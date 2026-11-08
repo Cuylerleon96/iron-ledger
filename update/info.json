@@ -1,15 +1,16 @@
 {
-  "versionCode": 7,
-  "versionName": "1.0.6",
+  "versionCode": 8,
+  "versionName": "1.0.7",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "834fc39b994d40f364a3fec94102b4d311c472a86e5ddb32839d4af4b5b0718e",
-  "sizeBytes": 3234312,
+  "sha256": "84432c1ec328ba90c9c59de94b459e40bc4a5b80ba38c75b810f45f0eda43b14",
+  "sizeBytes": 3236137,
   "published": "2026-11-08",
   "notes": [
-    "Rest between sets can now be logged \u2014 one field per exercise, with per-set overrides (or type r90)",
-    "Rest feeds Stamina only: shorter rest means more endurance demand. Strength and Power are deliberately unaffected, since long rest is what lets you lift heavy",
-    "New insight warns when rest does not match the work: short rest on heavy sets, or long rest on high-rep sets",
-    "Training density (% of session actually working) now shows on the dashboard",
-    "Includes 1.0.2-1.0.5: History sets, readable chips, body-composition sync, RPE display"
+    "Every exercise now shows a NEXT target from your own last session: +1 rep at the same load, or a ~2.5% load step",
+    "The target is built from your best set by estimated 1RM, so a light warmup triple never sets it",
+    "Load steps snap to what you can actually load (multiples of 1.25 kg)",
+    "Fix: weights keep their decimals everywhere - 102.5 kg was being displayed as 103",
+    "Fix: workouts and the bodyweight log are date-ordered on load, so the comparison can no longer read the wrong pair of sessions",
+    "Includes 1.0.6: rest between sets, which feeds Stamina only"
   ]
 }
