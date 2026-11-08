@@ -215,5 +215,57 @@ console.log("\n=== 10. cardio is gauged by time AND distance ===");
   truthy("without distance the minutes still stand (no invented penalty)", sw.distKmPerWk === 0 && sw.score > 0);
 }
 
+console.log("\n=== 11. round 2: the estimated Strength score ===");
+{
+  const e = env();
+  // a leg-press-only lifter must not be scored on pressing he never did
+  const leg = base({ workouts: [1, 3, 5].map((i) => wk(iso(i), [{ w: 200, r: 10 }], 375, "Leg Press on Hackenschmidt Machine")) });
+  const s = e.E.attributes(leg, 28, 0).STR;
+  console.log(`     leg press only -> Strength ${s.score} (${s.tier}) from "${s.detail.from}"`);
+  truthy("a leg press is judged on the leg press table", /Leg Press/.test(s.detail.from || ""));
+  truthy("...and does not read as an outstanding press", s.score < 70);
+  // a lift with no table at all is capped low rather than read as a bench press
+  const odd = base({ custom: [{ id: "z1", n: "Reverse Hyper Extension", c: "Legs", g: ["Legs"], p: [], s: [], e: [], m: "weight_reps" }],
+    workouts: [wk(iso(1), [{ w: 150, r: 10 }], "z1", "Reverse Hyper Extension"), wk(iso(3), [{ w: 150, r: 10 }], "z1", "Reverse Hyper Extension")] });
+  const z = e.E.attributes(odd, 28, 0).STR;
+  console.log(`     unmatched movement -> Strength ${z.score}`);
+  truthy("an unmatched movement does not inherit the bench press standard", z.score <= 55);
+}
+
+console.log("\n=== 12. round 2: two entry cards for one exercise ===");
+{
+  const e = env();
+  const st = base({ workouts: [{ id: "d", date: iso(1), note: "", entries: [
+    { id: 73, name: "Barbell Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] },
+    { id: 73, name: "Barbell Bench Press", mode: "weight_reps", sets: [{ w: 60, r: 10 }] },
+  ] }] });
+  const ser = e.E.seriesFor(st, 73);
+  eq("one session is one point, not two", ser.length, 1);
+  eq("...and it is the session's best, not an arbitrary card", Math.round(ser[0].est1RM), 117);
+  eq("compareLast does not compare a session with itself", e.E.compareLast(st, 73), null);
+  eq("bestFor still sees both cards", Math.round(e.E.bestFor(st, 73).est1RM), 117);
+}
+
+console.log("\n=== 13. round 2: a body-fat-only check-in ===");
+{
+  const e = env();
+  const st = base({ bodylog: [{ date: iso(30), weightKg: 70, bodyFatPct: 16 }, { date: iso(1), bodyFatPct: 14 }] });
+  eq("bodyweight falls back to the last entry that HAS a weight", e.E.bodyweight(st), 70);
+  eq("...not zero", e.E.bodyweight(st) !== 0, true);
+  const lean = base({ bodylog: [{ date: iso(30), weightKg: 70 }, { date: iso(1), bodyFatPct: 14 }] });
+  const vit = e.E.attributes(lean, 28, 0).VIT;
+  truthy("BMI is still scored from the last real weigh-in", /BMI/.test(vit.detail.basis || ""));
+}
+
+console.log("\n=== 14. round 2: cardio intervals are not strength sets ===");
+{
+  const e = env();
+  const custom = [{ id: "r1", n: "Running", c: "Cardio", g: ["Cardio"], p: [], s: [], e: [], m: "distance_time" }];
+  const st = base({ custom, workouts: [wk(iso(1), [{ d: 5000, t: 1500 }, { d: 5000, t: 1500 }, { d: 5000, t: 1500 }], "r1", "Running", "distance_time")] });
+  const s = e.E.staminaScore(st, e.E.windowWorkouts(st, 28, 0));
+  eq("cardio intervals add no strength volume", s.setsPerWk, 0);
+  truthy("but the cardio minutes still count", s.cardioMinPerWk > 0);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -248,8 +248,13 @@ const Engine = (() => {
   }
 
   /* ---------- bodyweight ---------- */
+  /* Only entries that actually carry a weight count. A body-fat-only check-in
+     used to zero this out (the last entry existed but had no weightKg), which
+     silently dropped the Strength ratio to the hardcoded 80kg guess and removed
+     BMI from Vitality — a measurement he never gave being replaced by one invented. */
   function bodyweight(state, atDate) {
-    const log = (state.bodylog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const log = (state.bodylog || []).filter((b) => num(b.weightKg) > 0)
+      .slice().sort((a, b) => a.date.localeCompare(b.date));
     if (!log.length) return num(state.profile.weightKg) || 0;
     if (!atDate) return num(log[log.length - 1].weightKg) || 0;
     let last = num(state.profile.weightKg) || 0;
@@ -262,8 +267,9 @@ const Engine = (() => {
     const mode = exMode(state, exId);
     let out = { est1RM: 0, reps: 0, time: 0, dist: 0, volume: 0, tonnage: 0, date: null };
     for (const w of state.workouts || []) {
-      for (const en of w.entries || []) {
-        if (en.id !== exId) continue;
+      {
+        const en = mergedEntry(w, exId);
+        if (!en) continue;
         const s = entryStats(en);
         const cand = {
           est1RM: s.est1RM, reps: Math.max(0, ...(en.sets || []).map((x) => num(x.r))),
@@ -279,17 +285,33 @@ const Engine = (() => {
     }
     out.mode = mode;
     return out;
+    }
+
+  /* All of one exercise's entries in a single session, as one entry. Logging an
+     exercise on two cards in one workout used to produce TWO series points with
+     the SAME date, so compareLast could compare a session against its own second
+     card (60kg x 10 instead of the session's 100kg x 5 best) or, with no later
+     session, against itself. A session is one point. */
+  function mergedEntry(w, exId) {
+    const es = (w.entries || []).filter((en) => en.id === exId);
+    if (!es.length) return null;
+    if (es.length === 1) return es[0];
+    return {
+      id: exId, name: es[0].name, mode: es[0].mode,
+      restDefault: es.find((en) => en.restDefault != null) ? es.find((en) => en.restDefault != null).restDefault : undefined,
+      sets: es.flatMap((en) => en.sets || []),
+      _merged: es.length,
+    };
   }
 
   /* Per-exercise series (one point per workout that trained it). */
   function seriesFor(state, exId) {
     const pts = [];
     for (const w of (state.workouts || []).slice().sort((a, b) => a.date.localeCompare(b.date))) {
-      for (const en of w.entries || []) {
-        if (en.id !== exId) continue;
-        const s = entryStats(en);
-        pts.push({ date: w.date, est1RM: s.est1RM, volume: s.volume, tonnage: s.tonnage, top: s.best, reps: s.reps, sets: s.sets, rpe: s.avgRPE, rest: s.avgRest });
-      }
+      const en = mergedEntry(w, exId);
+      if (!en) continue;
+      const s = entryStats(en);
+      pts.push({ date: w.date, est1RM: s.est1RM, volume: s.volume, tonnage: s.tonnage, top: s.best, reps: s.reps, sets: s.sets, rpe: s.avgRPE, rest: s.avgRest });
     }
     return pts;
   }
@@ -391,18 +413,36 @@ const Engine = (() => {
     // three estimated 1RMs and discount it — machine stacks under-report true
     // barbell strength, so this stays deliberately conservative and the UI
     // flags it "est." until a real barbell lift is logged.
+    /* Score each movement against its OWN published table wherever one exists.
+       This used to take the median lift and read it off the BENCH PRESS table
+       regardless of what it was — so a 200kg leg press, judged as a bench press,
+       gave a leg-press-only lifter 75/100 "Very good" on pressing he had never
+       done, and a seated dip machine could decide the headline Strength number.
+       Machine work is still discounted, because a stack is not a barbell. Only
+       movements with no table at all fall back to a generic load-vs-bodyweight
+       read, and that read is capped low. */
     const loads = [];
     for (const w of ws) for (const en of w.entries || []) {
       const s = entryStats(en);
-      if (s.est1RM > 0) loads.push({ v: s.est1RM, id: en.id });
+      if (!(s.est1RM > 0)) continue;
+      const info = exInfo(state, en.id);
+      const disc = isMachine(state, en.id) ? 0.62 : 0.85;
+      loads.push({ v: s.est1RM * disc, id: en.id, key: liftKey(info.n), name: info.n });
     }
     if (!loads.length) return { score: 0, basis: "none", bw, n: 0 };
+    const rated = loads.filter((l) => l.key && STANDARDS[l.key]).sort((a, b) => b.v - a.v);
+    if (rated.length) {
+      const use = rated.slice(0, 3);
+      const scores = use.map((l) => liftScore(l.v / bw, l.key, sex));
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      // still capped: these are machine and submaximal loads, not tested maxes
+      return { score: clamp(Math.min(75, avg)), basis: "estimated", bw, n: 0,
+               from: use.map((l) => l.name).join(", ") };
+    }
     loads.sort((a, b) => b.v - a.v);
-    const top = loads.slice(0, 3);
-    const med = top[Math.floor(top.length / 2)];
-    const disc = isMachine(state, med.id) ? 0.62 : 0.85;
-    const score = Math.min(75, liftScore((med.v * disc) / bw, "bench", sex));
-    return { score: clamp(score), basis: "estimated", bw, n: 0, from: exName(state, med.id) };
+    const med = loads[Math.min(1, loads.length - 1)];
+    const score = Math.min(55, interp(med.v / bw, [0.5, 1.0, 1.5, 2.0, 2.5], [8, 24, 40, 58, 72]));
+    return { score: clamp(score), basis: "estimated", bw, n: 0, from: med.name };
   }
 
   /* A run or a ride is gauged by TIME and DISTANCE, never by load: there is no
@@ -466,9 +506,15 @@ const Engine = (() => {
       for (const s of en.sets || []) maxReps = Math.max(maxReps, num(s.r));
     }
     const repScore = interp(maxReps, [5, 10, 15, 20, 30], [10, 30, 48, 66, 88]);
-    // volume tolerance: sets per week
+    // volume tolerance: strength sets per week — cardio intervals are not
+    // working sets and were inflating this, so a runner's interval session read
+    // as gym volume he had not done
     let sets = 0;
-    for (const w of ws) for (const en of w.entries || []) sets += entryStats(en).sets;
+    for (const w of ws) for (const en of w.entries || []) {
+      const m = exMode(state, en.id);
+      if (m === "distance_time" || m === "time") continue;
+      sets += entryStats(en).sets;
+    }
     const setScore = interp(sets / weeks, [0, 20, 40, 60, 90], [6, 30, 55, 75, 95]);
 
     // Rest interval is a training VARIABLE, not a virtue. Short rest raises the
