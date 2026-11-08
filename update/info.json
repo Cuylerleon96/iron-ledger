@@ -2,16 +2,11 @@
   "versionCode": 2,
   "versionName": "1.0.1",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "b7f945253702312f62550b12084e8c27dbf00aba00b33287fb57f9ba35950787",
-  "sizeBytes": 3230238,
+  "sha256": "aa9b278c31013f4eac4368e7b57a9d5da3f8783866c406183a760e92a364303a",
+  "sizeBytes": 3230383,
   "published": "2026-11-08",
   "notes": [
-    "Iron Ledger now updates itself from GitHub releases",
-    "Fixed muscle-legend text collision (CHBELOW MEV)",
-    "Library and exercise-picker rows stack cleanly on phones",
-    "Muscle-bar values no longer wrap and misalign the row",
-    "Chart labels get a dark outline so coloured text stays readable",
-    "New sessions default to today's date",
-    "Release-signed: uninstall the previous debug build before installing"
+    "Includes every 1.0.1 fix: muscle-legend text collision, library and picker row layout, chart label outlines, log defaults to today",
+    "Smoother rendering: dropped a full-screen compositing layer and the fixed background"
   ]
 }
