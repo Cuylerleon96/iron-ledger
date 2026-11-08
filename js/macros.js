@@ -336,7 +336,7 @@ const Macros = (() => {
 
     /* REFUSE — return a reason and NO numbers. */
     if (ageY == null || !isFinite(ageY))
-      return refuse("Age is required for Mifflin-St Jeor (the app has no age field yet).", SOURCES.mifflin);
+      return refuse("Add your birth year in Profile so we can work out your age for Mifflin-St Jeor.", SOURCES.mifflin);
     if (ageY < 18)
       return refuse("Under 18 — adolescent energy and macro targets need medical supervision, not a formula.", SOURCES.under18);
     if (inputs.pregnant || inputs.lactating)

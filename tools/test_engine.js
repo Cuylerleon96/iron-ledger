@@ -1,4 +1,8 @@
-/* Headless maths check. Runs the real browser sources in a vm context. */
+/* Headless maths check. Runs the real browser sources in a vm context.
+   Prints the same "engine: N passed, M failed" summary the other suites print,
+   so this suite's checks are counted in the run total instead of being silently
+   uncounted. Everything it checked before is still checked — the diagnostics
+   below are unchanged; the CHECK lines assert the same computed values. */
 const fs=require('fs'), vm=require('vm');
 const store={_d:{},getItem(k){return this._d[k]??null},setItem(k,v){this._d[k]=v},removeItem(k){delete this._d[k]}};
 const ctx={console,module:{exports:{}},localStorage:store,Date,Math,JSON,Object,Array,Set,Map,isFinite,parseFloat,parseInt,Number,String,Blob:class{},URL:{},setTimeout,clearTimeout,console,URL:{}};
@@ -10,6 +14,10 @@ SEED_CUSTOM.forEach(c=>Store.addCustom(c));
 Store.upsertWorkout(JSON.parse(JSON.stringify(SEED_WORKOUT)));
 const S=Store.state;
 S.profile.weightKg=82; S.profile.heightCm=178; S.profile.sex='M'; S.profile.weeklyTarget=4;
+
+let pass=0, fail=0;
+const ok=(label,cond)=>{const c=!!cond; console.log(`  ${c?"OK  ":"FAIL"} CHECK ${label}${c?"":`  got=${JSON.stringify(cond)}`}`); c?pass++:fail++;};
+const near=(label,got,want,tol=0.05)=>{const c=Math.abs(got-want)<=tol; console.log(`  ${c?"OK  ":"FAIL"} CHECK ${label}  got=${got}${c?"":` want≈${want}`}`); c?pass++:fail++;};
 
 console.log('library:', ctx.__X.EXERCISE_LIB.length, 'exercises | workout entries:', S.workouts[0].entries.length);
 console.log('Epley 100x10 =', Engine.est1RM(100,10).toFixed(1), '| 110x3 =', Engine.est1RM(110,3).toFixed(1));
@@ -34,4 +42,32 @@ Store.upsertWorkout(w2);
 console.log('\n-- after progressive session 10 Nov --');
 const A2=Engine.attributes(S,28);
 Engine.ATTRIBUTES.forEach(a=>console.log(`  ${a.key.padEnd(4)} ${String(A2[a.key].score).padStart(3)} delta ${A2[a.key].delta}`));
-console.log('  compareLast(Bench Press Machine):', JSON.stringify(Engine.compareLast(S,'u1')));
+const cmp=Engine.compareLast(S,'u1');
+console.log('  compareLast(Bench Press Machine):', JSON.stringify(cmp));
+
+/* ---- the same values, asserted (this is the count the run total reads) ---- */
+console.log('\n-- checks --');
+ok('library is non-empty', ctx.__X.EXERCISE_LIB.length > 500);
+ok('the seeded workout has entries', S.workouts[0].entries.length > 0);
+near('Epley 100x10 = 133.3', Engine.est1RM(100,10), 133.3333);
+near('Epley 110x3 = 121.0', Engine.est1RM(110,3), 121.0);
+ok('Epley rises with reps', Engine.est1RM(100,5) < Engine.est1RM(100,10));
+const ids=Engine.trainedExerciseIds(S,3650);
+ok('trained exercises were found', ids.length > 0);
+ok('every trained exercise has a positive best', ids.every(id=>{const b=Engine.bestFor(S,id); return b.est1RM>0 && b.volume>0 && b.tonnage>0;}));
+ok('every trained exercise has at least one series', ids.every(id=>Engine.seriesFor(S,id).length>=1));
+ok('there are six attributes', Engine.ATTRIBUTES.length === 6);
+ok('every attribute score is 0-100', Engine.ATTRIBUTES.every(a=>{const s=A[a.key].score; return s>=0 && s<=100;}));
+ok('every attribute carries a tier and a detail', Engine.ATTRIBUTES.every(a=>typeof A[a.key].tier==='string' && A[a.key].detail != null));
+ok('muscle groups are ordered and scored', Engine.GROUP_ORDER.length > 0 && Engine.GROUP_ORDER.every(g=>MG[g].score>=0 && MG[g].score<=100 && isFinite(MG[g].setsPerWk)));
+ok('weak points come back as a list', Array.isArray(Engine.weakPoints(S,28)));
+ok('summary reports the seeded session', sum.sessions >= 1);
+ok('summary carries positive tonnage and XP', sum.tonnage > 0 && sum.xp > 0);
+ok('summary carries a level', sum.level && sum.level.level >= 1);
+ok('achievements return a met flag each', Engine.achievements(S).every(a=>typeof a.met === 'boolean'));
+ok('the progressive session keeps all six attributes', Engine.ATTRIBUTES.every(a=>isFinite(A2[a.key].score)));
+ok('compareLast finds the earlier session', cmp && cmp.prevDate != null && cmp.est1RM && cmp.volume);
+ok('the progressive session beats the earlier one', cmp.est1RM.cur > cmp.est1RM.prev);
+
+console.log(`\nengine: ${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

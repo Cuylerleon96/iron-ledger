@@ -1781,9 +1781,9 @@
     if (cnt) cnt.textContent = items.length + (items.length === 1 ? " item" : " items");
     list.innerHTML = items.length
       ? items.map((e) =>
-          '<div class="pr-row"><span>' + esc(e.name) + "</span><span>" + fmtW(e.grams) + " g</span>" +
+          '<div class="pr-row has-del"><span>' + esc(e.name) + "</span><span>" + fmtW(e.grams) + " g</span>" +
           '<span class="muted">' + esc(macroLine(e.macros)) + "</span>" +
-          '<button class="btn ghost tiny food-del" data-id="' + esc(e.id) + '" title="Remove">✕</button></div>').join("")
+          '<button class="btn ghost tiny food-del" data-id="' + esc(e.id) + '" title="Remove" aria-label="Remove ' + esc(e.name) + '">✕</button></div>').join("")
       : '<p class="muted small">Nothing logged yet today.</p>';
 
     const totals = Store.dayTotals(date);

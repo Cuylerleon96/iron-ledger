@@ -143,8 +143,10 @@ const ed = M.plan({ ...MAN, goal: "lose", pace: "loss-slow", eatingDisorderRisk:
 eq("eating-disorder risk refused", ed.refused, true);
 eq("eating-disorder risk has no numbers", NO_NUMBERS(ed), true);
 const noage = M.plan({ sex: "M", weightKg: 80, heightCm: 180, goal: "maintain", pace: "maintain" });
-eq("missing age refused (no age field in app yet)", noage.refused, true);
+eq("missing age refused", noage.refused, true);
 eq("missing age has no numbers", NO_NUMBERS(noage), true);
+eq("missing-age reason no longer claims there is no age field", /no age field/i.test(noage.reason), false);
+eq("missing-age reason points at the birth year in Profile", /birth year/i.test(noage.reason) && /profile/i.test(noage.reason), true);
 
 console.log("\n--- warn paths still return numbers + a warning ---");
 const athlete = M.plan({ ...MAN, ageY: 25, goal: "maintain", pace: "maintain", athlete: true });

@@ -437,6 +437,12 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
   truthy("set-row reps inputs carry an aria-label", /\$\{sl\} reps/.test(app));
   truthy("the remove-set button has an aria-label", /aria-label="Remove \$\{sl\.toLowerCase\(\)\}"/.test(app));
 
+  // --- the logged-food row: the ✕ stays inline and is named ---
+  truthy("a logged-food row keeps its ✕ inline (has-del modifier, not the base 3-column grid)", /class="pr-row has-del"/.test(app));
+  truthy("the logged-food ✕ carries an aria-label, not a bare ✕ glyph", /aria-label="Remove ' \+ esc\(e\.name\) \+ '"/.test(app));
+  truthy("the has-del row is a 4-column grid whose name cell can shrink", /\.pr-row\.has-del \{ grid-template-columns: minmax\(0, 1fr\) auto auto auto; \}/.test(css));
+  truthy("the logged-food ✕ gets a 48 px tap target without inflating the row", /\.pr-row\.has-del \.food-del::before/.test(css) && /width: 48px; height: 48px/.test(css));
+
   // --- the remaining pass: focus trap, Escape, heatmap text, small type ---
   const chart = fs.readFileSync(path.join(B, "js", "chart.js"), "utf8");
   const appSrc = app;

@@ -1,11 +1,11 @@
 {
-  "versionCode": 57,
-  "versionName": "1.0.56",
+  "versionCode": 58,
+  "versionName": "1.0.57",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "2081b4e0de72306382adc953b1e153f37e08be58b7977b03f84d6ad818c84f2c",
-  "sizeBytes": 3862112,
+  "sha256": "41ae51f584734768f04489eb1dfd97662c80ca4b286915da4670c07606722c8e",
+  "sizeBytes": 3862447,
   "published": "2026-11-08",
   "notes": [
-    "Nutrition: duplicate foods in search now show as one row, today's totals encourage you in line with your goal, and the target rounding is explained."
+    "Nutrition: the remove \u2715 on a logged food now sits inline on its row, and the age prompt points to your birth year in Profile."
   ]
 }
