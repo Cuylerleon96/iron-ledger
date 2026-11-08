@@ -128,6 +128,17 @@ const Engine = (() => {
     [/bodyweight squat|air squat|\bsquat\b.*bodyweight/i, 0.65],
     [/sissy squat|reverse hyper|back extension|hyperextension/i, 0.45],
     [/plank|hold|isometric|hollow|\bl.?sit\b|dead ?hang|flexed arm hang/i, 0.00],
+    /* the owner's standard incline crunch: bench at 40 deg with the HEAD BELOW THE
+       HIPS, which is the decline geometry whatever the bench is called. Derived,
+       not guessed. The trunk's centre of mass sits r from the hip axis, so the
+       resisting torque is m*g*r*cos(phi), phi being the trunk's angle from
+       horizontal. Flat, the crunch sweeps 0 -> 35 deg (mean cos 0.94, the arm the
+       0.40 was set against). Head-below at 40 deg it sweeps -40 -> +35 deg: mean
+       cos 0.93, so the peak load is the SAME — but 75 deg of travel against 35,
+       which is 2.12x the work per rep. 0.40 x 2.12 = 0.85. (The plate rides the
+       same longer arc so this is very slightly conservative on the added weight;
+       the body is 89% of the load here, so it captures the effect.) */
+    [/incline crunch|decline crunch|decline sit.?up/i, 0.85],
     [/sit.?up|crunch|leg raise|knee raise|\bv.?up\b/i, 0.40],
   ];
   const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|inverted row|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;

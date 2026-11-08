@@ -1,12 +1,12 @@
 {
-  "versionCode": 27,
-  "versionName": "1.0.26",
+  "versionCode": 28,
+  "versionName": "1.0.27",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "fff2a81f4633077f327faefa0096d89534952b792c2caff7505f71ef1d257723",
-  "sizeBytes": 3266311,
+  "sha256": "7d376532f970458be68264a9107add48257e84856f5e4477eb9be43ae10800f8",
+  "sizeBytes": 3266688,
   "published": "2026-11-08",
   "notes": [
-    "A bodyweight movement now counts your body. A set with no stamped bodyweight contributed zero, so 15 lb on your chest on Incline Crunches scored an e1RM of 21 lb as though you weighed nothing. The load is now 138.2 x 0.40 + 15 = 70.3 lb, e1RM 98.4 lb, tonnage 2,108 lb",
-    "Sets logged before this existed, and imported sets, are now stamped with the bodyweight that was true on their own date. Nothing is invented: with no bodyweight recorded the set still scores on the plate alone"
+    "Your incline crunch standard is now derived, not assumed: bench at 40 degrees with the head BELOW the hips. The trunk sweeps -40 to +35 degrees, which is 75 degrees of travel against a flat crunchs 35, or 2.12x the work per rep. The load factor goes 0.40 to 0.85 and is 0.40 x 2.12, computed from the geometry",
+    "On your numbers: load 70.3 to 132.5 lb, e1RM 98 to 185 lb, tonnage 2,108 to 3,974 lb. Flat crunches, sit-ups and hanging leg raises keep the flat-bench 0.40, as they should"
   ]
 }

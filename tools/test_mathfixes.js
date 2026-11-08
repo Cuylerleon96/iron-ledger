@@ -509,7 +509,14 @@ console.log("\n=== 21. a bodyweight movement must count the body, not just the p
   eq("...at the published fraction", e.E.bwFactor("Dips"), 0.95);
   eq("'Pull-ups' is bodyweight", e.E.isBodyweight("Pull-ups"), true);
   eq("'Incline Crunches' is bodyweight", e.E.isBodyweight("Incline Crunches"), true);
-  eq("...at the trunk fraction", e.E.bwFactor("Incline Crunches"), 0.40);
+  // the owner's standard incline crunch is a 40 deg bench with the HEAD BELOW THE
+  // HIPS — the decline geometry — sweeping -40 -> +35 deg. Mean moment arm 0.93
+  // (peak load the same as flat) but 75 deg of travel against 35: 2.12x the work.
+  // 0.40 x 2.12 = 0.85. Derived from the geometry, not picked.
+  eq("...at the 40-deg head-below standard", e.E.bwFactor("Incline Crunches"), 0.85);
+  eq("a flat crunch keeps the flat-bench value", e.E.bwFactor("Abdominal Crunch"), 0.40);
+  eq("...as does a sit-up", e.E.bwFactor("Sit-ups"), 0.40);
+  eq("...and a hanging leg raise", e.E.bwFactor("Hanging Leg Raise"), 0.40);
   eq("'Plank' is an isometric hold (no load moved)", e.E.bwFactor("Plank"), 0);
 
   // equipment that supplies its own load must never be counted as bodyweight
@@ -524,8 +531,8 @@ console.log("\n=== 21. a bodyweight movement must count the body, not just the p
   eq("an unstamped set scores on the plate alone", Math.round(before * 2.2046), 21);
   eq("backfill stamps it", e.E.backfillBodyweight(st), 1);
   const after = e.E.seriesFor(st, 171).slice(-1)[0].top;
-  // 6.8039 + 80 x 0.40 = 38.8 kg, x (1 + 12/30) = 54.3 kg
-  eq("...using the bodyweight on that set's own date", Math.round(after * 2.2046), Math.round((6.8039 + 80 * 0.40) * (1 + 12 / 30) * 2.2046));
+  // 6.8039 + 80 x 0.85 = 74.8 kg (head-below 40 deg standard), x (1 + 12/30) = 104.7 kg
+  eq("...using the bodyweight on that set's own date", Math.round(after * 2.2046), Math.round((6.8039 + 80 * 0.85) * (1 + 12 / 30) * 2.2046));
   truthy("...which is a far larger, honest load", after > before * 2);
   eq("it is idempotent", e.E.backfillBodyweight(st), 0);
   // and it must not invent a weight that was never recorded
