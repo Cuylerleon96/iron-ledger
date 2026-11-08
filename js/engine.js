@@ -505,13 +505,15 @@ const Engine = (() => {
       const need = Math.max(0, Math.ceil(mg[g].landmarks.mev - mg[g].setsPerWk));
       out.push({ kind: "volume", severity: mg[g].score < 40 ? "high" : "med", group: g,
         title: `${g} is under-trained`, detail: `${mg[g].setsPerWk} sets/wk vs a ${mg[g].landmarks.mev}–${mg[g].landmarks.mav} target.`,
-        fix: need > 0 ? `Add ~${need} working sets/week of ${g.toLowerCase()} work.` : `Progressively overload ${g.toLowerCase()}.` });
+        fix: need > 0
+          ? `Add ~${need} working ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
+          : `Progressively overload ${g.toLowerCase()}.` });
     }
     // 2. completely untrained
     const untrained = GROUP_ORDER.filter((g) => mg[g].setsPerWk <= 0 && g !== "Calves");
     if (untrained.length) out.push({ kind: "gap", severity: untrained.length > 2 ? "high" : "med",
       title: `No data for ${untrained.join(", ")}`, detail: "These groups have had no working sets in the last 4 weeks.",
-      fix: `Add a compound movement for each: ${untrained.map((g) => suggestFor(g)).join("; ")}.` });
+      fix: `Add a compound movement for ${untrained.length === 1 ? "it" : "each"}: ${untrained.map((g) => suggestFor(g)).join("; ")}.` });
 
     // 3. push / pull balance
     const push = mg.Chest.volume + mg.Shoulders.volume + mg.Arms.volume * 0.5;

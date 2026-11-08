@@ -1,5 +1,29 @@
 apply plugin: 'com.android.application'
 
+// ---------------------------------------------------------------------------
+// Version + signing come from files, not literals, so the publish script can
+// bump a version without hand-editing Gradle.
+//
+//   version.properties    TRACKED  — source of truth for versionCode/versionName
+//   keystore.properties   IGNORED  — signing password; the .jks itself lives
+//                                    outside the repo in ~/.android-keystores/
+//
+// A release build without keystore.properties still compiles; it just comes out
+// unsigned. That is deliberate, so a fresh clone builds without the secret.
+// ---------------------------------------------------------------------------
+def versionPropsFile = rootProject.file("version.properties")
+def versionProps = new Properties()
+if (versionPropsFile.exists()) {
+    versionProps.load(new FileInputStream(versionPropsFile))
+}
+
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+def hasKeystore = keystorePropsFile.exists()
+if (hasKeystore) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+
 android {
     namespace "com.cuyler.ironledger"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +31,8 @@ android {
         applicationId "com.cuyler.ironledger"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode versionProps['versionCode'] ? versionProps['versionCode'].toInteger() : 1
+        versionName versionProps['versionName'] ?: "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +40,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasKeystore) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

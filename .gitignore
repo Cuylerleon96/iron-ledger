@@ -10,3 +10,6 @@ android/app/src/main/assets/public/
 # python bytecode
 tools/__pycache__/
 __pycache__/
+
+# signing secret — never commit
+android/keystore.properties

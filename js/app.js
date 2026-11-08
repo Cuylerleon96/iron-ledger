@@ -314,7 +314,7 @@
       axes: Engine.GROUP_ORDER.map((g) => ({ label: g, value: mg[g].score, tier: mg[g].setsPerWk + "/wk", valText: "", color: "#f8d030" })),
     });
     Chart.bars(barHost, {
-      unit: " sets/wk",
+      unit: "",
       items: Engine.GROUP_ORDER.map((g) => ({ label: g, value: mg[g].setsPerWk, status: mg[g].status, marker: mg[g].landmarks.mev })),
     });
 
@@ -387,12 +387,18 @@
   }
 
   /* ================= log ================= */
+  /* A new session always sits on today's date. It only stops following the
+     calendar once the user actually picks a date (dateTouched), so editing an
+     old workout keeps its date but a fresh log never inherits a stale one. */
   function newDraft(date) {
-    return { id: null, date: date || today(), note: "", entries: [] };
+    return { id: null, date: date || today(), note: "", entries: [], dateTouched: false };
   }
 
   function renderLog(host) {
     if (!draft) draft = newDraft();
+    // an unsaved, untouched draft tracks the current date even if the app has
+    // been sitting open across midnight
+    if (!draft.id && !draft.dateTouched) draft.date = today();
     const wrap = el("section", { class: "card" });
     wrap.innerHTML = `
       <div class="card-head">
@@ -417,7 +423,7 @@
       ${draft.id ? `<button class="btn danger" id="btn-del">Delete</button>` : ""}`;
     host.append(save);
 
-    $("#w-date").addEventListener("change", (e) => { draft.date = e.target.value; });
+    $("#w-date").addEventListener("change", (e) => { draft.date = e.target.value; draft.dateTouched = true; });
     $("#w-note").addEventListener("input", (e) => { draft.note = e.target.value; });
     $("#btn-add").addEventListener("click", () => exercisePicker((ex) => addEntry(ex)));
     $("#btn-import").addEventListener("click", importDialog);
@@ -562,7 +568,7 @@
     const gained = after.xp - before.xp;
     const newB = Engine.newAchievements(Store.state);
     Store.unlock(newB);
-    draft = newDraft(w.date);
+    draft = newDraft();
     let msg = `+${fmt(gained)} XP · ${entries.length} exercises saved`;
     if (newB.length) msg += ` · ${newB.length} badge${newB.length > 1 ? "s" : ""} unlocked!`;
     toast(msg, "good", 4200);
@@ -688,9 +694,13 @@
             return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt)}</span></div>`;
           }).join("")}
         </div>`;
-      $(".ed", card).addEventListener("click", () => { draft = JSON.parse(JSON.stringify(w)); setView("log"); });
+      $(".ed", card).addEventListener("click", () => {
+        draft = JSON.parse(JSON.stringify(w));
+        draft.dateTouched = true;          // editing keeps the workout's own date
+        setView("log");
+      });
       $(".cp", card).addEventListener("click", () => {
-        draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)) };
+        draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
         setView("log"); toast("Loaded into a new session");
       });
       host.append(card);
@@ -779,6 +789,69 @@
     Chart.line(chartHost, { points: pts, color: "#58c8f8", unit: Engine.exMode(S, id) === "weight_reps" ? " " + U.label() + " e1RM" : "" });
   }
 
+  /* ================= updates ================= */
+  function showUpdatePrompt(r) {
+    const box = el("div", { class: "update-box" });
+    box.innerHTML = `
+      <h3>Update available</h3>
+      <p class="muted small">v${esc(r.installed.versionName)} → <b>v${esc(r.versionName)}</b>${r.sizeMB ? ` · ${r.sizeMB} MB` : ""}</p>
+      ${r.notes.length ? `<ul class="notes">${r.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+      <div class="up-progress" id="up-prog" hidden><i id="up-bar"></i><span id="up-pct">0%</span></div>
+      <div class="row end"><button class="btn ghost" id="up-later">Later</button><button class="btn primary" id="up-go">Download &amp; install</button></div>`;
+    openModal(box, "narrow");
+    $("#up-later").addEventListener("click", closeModal);
+    $("#up-go").addEventListener("click", async () => {
+      const prog = $("#up-prog"), bar = $("#up-bar"), pct = $("#up-pct");
+      prog.hidden = false; $("#up-go").disabled = true;
+      try {
+        await Updater.install(r, (p) => { bar.style.width = p + "%"; pct.textContent = p + "%"; });
+        closeModal();
+        toast("Downloaded and verified — follow the installer prompt", "good", 5000);
+      } catch (e) {
+        const msg = String((e && e.message) || e);
+        if (/NOT_ALLOWED_TO_INSTALL/.test(msg)) {
+          const p2 = el("div", { class: "update-box" },
+            `<h3>Allow installs</h3>
+             <p class="muted small">Android needs permission for this app to install updates. Open the setting, allow it for Iron Ledger, then try again.</p>
+             <div class="row end"><button class="btn ghost" id="up-x">Close</button><button class="btn primary" id="up-s">Open settings</button></div>`);
+          openModal(p2, "narrow");
+          $("#up-x").addEventListener("click", closeModal);
+          $("#up-s").addEventListener("click", () => { Updater.openInstallSettings(); closeModal(); });
+        } else {
+          toast("Update failed: " + msg, "warn", 6000);
+        }
+        $("#up-go").disabled = false;
+      }
+    });
+  }
+
+  async function updateCheck(manual) {
+    if (typeof Updater === "undefined") return;
+    const status = $("#up-status");
+    if (status) status.textContent = "checking…";
+    let r;
+    try { r = await Updater.check(); }
+    catch (e) { r = { state: "error", reason: String((e && e.message) || e) }; }
+
+    if (status) {
+      status.textContent =
+        r.state === "available" ? "v" + r.versionName + " available" :
+        r.state === "current" ? "up to date" :
+        r.state === "unsupported" ? "browser build" :
+        (r.reason || "check failed");
+    }
+    // auto-checks stay quiet unless there is something new; only ever prompt
+    // once per version so a dismissed update does not nag on every launch
+    if (r.state === "available" && (manual || Updater.offered() !== r.latest)) {
+      Updater.markOffered(r.latest);
+      showUpdatePrompt(r);
+    } else if (manual && r.state === "current") {
+      toast(`Up to date — v${r.installed.versionName} (build ${r.installed.versionCode})`, "good");
+    } else if (manual && r.state === "error") {
+      toast(r.reason || "Update check failed", "warn", 5000);
+    }
+  }
+
   /* ================= profile ================= */
   function renderProfile(host) {
     const p = S.profile;
@@ -810,6 +883,22 @@
       <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmt(U.w(b.weightKg), 1)} ${U.label()}</span><span class="muted">${b.bodyFatPct ? b.bodyFatPct + "%" : ""}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
     host.append(bw);
     Chart.line($("#bw-chart", bw), { points: (S.bodylog || []).map((b) => ({ x: b.date, y: U.w(b.weightKg) })), color: "#a878f8", unit: " " + U.label() });
+
+    const upd = el("section", { class: "card" });
+    upd.innerHTML = `
+      <div class="card-head"><h3>App updates</h3><span class="muted" id="up-status"></span></div>
+      <p class="muted small">Checks a public release feed over the network. Nothing about your training is ever uploaded.</p>
+      <div class="row"><button class="btn" id="up-check">Check for updates</button><span class="muted small" id="up-version"></span></div>
+      <label class="mini-lab">Update feed URL
+        <input class="inp" id="up-feed" value="${esc(typeof Updater !== "undefined" ? Updater.feedUrl() : "")}">
+      </label>`;
+    host.append(upd);
+    $("#up-check", upd).addEventListener("click", () => updateCheck(true));
+    $("#up-feed", upd).addEventListener("change", (e) => { Updater.setFeedUrl(e.target.value); toast("Update feed saved"); });
+    if (typeof Updater !== "undefined") Updater.installed().then((i) => {
+      const v = $("#up-version", upd);
+      if (v) v.textContent = i ? `installed v${i.versionName} (build ${i.versionCode})` : "browser build — nothing to install";
+    });
 
     const data = el("section", { class: "card" });
     data.innerHTML = `
@@ -893,6 +982,8 @@
     }
     render();                       // paint FIRST — nothing below is allowed to gate it
     recoverFromDeviceStorage();     // fire and forget
+    // update check last, delayed, and Android-only: it must never delay the UI
+    setTimeout(() => { if (typeof Updater !== "undefined" && Updater.isAndroid()) updateCheck(false); }, 4000);
   }
 
   /* Android: localStorage is the working copy, the on-device mirror is the

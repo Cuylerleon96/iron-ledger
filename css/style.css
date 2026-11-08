@@ -200,6 +200,18 @@ main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: gr
 .ax-tier { font-family: var(--px); font-size: 11.5px; font-weight: 700; }
 .ax-val { font-family: var(--px); font-size: 10.5px; fill: #cfe8e0; }
 .ax-delta { font-family: var(--px); font-size: 11px; font-weight: 700; }
+/* Every chart label gets a dark outline, the way GBA text always does.
+   text-shadow does NOT apply to SVG text — paint-order:stroke is what
+   actually draws the stroke beneath the glyph, so labels stay readable
+   whatever colour the panel fill or the tier score makes them. */
+.radar .ax-name, .radar .ax-tier, .radar .ax-val, .radar .ax-delta {
+  paint-order: stroke;
+  stroke: #06201d;
+  stroke-width: 3.6px;
+  stroke-linejoin: round;
+}
+/* same for the trend chart y-axis labels */
+.linechart .lc-ylab { paint-order: stroke; stroke: #06201d; stroke-width: 3px; }
 .radar-shape { transition: all .5s steps(14); }
 
 /* ---------------- charts ---------------- */
@@ -216,7 +228,10 @@ main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: gr
   border-bottom: 2px dotted rgba(255, 255, 255, .14);
 }
 .attr-row:last-child { border-bottom: 0; }
-.mrow { grid-template-columns: 1fr auto 66px; }
+/* muscle rows emit 3 spans, not 5 — must out-specify BOTH the base
+   .attr-row rule and the one inside the mobile media query further
+   down this file, which is why this is compound, not just .mrow. */
+.attr-row.mrow { grid-template-columns: 1fr auto 78px; }
 .dot { width: 12px; height: 12px; border: 2px solid var(--cream); border-radius: 2px; box-shadow: 0 0 0 1px var(--ink); }
 .attr-name { font-weight: 700; text-shadow: var(--outline-sm); }
 .attr-tier { color: var(--gold); font-weight: 700; font-size: .64rem; text-shadow: var(--outline-sm); }
@@ -224,7 +239,7 @@ main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: gr
 .attr-row .up { color: var(--red-l); font-weight: 700; }
 .attr-row .down { color: var(--sky); font-weight: 700; }
 .attr-row .flat { color: #8fa8b0; }
-.status-belowMEV, .status-untrained { color: var(--red-l); }
+.status-belowMEV, .status-untrained { color: #ffb3a3; }
 .status-MEVMAV { color: var(--gold); }
 .status-optimal { color: var(--green-l); }
 .status-overMRV { color: var(--orange); }
@@ -232,7 +247,7 @@ main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: gr
 /* ---------------- bars ---------------- */
 .bar-host { margin-top: .6rem; position: relative; z-index: 2; }
 .barchart { display: grid; gap: .3rem; }
-.bar-row { display: grid; grid-template-columns: 72px 1fr 68px; align-items: center; gap: .45rem; font-size: .64rem; }
+.bar-row { display: grid; grid-template-columns: 80px 1fr 46px; align-items: center; gap: .45rem; font-size: .64rem; }
 .bar-lab { text-align: left; text-shadow: var(--outline-sm); }
 .bar-track {
   position: relative; height: 14px; border-radius: 3px; overflow: hidden;
@@ -241,7 +256,7 @@ main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: gr
 .bar-fill { display: block; height: 100%; background: linear-gradient(180deg, var(--green-l), var(--green) 60%, #4a9828); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); transition: width .6s steps(14); }
 .bar-fill.low { background: linear-gradient(180deg, var(--gold-l), var(--orange) 60%, #c06000); }
 .bar-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, .75); }
-.bar-val { text-align: right; text-shadow: var(--outline-sm); }
+.bar-val { text-align: right; white-space: nowrap; text-shadow: var(--outline-sm); }
 
 /* ---------------- attribute detail ---------------- */
 .detail-grid { display: grid; gap: .55rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
@@ -367,8 +382,8 @@ input[type="date"] { color-scheme: light; }
 }
 .lib-row:active { transform: translateX(2px); }
 .lib-row:hover { border-color: var(--gold); background: rgba(248, 208, 48, .14); }
-.lib-name { font-size: .68rem; font-weight: 700; text-shadow: var(--outline-sm); }
-.lib-meta { font-size: .58rem; text-align: right; color: #b8d0d8; }
+.lib-name { flex: 1 1 auto; min-width: 0; font-size: .68rem; font-weight: 700; text-shadow: var(--outline-sm); }
+.lib-meta { flex: 0 0 auto; white-space: nowrap; font-size: .58rem; text-align: right; color: #b8d0d8; }
 #lb-progress { margin-top: .5rem; }
 
 /* ---------------- modal / picker ---------------- */
@@ -391,8 +406,8 @@ input[type="date"] { color-scheme: light; }
   background: rgba(0, 0, 0, .3); color: var(--cream); font: inherit; cursor: pointer;
 }
 .pick-row:hover { border-color: var(--gold); background: rgba(248, 208, 48, .16); }
-.pick-name { font-size: .66rem; font-weight: 700; text-shadow: var(--outline-sm); }
-.pick-meta { font-size: .56rem; text-align: right; color: #b8d0d8; }
+.pick-name { flex: 1 1 auto; min-width: 0; font-size: .66rem; font-weight: 700; text-shadow: var(--outline-sm); }
+.pick-meta { flex: 0 0 auto; white-space: nowrap; font-size: .56rem; text-align: right; color: #b8d0d8; }
 .picker-foot { display: flex; justify-content: space-between; gap: .45rem; margin-top: .6rem; flex-wrap: wrap; }
 .import-box { display: grid; gap: .5rem; }
 .import-box textarea {
@@ -407,6 +422,15 @@ input[type="date"] { color-scheme: light; }
 .unlock-box p { font-size: .68rem; }
 .form-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .form-grid label, .mini-lab { display: flex; flex-direction: column; gap: .22rem; font-size: .6rem; color: #d8e8f0; }
+
+/* ---------------- updates ---------------- */
+.update-box { display: grid; gap: .5rem; }
+.update-box h3 { color: var(--gold); }
+.update-box .notes { margin: .2rem 0; padding-left: 1.1rem; font-family: 'Pixelify Sans', var(--px); font-size: .8rem; line-height: 1.5; color: #e8f4ff; }
+.update-box .notes li { margin: .15rem 0; }
+.up-progress { position: relative; height: 22px; border: 2px solid var(--cream); border-radius: 4px; overflow: hidden; background: #0a1c1a; box-shadow: 0 0 0 1px var(--ink); margin: .5rem 0; }
+.up-progress i { display: block; height: 100%; width: 0; background: linear-gradient(180deg, var(--green-l), var(--green) 60%, #4a9828); transition: width .2s linear; }
+.up-progress span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .62rem; text-shadow: var(--outline-sm); }
 
 /* ---------------- toasts ---------------- */
 #toasts { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 200; display: grid; gap: .35rem; width: min(94vw, 440px); }
@@ -440,6 +464,10 @@ input[type="date"] { color-scheme: light; }
 @media (max-width: 560px) {
   html { font-size: 15px; }
   .brand-txt { display: none; }
+  /* a long exercise name plus its meta cannot share one narrow line */
+  .lib-row, .pick-row { flex-direction: column; align-items: stretch; gap: .12rem; }
+  .lib-meta, .pick-meta { white-space: normal; text-align: left; }
+  .attr-row.mrow { grid-template-columns: 1fr auto 66px; }
   .attr-row { grid-template-columns: 12px 1fr auto 44px 40px; font-size: .62rem; }
   .hud-level { min-width: 76px; }
   .hist-n { min-width: 100%; }
