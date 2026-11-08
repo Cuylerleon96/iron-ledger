@@ -138,14 +138,25 @@ const Engine = (() => {
       if (mode === "weight_distance") return num(s.d) > 0;
       return false;
     });
-    let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, tonnage = 0, rpeSum = 0, rpeN = 0;
+    let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, bestReps = 0, tonnage = 0, rpeSum = 0, rpeN = 0;
     let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0;
     for (const s of sets) {
       volume += setVolume(s, mode);
       reps += num(s.r); time += num(s.t); dist += num(s.d);
-      if (num(s.w) > 0) tonnage += num(s.w) * Math.max(1, num(s.r));
-      const e = mode === "weight_reps" ? est1RM(num(s.w), num(s.r)) : num(s.w) || num(s.t);
-      if (e > best) { best = e; bestSet = s; }
+      /* Tonnage is load x reps and nothing else. It used to run for any set with
+         a weight and substitute Math.max(1, reps) when reps were undefined, so a
+         20kg x 45s hold scored "20 kg of tonnage" — a number nobody lifted,
+         feeding totals, XP and badges. */
+      if (mode === "weight_reps" && num(s.w) > 0) tonnage += num(s.w) * num(s.r);
+      /* `best` has to be the mode's OWN best, or every non-weight mode reports 0
+         and its trend, ETA and plateau detection silently never work. */
+      const e = mode === "weight_reps" ? est1RM(num(s.w), num(s.r))
+        : mode === "reps" ? num(s.r)
+        : mode === "time" ? num(s.t)
+        : mode === "distance_time" ? num(s.d)
+        : mode === "weight_distance" ? num(s.d)
+        : num(s.w) || num(s.t);
+      if (e > best) { best = e; bestSet = s; bestReps = num(s.r); }
       if (num(s.rpe) > 0) { rpeSum += num(s.rpe); rpeN++; }
       const restVal = num(s.rest) > 0 ? num(s.rest) : num(entry.restDefault);
       if (restVal > 0) { restSum += restVal; restN++; }
@@ -158,6 +169,10 @@ const Engine = (() => {
     return {
       sets: sets.length, volume, reps, time, dist, tonnage,
       est1RM: mode === "weight_reps" ? best : 0,
+      // Epley is only trustworthy to ~12 reps, so est1RM is capped there and a
+      // 12-rep and a 20-rep set at the same load estimate the same. Exposed so
+      // the UI can SAY that instead of showing a real improvement as 0%.
+      bestReps,
       best, bestSet, avgRPE: rpeN ? rpeSum / rpeN : null,
       avgRest: restN ? restSum / restN : null,
       totalRest: restSum,
@@ -213,16 +228,22 @@ const Engine = (() => {
   }
 
   /* ---------- date windowing ---------- */
+  /* HALF-OPEN: from <= t < to. Both ends used to be inclusive, so a session
+     sitting exactly on a boundary (7, 14, 21, 28 days ago) was counted in TWO
+     adjacent windows — inflating the weekly volume chart, the cur-vs-prev
+     deltas, the deload read and Stamina's sets/week. Half-open windows tile
+     exactly: every session lands in one window and only one. */
   function inWindow(w, fromMs, toMs) {
     const t = new Date(w.date + "T12:00:00").getTime();
-    return t >= fromMs && t <= toMs;
+    return t >= fromMs && t < toMs;
   }
   /* Windows are anchored to local noon so a DST shift never drops or
-     double-counts a day. */
+     double-counts a day. The current window's exclusive end is tomorrow noon,
+     which is what makes today always count. */
   function windowWorkouts(state, days, offsetDays = 0) {
     const noon = new Date(); noon.setHours(12, 0, 0, 0);
-    const to = new Date(noon); to.setDate(to.getDate() - offsetDays);
-    const from = new Date(noon); from.setDate(from.getDate() - offsetDays - days);
+    const to = new Date(noon); to.setDate(to.getDate() - offsetDays + 1);
+    const from = new Date(noon); from.setDate(from.getDate() - offsetDays - days + 1);
     return (state.workouts || []).filter((w) => inWindow(w, from.getTime(), to.getTime()));
   }
 
@@ -384,19 +405,61 @@ const Engine = (() => {
     return { score: clamp(score), basis: "estimated", bw, n: 0, from: exName(state, med.id) };
   }
 
+  /* A run or a ride is gauged by TIME and DISTANCE, never by load: there is no
+     tonnage and no reps. Scoring cardio on minutes alone meant a 30-minute stroll
+     scored exactly the same as a 30-minute threshold run, and the logged distance
+     was thrown away.
+
+     Distance is scored against the modality's OWN weekly reference range, because
+     20 km is a hard week on foot and a warm-up on a bike — one shared distance
+     scale would make every cyclist Elite and every runner Novice. Hours still come
+     from the modality-agnostic 150 min/week guidance. */
+  const CARDIO_MOD = [
+    [/run|jog|treadmill|sprint|walk|hik|ruck/i, "on foot", [0, 5, 15, 35, 70]],
+    [/bike|cycl|spin|ride|velo/i,           "cycling", [0, 20, 60, 120, 250]],
+    [/row|erg/i,                                "rowing",  [0, 3, 10, 25, 50]],
+    [/swim/i,                                   "swim",    [0, 1, 3, 7, 15]],
+    [/elliptical|stair|jump rope|rope/i,        "other",   [0, 5, 15, 35, 70]],
+  ];
+  const cardioMod = (name) => {
+    for (const [re, label, xs] of CARDIO_MOD) if (re.test(name)) return { label, xs };
+    return { label: "other", xs: [0, 5, 15, 35, 70] };
+  };
+
   function staminaScore(state, ws) {
-    // cardio minutes/week
-    let cardioMin = 0, distKm = 0;
+    // cardio: minutes AND distance, kept apart per modality
+    let cardioMin = 0, distKm = 0, cardioKm = 0, cardioSec = 0;
+    const byMod = new Map();
     for (const w of ws) for (const en of w.entries || []) {
       const m = exMode(state, en.id);
       const info = exInfo(state, en.id);
       if (m === "distance_time" || info.c === "Cardio") {
-        for (const s of en.sets || []) { cardioMin += num(s.t) / 60; distKm += num(s.d) / 1000; }
+        const mod = cardioMod(info.n);
+        if (!byMod.has(mod.label)) byMod.set(mod.label, { km: 0, min: 0, xs: mod.xs });
+        const bucket = byMod.get(mod.label);
+        for (const s of en.sets || []) {
+          const mins = num(s.t) / 60, km = num(s.d) / 1000;
+          cardioMin += mins; distKm += km; bucket.min += mins; bucket.km += km;
+          if (num(s.d) > 0 && num(s.t) > 0) { cardioKm += num(s.d) / 1000; cardioSec += num(s.t); }
+        }
       }
     }
     const weeks = Math.max(1, ws.length ? (28 / 7) : 1);
     const minPerWk = cardioMin / weeks;
-    const cardioScore = interp(minPerWk, [0, 30, 75, 150, 300], [6, 30, 52, 75, 95]);
+    const minScore = interp(minPerWk, [0, 30, 75, 150, 300], [6, 30, 52, 75, 95]);
+    // each modality scored against its own range; the best one carries, so
+    // logging one sport properly is never penalised for not doing another
+    let distScore = 0, distMod = null;
+    for (const [label, v] of byMod) {
+      if (!(v.km > 0)) continue;
+      const sc = interp(v.km / weeks, v.xs, [6, 30, 52, 75, 95]);
+      if (sc > distScore) { distScore = sc; distMod = label; }
+    }
+    // distance is only half the score when distance was actually logged — with
+    // none recorded, minutes alone stand rather than inventing a penalty
+    const hasDist = distKm > 0;
+    const cardioScore = hasDist ? 0.6 * minScore + 0.4 * distScore : minScore;
+    const paceKmh = cardioSec > 0 ? cardioKm / (cardioSec / 3600) : null;
     // rep capacity: best single-set reps logged
     let maxReps = 0;
     for (const w of ws) for (const en of w.entries || []) {
@@ -438,8 +501,10 @@ const Engine = (() => {
     } else {
       score = 0.42 * cardioScore + 0.28 * repScore + 0.30 * setScore;
     }
-    return { score: clamp(score), cardioMinPerWk: minPerWk, distKm, maxReps, setsPerWk: sets / weeks,
-             avgRest, density, hardReps, highReps, restN };
+    return { score: clamp(score), cardioMinPerWk: minPerWk,
+             distKmPerWk: distKm / weeks, distKm, cardioKm, distMod,
+             paceKmh, paceMinPerKm: paceKmh ? 60 / paceKmh : null,
+             maxReps, setsPerWk: sets / weeks, avgRest, density, hardReps, highReps, restN };
   }
 
   function powerScore(state, ws) {
@@ -600,9 +665,12 @@ const Engine = (() => {
   function attributeHistory(state, months = 12) {
     const out = [];
     const anchor = new Date(); anchor.setHours(12, 0, 0, 0);
+    /* Step by calendar month with the day CLAMPED to 28. setMonth alone rolls
+       over: 31 March minus one month is 3 March, so on the 29th-31st the year
+       chart's months drifted, overlapped and repeated. */
+    const anchorDay = Math.min(anchor.getDate(), 28);
     for (let i = months - 1; i >= 0; i--) {
-      const end = new Date(anchor);
-      end.setMonth(end.getMonth() - i);
+      const end = new Date(anchor.getFullYear(), anchor.getMonth() - i, anchorDay, 12, 0, 0, 0);
       const offsetDays = Math.max(0, Math.round((anchor.getTime() - end.getTime()) / DAY));
       const a = attributes(state, 28, offsetDays);
       const scores = {};
@@ -668,12 +736,18 @@ const Engine = (() => {
       : mode === "time" ? num(b.time)
       : mode === "distance_time" ? num(b.dist)
       : (num(b.est1RM) || num(b.time));
-    const pts = seriesFor(state, exId)
+    /* x is DAYS, not milliseconds. Fitting against epoch ms made the slope
+       ~1e-8 per unit, so ratePerWeek was always ~0 and every target fell through
+       to "over a year at your current rate" — the ETA has never once produced a
+       date for any exercise, because the two axes were never comparable. */
+    const raw = seriesFor(state, exId)
       .map((p) => ({ t: new Date(p.date + "T12:00:00").getTime(), v: mode === "weight_reps" ? p.est1RM : p.top }))
       .filter((p) => p.v > 0).sort((a, b2) => a.t - b2.t);
+    const t0 = raw.length ? raw[0].t : 0;
+    const pts = raw.map((p) => ({ t: (p.t - t0) / DAY, v: p.v }));
     let eta = null, ratePerWeek = null, basis = "not enough sessions";
     if (pts.length >= 4) {
-      const spanDays = (pts[pts.length - 1].t - pts[0].t) / DAY;
+      const spanDays = pts[pts.length - 1].t - pts[0].t;   // already in days
       if (spanDays >= 14) {
         // least squares on value vs days
         const n = pts.length;
@@ -807,20 +881,85 @@ const Engine = (() => {
   }
 
   /* ---------- muscle-group balance (radar 2 + weak points) ---------- */
+  /* ---------- per-exercise stimulus weight ----------
+     A set is not a set. A machine chest press drives chest AND triceps AND front
+     delts through a long arc; a pec deck does one joint and nothing else. A
+     weighted incline crunch moves the torso against gravity through a longer
+     range than a flat crunch. Counting them identically is exactly why a balance
+     chart built on raw set counts reads wrong.
+
+     Derived from each exercise's OWN attributes — how many muscles it recruits,
+     its equipment, and its range/leverage modifiers — so it covers all ~930
+     library movements and any custom exercise with nothing to maintain by hand.
+
+     These are transparent, adjustable WEIGHTS, not measurements. They never
+     touch a logged weight, an e1RM or a PR: those stay raw so they stay
+     comparable between sessions and between exercises. Override per exercise
+     with an explicit weight. */
+  const EQ_W = [
+    [/barbell|olympic|trap bar/i, 1.00],
+    [/dumbbell/i, 0.97],
+    [/kettlebell/i, 0.93],
+    [/bodyweight|pull-?up|chin-?up|\bdip\b|push-?up|plank/i, 0.90],
+    [/cable|pulley|lat pull/i, 0.88],
+    [/machine|smith|sled|hack|stack|pec deck|\bdeck\b/i, 0.84],
+    [/band|resistance/i, 0.75],
+  ];
+  const ROM_W = [/incline/i, /decline/i, /deficit/i, /full[- ]?range|\brom\b/i,
+                 /wide|stretch|extended/i, /single[- ]?arm|single[- ]?leg|unilateral/i];
+  /* Compound or isolation, which is the single biggest driver of what a set is
+     worth. Read from the NAME first: the library's own muscle arrays are
+     inconsistent — "Leg Press on Hackenschmidt Machine" lists one group and no
+     synergists, so a pure array test files the biggest compound in the gym as an
+     isolation. The arrays are the fallback, not the source. */
+  const ISO_RE = /curl|extension|fly|raise|pushdown|kickback|crunch|plank|shrug|pull-?over|abduction|adduction|calf|pec deck|\bdeck\b|kickback/i;
+  const COMPOUND_RE = /squat|deadlift|press|row|pull-?up|chin-?up|\bdip\b|lunge|clean|snatch|thruster|push-?up|pulldown|step-?up|hip thrust|good morning|swing|carry/i;
+  function isIsolation(state, id) {
+    const n = exInfo(state, id).n;
+    if (ISO_RE.test(n)) return true;
+    if (COMPOUND_RE.test(n)) return false;
+    const info = exInfo(state, id);
+    return exGroups(state, id).length <= 1 && (info.s || []).length === 0;
+  }
+
+  function exerciseWeight(state, id) {
+    const info = exInfo(state, id);
+    const o = (state.overrides && state.overrides[id]) || {};
+    if (o.weight != null && isFinite(num(o.weight)) && num(o.weight) > 0) return num(o.weight);
+    // recruitment: an isolation set drives one joint and nothing else, so it is
+    // worth less than a compound set; more muscles driven is worth more
+    const groups = exGroups(state, id).length;
+    const sec = (info.s || []).length;
+    let w = (isIsolation(state, id) ? 0.85 : 1)
+      + Math.min(0.24, 0.08 * Math.max(0, groups - 1) + 0.06 * Math.min(3, sec));
+    // stability: free weights demand it, a stack does not
+    const eqs = (info.e || []).map((x) => String(x).toLowerCase());
+    for (const [re, v] of EQ_W) if (eqs.some((x) => re.test(x)) || re.test(info.n)) { w *= v; break; }
+    // range and leverage, counted once each
+    const hay = info.n + " " + eqs.join(" ");
+    let rom = 0;
+    for (const re of ROM_W) if (re.test(hay)) rom++;
+    w *= 1 + Math.min(0.15, rom * 0.05);
+    return Math.round(Math.max(0.6, Math.min(1.35, w)) * 100) / 100;
+  }
+
   function muscleGroups(state, days = 28) {
     const ws = windowWorkouts(state, days, 0);
     const weeks = days / 7;
-    const sets = {}, vol = {}, lastTrained = {};
-    for (const g of GROUP_ORDER) { sets[g] = 0; vol[g] = 0; lastTrained[g] = null; }
+    const sets = {}, eff = {}, vol = {}, lastTrained = {};
+    for (const g of GROUP_ORDER) { sets[g] = 0; eff[g] = 0; vol[g] = 0; lastTrained[g] = null; }
     for (const w of ws) for (const en of w.entries || []) {
       const st = entryStats(en);
       if (!st.sets) continue;
       const gs = exGroups(state, en.id).filter((g) => GROUP_ORDER.includes(g));
       if (!gs.length) continue;
-      // primary group takes full credit, others share it
+      // primary group takes full credit, others share it; how much a set is WORTH
+      // comes from the exercise itself (see exerciseWeight)
+      const wgt = exerciseWeight(state, en.id);
       gs.forEach((g, i) => {
         const share = i === 0 ? 1 : 0.5;
-        sets[g] += st.sets * share;
+        sets[g] += st.sets * share;             // raw — comparable to MEV/MAV/MRV
+        eff[g] += st.sets * share * wgt;        // stimulus — what the score uses
         vol[g] += st.volume * share;
         const d = w.date; if (!lastTrained[g] || d > lastTrained[g]) lastTrained[g] = d;
       });
@@ -828,16 +967,28 @@ const Engine = (() => {
     const out = {};
     for (const g of GROUP_ORDER) {
       const L = LANDMARKS[g];
-      const perWk = sets[g] / weeks;
+      const perWk = sets[g] / weeks;          // raw sets, vs the published landmarks
+      const effPerWk = eff[g] / weeks;        // stimulus-equivalent sets, for the score
       // 100 = at or above the adaptive sweet spot; below that, linear to MEV.
-      let score = perWk <= 0 ? 0
-        : perWk < L.mev ? (perWk / L.mev) * 55
-        : perWk < L.mav ? 55 + ((perWk - L.mev) / (L.mav - L.mev)) * 40
-        : 95 + Math.min(5, ((perWk - L.mav) / Math.max(1, L.mrv - L.mav)) * 5);
+      /* 0 -> 55 up to MEV, 55 -> 95 across MEV..MAV, then a small top-up to 100
+         at MRV, and it FALLS past MRV. It used to keep climbing, so 24 sets/wk
+         (flagged "over MRV") scored 100 while 18 sets/wk ("optimal") scored 98 —
+         the number and the flag disagreed about which week was better. */
+      let score = effPerWk <= 0 ? 0
+        : effPerWk < L.mev ? (effPerWk / L.mev) * 55
+        : effPerWk < L.mav ? 55 + ((effPerWk - L.mev) / (L.mav - L.mev)) * 40
+        : effPerWk <= L.mrv ? 95 + ((effPerWk - L.mav) / Math.max(1, L.mrv - L.mav)) * 5
+        : Math.max(40, 100 - (effPerWk - L.mrv) * 3);
       score = clamp(Math.round(score));
-      const status = perWk <= 0 ? "untrained" : perWk < L.mev ? "below MEV"
-        : perWk <= L.mrv ? (perWk < L.mav ? "MEV→MAV" : "optimal") : "over MRV";
-      out[g] = { group: g, score, setsPerWk: Math.round(perWk * 10) / 10, totalSets: Math.round(sets[g] * 10) / 10,
+      /* Judged on the SAME stimulus-weighted value the score uses. Reading raw
+         sets here while the score read weighted ones let the flag and the number
+         disagree — a group could be "optimal" and score like it was under MEV. */
+      const status = effPerWk <= 0 ? "untrained" : effPerWk < L.mev ? "below MEV"
+        : effPerWk <= L.mrv ? (effPerWk < L.mav ? "MEV→MAV" : "optimal") : "over MRV";
+      out[g] = { group: g, score,
+                 setsPerWk: Math.round(perWk * 10) / 10,
+                 effPerWk: Math.round(effPerWk * 10) / 10,
+                 totalSets: Math.round(sets[g] * 10) / 10,
                  volume: Math.round(vol[g]), last: lastTrained[g], status, landmarks: L };
     }
     return out;
@@ -861,7 +1012,7 @@ const Engine = (() => {
       out.push({ kind: "volume", severity: mg[g].score < 40 ? "high" : "med", group: g,
         title: `${g} is under-trained`, detail: `${mg[g].setsPerWk} sets/wk vs a ${mg[g].landmarks.mev}–${mg[g].landmarks.mav} target.`,
         fix: need > 0
-          ? `Add ~${need} ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
+          ? `Add about ${need} ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
           : `Progressively overload ${g.toLowerCase()}.` });
     }
     // 2. completely untrained
@@ -883,7 +1034,10 @@ const Engine = (() => {
     }
     // 4. quad / hamstring balance
     if (mg.Legs.setsPerWk > 0) {
-      const hs = (state.workouts || []).flatMap((w) => w.entries || []);
+      // windowed like every other check — this read the entire history, so the
+      // quads/hamstrings numbers were all-time while the muscle card beside them
+      // was 28 days, and the two drifted apart the longer he trained.
+      const hs = ws.flatMap((w) => w.entries || []);
       let quad = 0, ham = 0;
       for (const en of hs) {
         const info = exInfo(state, en.id);
@@ -997,11 +1151,15 @@ const Engine = (() => {
     return rows.sort((a, b) => (b.best.date || "").localeCompare(a.best.date || ""));
   }
 
+  /* One PR per exercise per session, whatever moved. reps, volume and tonnage all
+     rise together when you add a set, so counting hits made a single extra set
+     fire three "PRs" and inflated the HUD count and its XP bonus. The individual
+     hits stay on the record for display; the COUNT is the achievement. */
   function prCount(state, days = 28) {
     const b = new Date(); b.setHours(12, 0, 0, 0); b.setDate(b.getDate() - days);
     const from = dstr(b);
     let n = 0;
-    for (const r of prTable(state)) for (const p of r.prs) if (p.date >= from) n += p.hit.length;
+    for (const r of prTable(state)) for (const p of r.prs) if (p.date >= from && p.hit.length) n += 1;
     return n;
   }
 
@@ -1030,7 +1188,22 @@ const Engine = (() => {
       if (wset.has(wk(d))) weeks++;
       else if (i > 0) break;
     }
-    return { days, weeks, lastDate: dates[dates.length - 1], daysSince };
+    /* Longest run ever. XP is recomputed from state on every render, so paying
+       XP for the CURRENT streak made it fall the moment a streak broke: identical
+       training scored 60 XP less ten days later and a level could go DOWN. Paying
+       for the best run instead only ever moves one way. */
+    let bestDays = 0, runD = 0;
+    for (let i = 0; i < dates.length; i++) {
+      runD = i > 0 && daysBetween(dates[i - 1], dates[i]) === 1 ? runD + 1 : 1;
+      if (runD > bestDays) bestDays = runD;
+    }
+    const wks = [...wset].sort();
+    let bestWeeks = 0, runW = 0;
+    for (let i = 0; i < wks.length; i++) {
+      runW = i > 0 && daysBetween(wks[i - 1], wks[i]) === 7 ? runW + 1 : 1;
+      if (runW > bestWeeks) bestWeeks = runW;
+    }
+    return { days, weeks, bestDays, bestWeeks, lastDate: dates[dates.length - 1], daysSince };
   }
 
   /* ---------- XP & levels ---------- */
@@ -1045,7 +1218,7 @@ const Engine = (() => {
     }
     total += prCount(state, 3650) * 20;
     const st = streaks(state);
-    total += st.days * 15 + st.weeks * 50;
+    total += st.bestDays * 15 + st.bestWeeks * 50;   // best ever, never current
     total += (state.bodylog || []).length * 10;
     return total;
   }
@@ -1160,8 +1333,9 @@ const Engine = (() => {
     exInfo, exName, exMode, exGroups, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
+    strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep,
+    nextTarget, kgStep, exerciseWeight, isIsolation,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };

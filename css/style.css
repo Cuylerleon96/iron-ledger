@@ -438,6 +438,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .set-n { width: 16px; text-align: center; font-size: .6rem; color: var(--gold); font-weight: 700; }
 .set-row .times, .set-row .unit { color: #cfe0e8; font-size: .66rem; }
 .set-row .e1 { margin-left: auto; color: var(--gold); font-size: .6rem; text-shadow: var(--outline-sm); }
+.set-row .e1.capped { opacity: .75; font-style: italic; }
 .set-row .inp { padding: .3rem .28rem; min-width: 0; }
 /* keep the row on one line: the delete button used to wrap onto its own line
    because the fields added up to more than the card is wide on a phone */

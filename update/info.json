@@ -1,11 +1,22 @@
 {
-  "versionCode": 18,
-  "versionName": "1.0.17",
+  "versionCode": 19,
+  "versionName": "1.0.18",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "b61176882d6b1e42ddd9b1e267225f03db0730ff105caa9fc829ae5b4178b659",
-  "sizeBytes": 3255431,
+  "sha256": "48a0787b2ee69694fa3b87ad80139da52f601bd8b64552aa81504cf569e73c03",
+  "sizeBytes": 3260080,
   "published": "2026-11-08",
   "notes": [
-    "Fix: the session date looked blank. The date box was the one field missing its styling, so the browser drew a pale control under pale text and the date was invisible. It now reads like every other field"
+    "Fix: the time-to-target estimate never once produced a date. Your trend was fitted against milliseconds instead of days, so every target read as over a year away",
+    "New: every exercise now carries an effort weight. A weighted incline crunch is worth more than a flat one, a machine press less than a barbell press, a compound more than an isolation, and a hard range of motion more than a short one. Derived from the movement itself, so it works for all 930 exercises with nothing to enter, and you can override any of them",
+    "Fix: a session exactly 7, 14, 21 or 28 days ago was counted in TWO weeks at once, which inflated the volume chart, the month-on-month changes and the fatigue read",
+    "Fix: cardio was scored on minutes alone, so a 30 minute stroll scored the same as a 30 minute threshold run and your logged distance was thrown away. Distance now counts, against each sport own scale, and your pace is reported",
+    "Fix: bodyweight and timed exercises such as push-ups and planks had no trend value at all, so they could never show a time-to-target and could never be flagged as stalled",
+    "Fix: past the maximum useful volume the muscle score kept climbing, so overtraining a group scored higher than training it correctly",
+    "Fix: your level could go DOWN. Experience was paid for your current streak rather than your best one, so missing a day could drop a level",
+    "Fix: one improvement was counted as three personal records, because reps, volume and tonnage all rise together",
+    "Fix: tonnage invented a rep count on weighted carries and timed holds, adding weight you never lifted to your totals and badges",
+    "Fix: the advice said Add minus four sets a week. The tilde rendered as a minus sign in the pixel font",
+    "Fix: the year chart months could repeat or overlap, which happened on the 29th to the 31st",
+    "Fix: the quads versus hamstrings check used your entire history while every number beside it used the last 28 days"
   ]
 }

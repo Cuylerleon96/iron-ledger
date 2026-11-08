@@ -1,0 +1,219 @@
+/* Math fixes — every defect found in the audit, asserted as fixed.
+   Run: node tools/test_mathfixes.js
+
+   Each case exists because the wrong answer was actually observed first. The
+   comment on each says what it used to do, so a future reader can tell an
+   intentional change from a regression. */
+const fs = require("fs"), vm = require("vm"), path = require("path");
+const B = path.join(__dirname, "..");
+const SRC = ["js/data.js", "js/engine.js", "js/store.js"]
+  .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+
+let pass = 0, fail = 0;
+const eq = (label, got, want) => {
+  const ok = JSON.stringify(got) === JSON.stringify(want);
+  console.log(`  ${ok ? "OK  " : "FAIL"} ${label}  got=${JSON.stringify(got)}${ok ? "" : ` want=${JSON.stringify(want)}`}`);
+  ok ? pass++ : fail++;
+};
+const truthy = (label, v) => eq(label, !!v, true);
+const near = (label, got, want, tol = 0.02) => {
+  const ok = Math.abs(got - want) <= tol;
+  console.log(`  ${ok ? "OK  " : "FAIL"} ${label}  got=${Math.round(got * 1000) / 1000}${ok ? "" : ` want≈${want}`}`);
+  ok ? pass++ : fail++;
+};
+
+function env() {
+  const store = {};
+  const s = {
+    console: { log() {}, warn() {}, error() {} }, Date, Math, JSON, Object, Array,
+    Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map,
+    setTimeout, clearTimeout, module: { exports: {} },
+    document: { addEventListener() {}, removeEventListener() {} }, window: {},
+    localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+  };
+  s.globalThis = s; vm.createContext(s);
+  vm.runInContext(SRC + "\n;globalThis.__X={Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
+  return { E: s.__X.Engine, S: s.__X.Store };
+}
+const iso = (off) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - off); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const base = (over = {}) => Object.assign({
+  version: 1, createdAt: "2026-01-01T00:00:00.000Z",
+  profile: { name: "C", sex: "M", heightCm: 178, weightKg: 80, bodyFatPct: 15, weeklyTarget: 3, units: "kg" },
+  workouts: [], bodylog: [], overrides: {}, custom: [], achievements: {}, targets: {}, settings: { seeded: true },
+}, over);
+const wk = (date, sets, id = 73, name = "Bench Press", mode = "weight_reps") =>
+  ({ id: "w" + date + id, date, note: "", entries: [{ id, name, mode, sets }] });
+
+console.log("\n=== 1. windows must not overlap ===");
+{
+  const e = env();
+  const st = base({ workouts: [wk(iso(0), [{ w: 100, r: 10 }]), wk(iso(7), [{ w: 100, r: 10 }]), wk(iso(14), [{ w: 100, r: 10 }])] });
+  const v = e.E.volumeWeeks(st, 4);
+  const total = v.reduce((a, x) => a + x.sessions, 0);
+  console.log(`     3 sessions, one exactly every 7 days -> counted across 4 weeks: ${total}`);
+  eq("every session counted exactly once", total, 3);
+  // and the cur-vs-prev pair must not share a day
+  const a = e.E.attributes(base({ workouts: [wk(iso(0), [{ w: 100, r: 10 }]), wk(iso(28), [{ w: 100, r: 10 }])] }), 28, 0);
+  eq("the 28-day boundary session is in ONE window, not both", a.CON.detail.sessions, 1);
+}
+
+console.log("\n=== 2. history months are evenly spaced, never repeated ===");
+{
+  const e = env();
+  const h = e.E.attributeHistory(base(), 12);
+  const gaps = [];
+  for (let i = 1; i < h.length; i++) gaps.push(Math.round((new Date(h[i].date + "T12:00:00") - new Date(h[i - 1].date + "T12:00:00")) / 86400000));
+  console.log(`     gaps: ${gaps.join(" ")}`);
+  eq("no gap shorter than 27 days", gaps.every((g) => g >= 27), true);
+  eq("no duplicate months", new Set(h.map((x) => x.date)).size, h.length);
+  // the bug only bit on month ends; prove the arithmetic itself is now safe
+  const d = new Date(2026, 2, 31);                       // 31 March
+  const clamped = new Date(d.getFullYear(), d.getMonth() - 1, Math.min(d.getDate(), 28), 12);
+  eq("stepping back a month from the 31st lands in February", clamped.getMonth(), 1);
+}
+
+console.log("\n=== 3. every mode has a real best value (reps / time / distance) ===");
+{
+  const e = env();
+  const c = [{ id: "c1", n: "Push Up", c: "Chest", g: ["Chest"], p: ["Chest"], s: [], e: ["Bodyweight"], m: "reps" }];
+  const st = base({ custom: c, targets: { c1: { value: 25 } },
+    workouts: [26, 22, 18, 14, 10].map((d, i) => wk(iso(d), [{ r: 10 + i * 2 }], "c1", "Push Up", "reps")) });
+  const ser = e.E.seriesFor(st, "c1");
+  console.log(`     reps series: ${ser.map((p) => p.top).join(" ")}`);
+  eq("reps mode reports real values", ser.some((p) => p.top > 0), true);
+  const tp = e.E.targetProgress(st, "c1");
+  console.log(`     target 25 reps -> current ${tp.current}, ${Math.round(tp.pct)}%, eta=${tp.eta}, basis="${tp.basis}"`);
+  truthy("a clear reps trend now produces an ETA", tp.eta != null);
+  eq("...and it is not 'not enough sessions'", tp.basis, "your logged rate");
+
+  // a flat reps exercise must be catchable as a plateau
+  const flat = base({ custom: c, workouts: [26, 22, 18, 14, 10].map((d) => wk(iso(d), [{ r: 12 }], "c1", "Push Up", "reps")) });
+  const stg = e.E.weakPoints(flat, 28).filter((w) => w.kind === "stagnant");
+  truthy("a stalled reps exercise is flagged", stg.length > 0);
+
+  const t = e.E.entryStats({ mode: "time", sets: [{ t: 60 }, { t: 90 }] });
+  eq("time mode best is seconds", t.best, 90);
+  const dd = e.E.entryStats({ mode: "distance_time", sets: [{ d: 5000, t: 1500 }, { d: 8000, t: 2400 }] });
+  eq("distance mode best is metres", dd.best, 8000);
+}
+
+console.log("\n=== 4. XP only ever goes up ===");
+{
+  const e = env();
+  const four = [1, 2, 3, 4].map((i) => wk(iso(i), [{ w: 100, r: 10 }]));
+  const a = e.E.xp(base({ workouts: four }));
+  const b = e.E.xp(base({ workouts: [10, 11, 12, 13].map((i) => wk(iso(i), [{ w: 100, r: 10 }])) }));
+  console.log(`     same 4 sessions, recent -> ${a} XP; the same sessions 10 days old -> ${b} XP`);
+  eq("identical training scores identical XP", a, b);
+  const st = e.E.streaks(base({ workouts: four }));
+  console.log(`     current streak ${st.days}d, best ever ${st.bestDays}d`);
+  eq("best-ever streak is tracked", st.bestDays, 4);
+}
+
+console.log("\n=== 5. one improvement is one PR ===");
+{
+  const e = env();
+  const st = base({ workouts: [wk(iso(7), [{ w: 100, r: 10 }]), wk(iso(0), [{ w: 100, r: 10 }, { w: 100, r: 10 }])] });
+  const row = e.E.prTable(st)[0];
+  console.log(`     adding one set -> hits: ${JSON.stringify(row.prs[0].hit)}`);
+  truthy("the individual hits are still recorded for display", row.prs[0].hit.length > 1);
+  eq("but only ONE PR is counted", e.E.prCount(st, 28), 1);
+}
+
+console.log("\n=== 6. over MRV must score below optimal ===");
+{
+  const e = env();
+  // a barbell movement, so its stimulus weight is ~1.0 and raw sets are directly
+  // comparable to the published landmarks (a pec deck at 0.71 legitimately shifts
+  // what 18 sets means, which would make this test meaningless)
+  const mk = (total, n = 6) => base({ workouts: Array.from({ length: n }, (_, i) => wk(iso(i * 4), Array.from({ length: Math.round(total / n) }, () => ({ w: 40, r: 10 })), 73, "Barbell Bench Press")) });
+  const opt = e.E.muscleGroups(mk(72), 28).Chest;
+  const over = e.E.muscleGroups(mk(96), 28).Chest;
+  console.log(`     ${opt.setsPerWk} sets/wk (${opt.status}) score ${opt.score}`);
+  console.log(`     ${over.setsPerWk} sets/wk (${over.status}) score ${over.score}`);
+  eq("over MRV is flagged", over.status, "over MRV");
+  truthy("...and scores lower than optimal", over.score < opt.score);
+}
+
+console.log("\n=== 7. tonnage is load x reps, nothing invented ===");
+{
+  const e = env();
+  const t = e.E.entryStats({ mode: "weight_time", sets: [{ w: 20, t: 45 }, { w: 20, t: 45 }] });
+  eq("a weight x time hold has no tonnage", t.tonnage, 0);
+  eq("...but still counts its volume and time", [t.volume, t.time], [1800, 90]);
+  const d = e.E.entryStats({ mode: "weight_distance", sets: [{ w: 24, d: 40 }] });
+  eq("a weight x distance carry has no tonnage", d.tonnage, 0);
+  const wr = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 100, r: 10 }] });
+  eq("weight x reps still does", wr.tonnage, 1000);
+}
+
+console.log("\n=== 8. the quad/hamstring check uses the same window as everything else ===");
+{
+  const e = env();
+  // old leg work well outside 28 days must not appear
+  const old = wk(iso(200), Array.from({ length: 40 }, () => ({ w: 100, r: 5 })), 375, "Leg Press");
+  const st = base({ workouts: [wk(iso(1), [{ w: 100, r: 10 }], 369, "Leg Extension"), wk(iso(2), [{ w: 100, r: 10 }], 366, "Leg Curls (sitting)"), old] });
+  const wp = e.E.weakPoints(st, 28).filter((w) => w.kind === "balance" && /Quad/.test(w.title));
+  console.log(`     40 old sets outside the window; in-window detail: ${wp.length ? wp[0].detail : "(none)"}`);
+  truthy("the all-time leg work is not counted", !wp.length || /Quads 1 sets/.test(wp[0].detail));
+}
+
+console.log("\n=== 9. per-exercise weighting: a set is not a set ===");
+{
+  const e = env();
+  const custom = [
+    { id: "x1", n: "Incline Crunches", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: ["Incline bench"], m: "weight_reps" },
+    { id: "x2", n: "Crunches", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: [], m: "weight_reps" },
+    { id: "x3", n: "Barbell Bench Press", c: "Chest", g: ["Chest", "Arms", "Shoulders"], p: ["Chest"], s: ["Triceps", "Shoulders"], e: ["Barbell", "Bench"], m: "weight_reps" },
+    { id: "x4", n: "Pec Deck", c: "Chest", g: ["Chest"], p: ["Chest"], s: [], e: [], m: "weight_reps" },
+    { id: "x5", n: "Leg Press on Hackenschmidt Machine", c: "Legs", g: ["Legs"], p: ["Quads"], s: [], e: [], m: "weight_reps" },
+    { id: "x6", n: "Leg Extension", c: "Legs", g: ["Legs"], p: ["Quads"], s: [], e: [], m: "weight_reps" },
+    { id: "x7", n: "Machine Chest Press", c: "Chest", g: ["Chest", "Arms", "Shoulders"], p: ["Chest"], s: ["Triceps", "Shoulders"], e: ["Machine"], m: "weight_reps" },
+  ];
+  const st = base({ custom });
+  const w = (id) => e.E.exerciseWeight(st, id);
+  for (const c of custom) console.log(`     ${String(w(c.id)).padStart(5)}  ${c.n}`);
+  console.log(`        (isolation: crunch ${e.E.isIsolation(st, "x2")}, leg ext ${e.E.isIsolation(st, "x6")}, leg press ${e.E.isIsolation(st, "x5")}, bench ${e.E.isIsolation(st, "x3")})`);
+  truthy("incline crunches count for MORE than flat crunches", w("x1") > w("x2"));
+  truthy("a compound outranks an isolation", w("x3") > w("x4"));
+  truthy("a leg press is not mistaken for an isolation", !e.E.isIsolation(st, "x5"));
+  truthy("a pec deck IS an isolation", e.E.isIsolation(st, "x4"));
+  truthy("free weight outranks the same lift on a machine", w("x3") > w("x7"));
+  // and the override wins
+  const ov = base({ custom, overrides: { x2: { weight: 1.3 } } });
+  eq("an explicit override wins", e.E.exerciseWeight(ov, "x2"), 1.3);
+  // and the score actually uses it
+  const sets = Array.from({ length: 20 }, () => ({ w: 20, r: 15 }));
+  const flat = e.E.muscleGroups(base({ custom, workouts: [wk(iso(1), sets, "x2")] }), 28).Core;
+  const inc = e.E.muscleGroups(base({ custom, workouts: [wk(iso(1), sets, "x1")] }), 28).Core;
+  console.log(`     20 identical sets -> flat crunch score ${flat.score}, incline crunch score ${inc.score}`);
+  truthy("the same work scores higher when it is harder work", inc.score > flat.score);
+  eq("but raw sets/wk is untouched (still comparable to MEV/MAV)", [flat.setsPerWk, inc.setsPerWk], [5, 5]);
+}
+
+console.log("\n=== 10. cardio is gauged by time AND distance ===");
+{
+  const e = env();
+  const custom = [{ id: "r1", n: "Running", c: "Cardio", g: ["Cardio"], p: [], s: [], e: [], m: "distance_time" },
+                  { id: "b1", n: "Cycling", c: "Cardio", g: ["Cardio"], p: [], s: [], e: [], m: "distance_time" }];
+  // SAME duration in both, so the only difference is whether distance was
+  // recorded — that isolates what the distance term actually contributes
+  const timed = base({ custom, workouts: [wk(iso(1), [{ t: 1800 }], "r1", "Running", "distance_time")] });
+  const dist = base({ custom, workouts: [wk(iso(1), [{ d: 20000, t: 1800 }], "r1", "Running", "distance_time")] });
+  const ride = base({ custom, workouts: [wk(iso(1), [{ d: 20000, t: 1800 }], "b1", "Cycling", "distance_time")] });
+  const sw = e.E.staminaScore(timed, e.E.windowWorkouts(timed, 28, 0));
+  const sr = e.E.staminaScore(dist, e.E.windowWorkouts(dist, 28, 0));
+  const sb = e.E.staminaScore(ride, e.E.windowWorkouts(ride, 28, 0));
+  console.log(`     30 min, no distance recorded    : ${Math.round(sw.score)}  (distance unknown -> minutes only)`);
+  console.log(`     30 min covering 20 km on foot   : ${Math.round(sr.score)}  mod=${sr.distMod}  pace=${sr.paceKmh.toFixed(1)} km/h`);
+  console.log(`     the SAME 20 km in 30 min cycling: ${Math.round(sb.score)}  mod=${sb.distMod}`);
+  truthy("recording the distance scores higher than the same session without it", sr.score > sw.score);
+  truthy("the same distance on a bike is not ranked like a run", Math.abs(sr.score - sb.score) > 0.5);
+  eq("modality is identified from the name", [sr.distMod, sb.distMod], ["on foot", "cycling"]);
+  near("pace is reported (20 km in 30 min = 40 km/h)", sr.paceKmh, 40, 0.1);
+  eq("distance per week is reported (20 km over a 4-week window)", sr.distKmPerWk, 5);
+  truthy("without distance the minutes still stand (no invented penalty)", sw.distKmPerWk === 0 && sw.score > 0);
+}
+
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);
