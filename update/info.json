@@ -1,12 +1,14 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.3",
+  "versionCode": 5,
+  "versionName": "1.0.4",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "82c4e8c14257373d2637aa6dc024d2e21720ecd6e8f84e44f5b5fc2f67923c0f",
-  "sizeBytes": 3230849,
+  "sha256": "47a195710c8d1b25e2c552d90910068924dab69e05748c506f07dcd47d1904cb",
+  "sizeBytes": 3231546,
   "published": "2026-11-08",
   "notes": [
-    "Update checks read the release feed directly \u2014 fresh immediately instead of waiting on a CDN cache",
-    "Includes 1.0.2: History lists each exercise's sets, and exercise chips are readable"
+    "Body fat now syncs from your check-ins like weight does \u2014 no need to enter it twice",
+    "Editing weight or body fat in Profile records today's check-in, so there is one source of truth",
+    "Vitality scoring reads body fat from the log, not a stale profile copy",
+    "Includes 1.0.2 and 1.0.3: History sets visible, readable exercise chips, fresher update feed"
   ]
 }
