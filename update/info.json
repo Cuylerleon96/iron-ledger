@@ -1,16 +1,14 @@
 {
-  "versionCode": 10,
-  "versionName": "1.0.9",
+  "versionCode": 11,
+  "versionName": "1.0.10",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "c9a5bef95cc210640ba075f84a29e3c875aad320387f187fa5aff4ab371a665b",
-  "sizeBytes": 3239485,
+  "sha256": "0074064e06f715ad2b0df660daf696a8d3a933a6746a6f42e4116fa4a16ed83e",
+  "sizeBytes": 3240220,
   "published": "2026-11-08",
   "notes": [
-    "Fix: the updater could sit on an old build saying 'up to date' forever. It read a cached copy of the release feed, so the comparison was against the wrong version",
-    "The check now uses two independent channels - the build number and the version name - and takes the newest across every source. If either says an update exists, you get it",
-    "It also reads the release feed, which is not cacheable, so a cached copy of the version file can no longer hide an update",
-    "A check that fails now says why instead of quietly claiming you are up to date; an unreadable version is reported as unknown, never as current",
-    "Installing re-reads the feed first, so the checksum always describes the file actually being downloaded",
-    "Every request is cache-busted and time-boxed, so a slow network fails with a reason instead of hanging"
+    "The app now checks for updates by itself when you open it - no button needed",
+    "It also re-checks when you come back to the app, so leaving it open for weeks can't miss a release",
+    "A new version shows a small gold dot on the Profile tab, so it never has to interrupt you with a popup",
+    "Profile shows what the automatic check found, and when the app was last built against your version"
   ]
 }
