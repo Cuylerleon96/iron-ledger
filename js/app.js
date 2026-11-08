@@ -442,6 +442,8 @@
     $("#btn-import").addEventListener("click", importDialog);
     $("#btn-save").addEventListener("click", saveDraft);
     const del = $("#btn-del"); if (del) del.addEventListener("click", () => {
+      // Irreversible and it can be a whole session of work, so confirm once.
+      if (!confirm("Delete this session? This cannot be undone.")) return;
       Store.deleteWorkout(draft.id); draft = newDraft(); toast("Session deleted", "warn"); render();
     });
   }
@@ -1022,7 +1024,7 @@
     const data = el("section", { class: "card" });
     data.innerHTML = `
       <div class="card-head"><h3>Your data</h3><span class="muted">local-first — nothing leaves this device</span></div>
-      <p class="muted small">Everything is stored in this browser. Export a backup regularly — it is the only copy.</p>
+      <p class="muted small">Kept on this device only — a working copy, a rolling backup, and a mirror in app storage. An export is the one copy that survives a lost or wiped phone, so take one now and then.</p>
       <div class="row">
         <button class="btn" id="d-exp">Export JSON</button>
         <button class="btn" id="d-csv">Export CSV</button>
@@ -1074,7 +1076,11 @@
       });
       inp.click();
     });
-    const bak = $("#d-bak", data); if (bak) bak.addEventListener("click", () => { if (Store.loadBackup()) { toast("Backup restored", "good"); render(); } });
+    const bak = $("#d-bak", data); if (bak) bak.addEventListener("click", () => {
+      // This replaces everything currently in the app with an older snapshot.
+      if (!confirm("Replace everything with the previous backup? Current data will be discarded.")) return;
+      if (Store.loadBackup()) { toast("Backup restored", "good"); render(); }
+    });
     $("#d-reset", data).addEventListener("click", () => {
       if (confirm("Delete all workouts, logs and profile on this device? Export first if unsure.")) { Store.reset(); S = Store.state; draft = null; toast("Reset", "warn"); render(); }
     });
@@ -1088,15 +1094,38 @@
     toast("Loaded your 7 Nov session", "good");
   }
 
-  function download(name, text, type) {
+  /* An <a download> of a blob URL is a NO-OP inside a WebView: no download is
+     started, and nothing is registered to catch one. On Android the export
+     therefore goes through the native bridge, which writes a real file into
+     app storage and offers to send it off-device — that second half is the part
+     that makes a backup survive a lost phone. The blob path stays for the browser
+     build, where it genuinely works. */
+  async function download(name, text, type) {
+    const P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.AppUpdater;
+    if (P && P.exportFile) {
+      try {
+        const r = await P.exportFile({ name, data: text, mime: type });
+        toast("Saved to app storage — pick where to send it", "good", 6000);
+        return r;
+      } catch (e) {
+        toast("Export failed: " + ((e && e.message) || e), "warn", 7000);
+        return null;
+      }
+    }
     const b = new Blob([text], { type });
     const a = el("a", { href: URL.createObjectURL(b), download: name });
     document.body.append(a); a.click(); a.remove();
     toast("Downloaded " + name);
+    return null;
   }
 
   /* ================= boot ================= */
   function boot() {
+    // A save that fails (storage full) leaves the screen showing data that is not
+    // on disk. Say so immediately instead of finding out after a crash.
+    if (typeof Store !== "undefined" && Store.setSaveErrorHandler) {
+      Store.setSaveErrorHandler(() => toast("Storage is full — that change may not have been saved. Export a backup.", "warn", 9000));
+    }
     buildIndex();
     // first run: seed the example session so the app is not empty
     if (!S.settings.seeded && !S.workouts.length && typeof SEED_WORKOUT !== "undefined") seedData();

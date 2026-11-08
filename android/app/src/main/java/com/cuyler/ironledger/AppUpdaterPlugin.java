@@ -18,6 +18,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
@@ -34,6 +35,8 @@ import java.util.Locale;
  * Downloading happens here rather than in JS so a multi-MB APK never has to
  * cross the bridge as base64, and so the install intent can be raised directly
  * against a FileProvider URI.
+ *
+ * It also writes data exports, because a WebView cannot download one.
  */
 @CapacitorPlugin(name = "AppUpdater")
 public class AppUpdaterPlugin extends Plugin {
@@ -167,6 +170,50 @@ public class AppUpdaterPlugin extends Plugin {
                 }
             }
         }).start();
+    }
+
+    /**
+     * Write an export to app-specific EXTERNAL storage and offer to send it away.
+     *
+     * An <a download> of a blob URL does nothing in a WebView: no download starts
+     * and nothing here was registered to catch one, so the Export buttons looked
+     * live and saved nothing. App-specific external storage needs no runtime
+     * permission, is reachable over USB and by a file manager, and the share
+     * chooser is the part that actually gets a backup off the phone.
+     */
+    @PluginMethod
+    public void exportFile(PluginCall call) {
+        String name = call.getString("name", "iron-ledger-export.json");
+        String data = call.getString("data", "");
+        String mime = call.getString("mime", "application/json");
+        try {
+            File dir = new File(getContext().getExternalFilesDir(null), "exports");
+            if (!dir.exists() && !dir.mkdirs()) throw new Exception("could not create " + dir);
+            // keep the name tame: it is used as a filename
+            File out = new File(dir, name.replaceAll("[^A-Za-z0-9._-]", "_"));
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                fos.write(data.getBytes(StandardCharsets.UTF_8));
+                fos.flush();
+            }
+            if (out.length() == 0) throw new Exception("wrote an empty file");
+
+            Uri uri = FileProvider.getUriForFile(getContext(),
+                    getContext().getPackageName() + ".fileprovider", out);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType(mime);
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(send, "Save or send your backup");
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(chooser);
+
+            JSObject res = new JSObject();
+            res.put("path", out.getAbsolutePath());
+            res.put("bytes", out.length());
+            call.resolve(res);
+        } catch (Exception e) {
+            call.reject("export failed: " + e.getMessage());
+        }
     }
 
     private void install(File apk) {

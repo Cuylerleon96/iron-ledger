@@ -18,7 +18,7 @@ const Store = (() => {
     overrides: {},     // exId -> {mode?, g?, n?}
     custom: [],        // user-created exercises
     achievements: {},  // id -> ISO date
-    settings: { sound: false, seeded: false },
+    settings: { seeded: false },
   });
 
   const migrate = (s) => {
@@ -26,6 +26,8 @@ const Store = (() => {
     const out = Object.assign({}, d, s || {});
     out.profile = Object.assign({}, d.profile, (s && s.profile) || {});
     out.settings = Object.assign({}, d.settings, (s && s.settings) || {});
+    delete out.settings.sound;   // declared long ago and never read: a setting the
+                                 // user can neither see nor change is dead schema
     // Date-order both logs HERE, the single point every load passes through.
     // upsertWorkout/addBodyLog already sort on write, but an imported or
     // restored state (or one written by an older build) can arrive unsorted —
@@ -90,6 +92,7 @@ const Store = (() => {
     return true;
   }
 
+  let onSaveError = null;     // set by the UI so a failed save can be announced
   let saveTimer = null;
   function save(immediate) {
     const doIt = () => {
@@ -102,7 +105,14 @@ const Store = (() => {
         if (typeof Native !== "undefined" && Native.available && allowMirror(state)) {
           Native.write(JSON.stringify(state));
         }
-      } catch (e) { console.error("save failed", e); }
+      } catch (e) {
+        console.error("save failed", e);
+        // A QuotaExceededError means the save DID NOT happen while the screen
+        // still shows the session as recorded. Staying silent here loses a
+        // workout the user believes they logged.
+        const quota = !!e && (e.name === "QuotaExceededError" || /quota|exceeded/i.test(String(e.message || e)));
+        if (quota && onSaveError) { try { onSaveError(); } catch (err) { /* never throw from a save */ } }
+      }
     };
     if (immediate) { clearTimeout(saveTimer); doIt(); return; }
     clearTimeout(saveTimer); saveTimer = setTimeout(doIt, 250);
@@ -171,7 +181,9 @@ const Store = (() => {
   function deleteCustom(id) {
     allowShrink = true;
     state.custom = state.custom.filter((x) => x.id !== id);
-    state.workouts.forEach((w) => (w.entries = (w.entries || []).filter((e) => e.id !== id)));
+    // Past sessions KEEP their sets. Each entry carries its own name and mode, so
+    // the history still renders correctly — and silently rewriting training the
+    // user already logged is data loss they never asked for.
     save(true);
     allowShrink = false;
   }
@@ -197,7 +209,22 @@ const Store = (() => {
       const bdates = new Set(state.bodylog.map((b) => b.date));
       incoming.bodylog.forEach((b) => { if (!bdates.has(b.date)) state.bodylog.push(b); });
       state.achievements = Object.assign({}, incoming.achievements, state.achievements);
+      // The profile and per-exercise overrides were being dropped, so importing a
+      // backup onto a fresh install left the user with sessions but no name,
+      // height, goal or units — a "restore" that silently lost half the ledger.
+      Object.keys(incoming.overrides || {}).forEach((k) => {
+        if (!state.overrides[k]) state.overrides[k] = incoming.overrides[k];
+      });
+      // Only fill what is unset, so importing an old file can never clobber a
+      // newer local edit.
+      ["name", "sex", "units"].forEach((k) => {
+        if (!state.profile[k] && incoming.profile[k]) state.profile[k] = incoming.profile[k];
+      });
+      ["heightCm", "weightKg", "bodyFatPct", "goalWeightKg"].forEach((k) => {
+        if (state.profile[k] == null && incoming.profile[k] != null) state.profile[k] = incoming.profile[k];
+      });
       state.workouts.sort((a, b) => a.date.localeCompare(b.date));
+      state.bodylog.sort((a, b) => a.date.localeCompare(b.date));
     }
     save(true);
     return state;
@@ -293,6 +320,7 @@ const Store = (() => {
     addCustom, updateCustom, deleteCustom, setOverride, unlock,
     exportJSON, importJSON, exportCSV, reset, loadBackup, hasBackup, uid, migrate,
     bootstrapNative, recover, snapshotPreUpdate, recoverFromSnapshot, richness,
+    setSaveErrorHandler: (fn) => { onSaveError = fn; },
   };
 })();
 if (typeof module !== "undefined") module.exports = Store;

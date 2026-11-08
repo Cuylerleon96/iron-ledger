@@ -418,7 +418,11 @@ const Engine = (() => {
     }
     const avgRest = restN ? restSum / restN : null;
     // share of the session spent working rather than resting
-    const density = (workSec + restSum) > 0 ? Math.round((workSec / (workSec + restSum)) * 100) : null;
+    // Density needs rest to mean anything: with no rest logged the work-time
+    // fraction is trivially 100%, which reads as "perfectly efficient session"
+    // when the truth is that we do not know.
+    const density = restN > 0 && (workSec + restSum) > 0
+      ? Math.round((workSec / (workSec + restSum)) * 100) : null;
 
     let score;
     if (avgRest != null) {
@@ -510,7 +514,10 @@ const Engine = (() => {
       const v = bmi < 18.5 ? clamp(100 - (18.5 - bmi) * 12) : bmi > 25 ? clamp(100 - (bmi - 25) * 7) : 100;
       parts.push({ w: 0.2, v }); used.push("BMI");
     }
-    if (!parts.length) return { score: 45, basis: "no data", log: log.length, used: [] };
+    // No measurements means no score, exactly like the other five attributes.
+    // Returning a middle value here implied "Decent" body composition on a fresh
+    // install, which is a number the user never gave us.
+    if (!parts.length) return { score: 0, basis: "no data", log: log.length, used: [] };
     const tw = parts.reduce((a, p) => a + p.w, 0);
     let score = clamp(parts.reduce((a, p) => a + p.v * p.w, 0) / tw);
     // BMI alone is a weak signal and says nothing about body composition,
@@ -890,7 +897,8 @@ const Engine = (() => {
       restTotal += s.totalRest; restN += s.restN; workSec += s.workSec;
     }
     const avgRest = restN ? restTotal / restN : null;
-    const density = (workSec + restTotal) > 0 ? Math.round((workSec / (workSec + restTotal)) * 100) : null;
+    const density = restN > 0 && (workSec + restTotal) > 0
+      ? Math.round((workSec / (workSec + restTotal)) * 100) : null;
     const totalXp = xp(state);
     return {
       sessions: ws.length, tonnage, sets, reps, timeMin: time / 60, distKm: dist / 1000,

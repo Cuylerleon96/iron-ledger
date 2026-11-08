@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- legacy external root: restricted on Android 10+, kept for the updater -->
     <external-path name="my_images" path="." />
+    <!-- the download/export staging area -->
     <cache-path name="my_cache_images" path="." />
+    <!-- getExternalFilesDir(..)/exports — where data backups are written. Needs
+         its own entry: external-path does NOT cover app-specific directories, so
+         the share URI would fail with an IllegalArgumentException. -->
+    <external-files-path name="exports" path="." />
 </paths>
