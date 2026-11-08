@@ -1,12 +1,12 @@
 {
-  "versionCode": 32,
-  "versionName": "1.0.31",
+  "versionCode": 33,
+  "versionName": "1.0.32",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "4934a0e76a52adccf1ee5f6aff788ed7f370859ada1fd3dd10434c7503627e72",
-  "sizeBytes": 3269086,
+  "sha256": "196bbc2d6d40199d3199894cf73c0c1be20488b61ff2e2e6e4f620c16c08eefb",
+  "sizeBytes": 3269128,
   "published": "2026-11-08",
   "notes": [
-    "Two corrections from the source research. Knee push-up is 0.49, not a midpoint: Ebben/Wurm 2011 and Suprak 2011 independently measure 49 percent, with Gouvali 2005 at 52.9 \u2014 two of three agree so the consensus wins",
-    "Rows DO have measured data, for the suspension/TRX row: Melrose and Dawes dynamometer values by body angle from vertical are 37.44 percent at 30 degrees, 52.88 at 45, 68.08 at 60, 79.38 at 75. The reference 0.60 sits near 50 degrees; the endpoints are keyed on the direction word, upright being the easier end. A plain-bar inverted row has no independent measured figure, so its reference stands. Also recorded: the push-up relationship with elevation is roughly LINEAR in height, about 0.20 percent body mass per 30 cm, not a pure cosine"
+    "Fixes a bug I shipped and did not catch: the new row factors were UNREACHABLE. A factor and a bodyweight gate are two separate decisions, and the row variants were not in the gate list, so the numbers were set and never used. Every new factor now has to prove its gate is open in the test, not just that the number was assigned",
+    "Values: incline/upright row 0.37, feet-elevated row 0.79, inverted row 0.60, knee push-up 0.49 (two-study consensus), push-ups 0.64, incline 0.55, decline 0.74, incline crunches 0.85"
   ]
 }

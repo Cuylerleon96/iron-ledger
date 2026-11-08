@@ -602,9 +602,19 @@ console.log("\n=== 23. push-up variants, from published force-plate measurement 
   // knee push-up sits between
   eq("knee push-up takes the two-study consensus, not a midpoint", e.E.bwFactor("Knee Push-ups"), 0.49);
   // rows are measured, for the suspension variant; endpoints key on the direction word
+  /* bwFactor() pattern-matches on its own, so a factor can be set and still be
+     UNREACHABLE if isBodyweight() does not let it through. Asserting only the
+     factor let exactly that bug through once: the row rules were dead for a
+     publish. Every new factor now has to prove its gate is open too. */
   eq("an upright/incline row is the easier end", e.E.bwFactor("Incline Row"), 0.37);
+  eq("...and its bodyweight gate is actually open", e.E.isBodyweight("Incline Row"), true);
   eq("a feet-elevated row is the harder end", e.E.bwFactor("Feet-Elevated Row"), 0.79);
+  eq("...and its bodyweight gate is actually open", e.E.isBodyweight("Feet-Elevated Row"), true);
   eq("a plain inverted row keeps its reference", e.E.bwFactor("Inverted Row"), 0.60);
+  eq("...and it is gated on", e.E.isBodyweight("Inverted Row"), true);
+  // and every push-up variant must be reachable
+  for (const n of ["Push-ups", "Incline Push-ups", "Decline Push-ups", "Knee Push-ups"])
+    eq(`'${n}' is a live bodyweight movement`, e.E.isBodyweight(n), true);
   truthy("...and the harder end is the larger fraction", e.E.bwFactor("Feet-Elevated Row") > e.E.bwFactor("Incline Row"));
 }
 

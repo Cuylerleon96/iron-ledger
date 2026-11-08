@@ -201,7 +201,7 @@ const Engine = (() => {
        that share a flat-ish arc. */
     [/sit.?up|crunch|leg raise|knee raise|\bv.?up\b/i, 0.40],
   ];
-  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|inverted row|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
+  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|(incline|decline|feet.?elevated|horizontal|standing|upright|high anchor|low anchor|australian|bodyweight) row|\binverted row\b|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
   const bwFactor = (name) => {
     const n = String(name || "");
     for (const [re, f] of BW_FACTOR) if (re.test(n)) return f;
