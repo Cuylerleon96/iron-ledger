@@ -74,7 +74,7 @@ function appEnv(seed) {
   vm.createContext(s);
   const state = base(seed || {});
   vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(state))});`, s);
-  const src = ["js/data.js", "js/engine.js", "js/store.js", "js/app.js"]
+  const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/app.js"]
     .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
   vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
   return { A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, LIB: s.__X.EXERCISE_LIB, calls };
@@ -536,8 +536,9 @@ console.log("\n=== 20. the consistency grid starts at the first logged workout =
   eq("2 weeks daily draws 14", Object.keys(e.E.dayMap(mk([...Array.from({ length: 14 }, (_, i) => 13 - i)]), 371)).length, 14);
   // an established user is still capped at the full year
   eq("a 4-month history is capped at 371 cells", Object.keys(e.E.dayMap(mk([...Array.from({ length: 60 }, (_, i) => i * 2)]), 371)).length, 119);
-  // and an empty account must not crash or claim anything
-  eq("an empty account still returns a full window", Object.keys(e.E.dayMap(mk([]), 371)).length, 371);
+  // an empty account shows an EMPTY state, not a year of blank cells (item 5a
+  // deliberately changed this: the old fallback drew 371 empty days)
+  eq("an empty account draws no grid, not 371 blanks", Object.keys(e.E.dayMap(mk([]), 371)).length, 0);
   eq("...with nothing trained", Object.values(e.E.dayMap(mk([]), 371)).filter((d) => d.sessions > 0).length, 0);
 
   // the card must report the real span, not a fixed year
@@ -545,6 +546,9 @@ console.log("\n=== 20. the consistency grid starts at the first logged workout =
   truthy("the label uses the actual span", /of the last \$\{span\} \$\{pl\(span, "day"\)\}/.test(appSrc));
   truthy("...and says so when it is short", /since you started/.test(appSrc));
   eq("the hardcoded 371-day label is gone", /of the last 371 days/.test(appSrc), false);
+  // and an empty account renders an empty state, not a blank grid
+  truthy("the dashboard shows an empty state for a brand-new account", /No sessions yet/.test(appSrc));
+  truthy("...and no heatmap is drawn for it", /\$\{trained\} of the last/.test(appSrc));
 }
 
 console.log("\n=== 21. a bodyweight movement must count the body, not just the plate ===");
@@ -816,6 +820,81 @@ console.log("\n=== 28. the dead 'Hide from lists' control is gone ===");
   const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
   eq("no dt-hide control remains", /dt-hide/.test(src), false);
   eq("and no listener for it either", /#dt-hide/.test(src), false);
+}
+
+console.log("\n=== 29. custom exercises can be renamed and deleted (item 3) ===");
+{
+  /* Store.updateCustom / deleteCustom existed but were never called from the UI,
+     so a typo (or a notes-importer fuzzy match) was permanent and kept feeding
+     the muscle-group analysis. The detail modal now offers both, and deleting
+     DETACHES the logged sets (keeps history, stops the analysis pollution)
+     rather than blocking. */
+  const h = appEnv({});
+  h.A.buildIndex();
+  h.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
+  h.A.buildIndex();
+  eq("a custom exercise is detected", h.A.isCustomEx("uz"), true);
+  eq("a library exercise is not custom", h.A.isCustomEx(73), false);
+  truthy("the modal renders rename + delete for a custom exercise",
+    /dt-rename/.test(h.A.customControlsHTML("uz")) && /dt-del/.test(h.A.customControlsHTML("uz")));
+  eq("...and nothing for a library exercise", h.A.customControlsHTML(73), "");
+  eq("rename applies", h.A.renameCustomEx("uz", "Fixed Press"), true);
+  eq("the stored name changed", h.S.state.custom.find((x) => x.id === "uz").n, "Fixed Press");
+  eq("a blank rename is refused", h.A.renameCustomEx("uz", "   "), false);
+  eq("...and changed nothing", h.S.state.custom.find((x) => x.id === "uz").n, "Fixed Press");
+  h.S.upsertWorkout({ id: "wz", date: iso(3), entries: [{ id: "uz", name: "Fixed Press", mode: "weight_reps", sets: [{ w: 40, r: 10 }] }] });
+  h.A.deleteCustomEx("uz");
+  eq("delete removes it from the custom list", h.S.state.custom.length, 0);
+  eq("but keeps the logged set (detach, not silent data loss)", h.S.state.workouts[0].entries.length, 1);
+  eq("and stops it feeding the muscle analysis", h.E.exGroups(h.S.state, "uz"), []);
+  // the modal actually wires the controls (not a dead control)
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the detail modal embeds the custom controls", /\$\{customControlsHTML\(id\)\}/.test(src));
+  truthy("...and binds rename + delete listeners", /#dt-rename/.test(src) && /#dt-del/.test(src));
+}
+
+console.log("\n=== 30. import: merge vs confirm-guarded replace (item 4) ===");
+{
+  /* importJSON supported a replace mode, but the only UI path hard-coded merge,
+     so a user whose state had gone inconsistent had no way to restore a clean
+     export over it. A clearly-labelled, confirm-guarded replace path now exists
+     and its warning names exactly what is lost. */
+  const h = appEnv({});
+  h.A.buildIndex();
+  h.S.upsertWorkout({ id: "w1", date: iso(10), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 80, r: 5 }] }] });
+  h.S.addBodyLog({ date: iso(10), weightKg: 82 });
+  h.S.addCustom({ id: "uz", n: "Typo", c: "Chest", g: ["Chest"], p: ["Chest"], s: [], e: [], m: "weight_reps", d: "" });
+  const warn = h.A.replaceImportWarning();
+  truthy("the warning counts the workouts at risk", /1 workout\b/.test(warn));
+  truthy("...and the bodyweight logs", /1 bodyweight log\b/.test(warn));
+  truthy("...and the custom exercises", /1 custom exercise\b/.test(warn));
+  truthy("...and says it cannot be undone", /cannot be undone/i.test(warn));
+  const srcEnv = appEnv({});
+  srcEnv.S.upsertWorkout({ id: "w9", date: iso(40), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 60, r: 5 }] }] });
+  const file = srcEnv.S.exportJSON();
+  h.A.importData(file, "merge");
+  eq("merge is additive: the local workout survives", h.S.state.workouts.some((w) => w.id === "w1"), true);
+  eq("...and the imported one is added", h.S.state.workouts.some((w) => w.id === "w9"), true);
+  h.A.importData(file, "replace");
+  eq("replace discards the local workout", h.S.state.workouts.some((w) => w.id === "w1"), false);
+  eq("...leaving only the file's", h.S.state.workouts.map((w) => w.id), ["w9"]);
+  const src2 = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("a clearly-labelled replace control exists", /Restore from file \(replace all\)/.test(src2));
+  truthy("...and it routes through the replace mode, not merge", /pickImport\("replace"\)/.test(src2));
+}
+
+console.log("\n=== 31. the seed affordance is reachable (item 5b) ===");
+{
+  /* boot() set settings.seeded true before the first render, so the condition
+     that rendered the "Load my 7 Nov session" button never fired and it was
+     unreachable. It now shows whenever that session is not already logged. */
+  const h = appEnv({});
+  h.A.buildIndex();
+  eq("a fresh account offers the seed session", h.A.shouldShowSeed(), true);
+  h.S.upsertWorkout({ id: "seed-2026-11-07", date: "2026-11-07", entries: [] });
+  eq("once loaded it is no longer offered", h.A.shouldShowSeed(), false);
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  eq("the dead seeded===false condition is gone", /settings\.seeded === false \?/.test(src), false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

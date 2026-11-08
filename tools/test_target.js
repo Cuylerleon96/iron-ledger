@@ -73,5 +73,23 @@ t = Engine.nextTarget(Store.state, 76);
 eq("sessions counted", t.sessions, 2);
 eq("flat sessions report ~zero trend", Math.round(t.trend), 0);
 
+console.log("--- an exercise on two cards in one session counts ONCE (merge) ---");
+/* The bug: nextTarget iterated the raw per-workout entries, while mergedEntry /
+   seriesFor / compareLast merge an exercise's cards within one workout. So an
+   exercise logged on two cards in one session counted as TWO sessions and its
+   trend measured a session against its OWN second card, inflating progress. */
+Store.reset();
+Store.addBodyLog({ date: "2026-01-01", weightKg: 82 });
+Store.upsertWorkout({ id: "t0", date: "2026-11-01",
+  entries: [{ id: 76, name: "Bench Press", mode: "weight_reps", sets: [{ w: 90, r: 5 }] }] });
+Store.upsertWorkout({ id: "t1", date: "2026-11-07", entries: [
+  { id: 76, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] },   // heavy card
+  { id: 76, name: "Bench Press", mode: "weight_reps", sets: [{ w: 60, r: 10 }] },   // back-off card
+] });
+t = Engine.nextTarget(Store.state, 76);
+eq("two workouts are two sessions, not three", t.sessions, 2);
+eq("the reference is the session's best set, not its own second card", t.last, { w: 100, r: 5 });
+eq("progress is measured against the PREVIOUS session (trend > 0)", t.trend > 0, true);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

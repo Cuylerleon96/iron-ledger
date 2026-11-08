@@ -151,6 +151,27 @@ console.log("=== consistency calendar ===");
   truthy("a day with no training is zeroed", Object.values(dm).some((d) => d.sessions === 0 && d.sets === 0));
 }
 
+console.log("=== an empty account has an empty calendar ===");
+{
+  // dayMap fell back to the full 371-day span when there was no first workout,
+  // so a brand-new account saw a year of empty cells. No sessions = no grid.
+  const empty = env({});
+  eq("no sessions means no calendar, not 371 blanks", Object.keys(empty.E.dayMap(empty.S.state, 371)).length, 0);
+}
+
+console.log("=== deleting a custom exercise detaches its logged sets ===");
+{
+  const e = env({});
+  e.S.addCustom({ id: "uz", n: "Typo Machien Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
+  e.S.upsertWorkout({ id: "wz", date: "2026-10-01", entries: [{ id: "uz", name: "Typo Machien Press", mode: "weight_reps", sets: [{ w: 40, r: 10 }] }] });
+  eq("the custom exercise feeds its group into the analysis", e.E.exGroups(e.S.state, "uz"), ["Chest"]);
+  e.S.deleteCustom("uz");
+  eq("it is gone from the custom list", e.S.state.custom.length, 0);
+  eq("its logged sets stay on the workout (no silent data loss)", e.S.state.workouts.length, 1);
+  eq("...and the entries are untouched", e.S.state.workouts[0].entries.length, 1);
+  eq("it no longer contributes any muscle group", e.E.exGroups(e.S.state, "uz"), []);
+}
+
 console.log("=== body-fat goal ===");
 {
   const e = env({});

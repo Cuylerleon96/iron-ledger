@@ -15,6 +15,7 @@ a release which does not exist yet would offer an update that cannot download.
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -33,6 +34,55 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 VERSION_FILE = ROOT / "android/version.properties"
 FEED_FILE = ROOT / "update/info.json"
 APK = ROOT / "android/app/build/outputs/apk/release/app-release.apk"
+
+# The Android build needs a JDK 17. The system default here is JDK 27, which dies
+# inside AGP's JdkImageTransform (jlink against
+# platforms/android-34/core-for-system-modules.jar). Exporting JAVA_HOME and the
+# SDK root by hand was previously the ONLY way to get a build — so a publish run
+# any other way half-built and failed with a confusing jlink error. Resolve and
+# export both here, and refuse to build at all if either is missing.
+JDK17_CANDIDATES = (
+    "/usr/lib/jvm/java-17-openjdk",
+    "/usr/lib/jvm/java-17-openjdk-amd64",
+)
+SDK_ROOT = pathlib.Path.home() / "android-sdk"
+
+
+def find_java17():
+    candidates = []
+    env_home = os.environ.get("JAVA_HOME")
+    if env_home:
+        candidates.append(env_home)
+    candidates.extend(JDK17_CANDIDATES)
+    candidates.extend(str(d) for d in sorted(pathlib.Path("/usr/lib/jvm").glob("java-17*")))
+    for c in candidates:
+        # accept only a REAL JDK 17: a 27 here reproduces the exact broken build
+        release = pathlib.Path(c, "release")
+        if not pathlib.Path(c, "bin/java").exists():
+            continue
+        if release.exists() and "JAVA_VERSION=\"17" not in release.read_text(errors="replace"):
+            continue
+        return c
+    return None
+
+
+def configure_build_env():
+    java_home = find_java17()
+    if java_home is None:
+        sys.exit("FATAL: no Java 17 JDK found (looked at $JAVA_HOME and /usr/lib/jvm/java-17*). "
+                 "The Android build cannot run on the default JDK 27 — AGP's JdkImageTransform "
+                 "fails jlink against platforms/android-34/core-for-system-modules.jar. "
+                 "Install openjdk 17 and re-run.")
+    if not (SDK_ROOT / "platforms").is_dir():
+        sys.exit(f"FATAL: Android SDK root not found at {SDK_ROOT} (no platforms/ dir). "
+                 f"Set ANDROID_HOME/ANDROID_SDK_ROOT to the SDK root itself and re-run.")
+    os.environ["JAVA_HOME"] = java_home
+    os.environ["ANDROID_HOME"] = str(SDK_ROOT)
+    os.environ["ANDROID_SDK_ROOT"] = str(SDK_ROOT)
+    os.environ["PATH"] = str(pathlib.Path(java_home, "bin")) + os.pathsep + os.environ.get("PATH", "")
+    print(f"  JAVA_HOME={java_home}")
+    print(f"  ANDROID_HOME={SDK_ROOT}")
+
 
 
 def token():
@@ -124,6 +174,10 @@ def main():
     ap.add_argument("--replace-release", action="store_true",
                     help="deliberately re-cut an existing tag (replaces its asset AND notes)")
     args = ap.parse_args()
+
+    # Fail fast, before any side effect: resolve the JDK 17 + SDK and export them
+    # so the Android build works regardless of the caller's shell.
+    configure_build_env()
 
     code, name = read_version()
     if not args.no_bump:

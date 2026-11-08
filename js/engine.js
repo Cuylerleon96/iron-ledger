@@ -586,11 +586,15 @@ const Engine = (() => {
 
     const sessions = [];
     for (const w of (state.workouts || []).slice().sort((a, b) => a.date.localeCompare(b.date))) {
-      for (const en of w.entries || []) {
-        if (en.id !== exId) continue;
-        const st = entryStats(en);
-        if (st.sets) sessions.push({ date: w.date, st, sets: en.sets || [] });
-      }
+      // Same merge as the rest of the engine: an exercise logged on two cards in
+      // one workout is ONE session, not two. Iterating w.entries raw here made a
+      // single session count twice and let the trend compare a session against
+      // its own second card (e.g. against 60kg x 10 instead of the session's
+      // 100kg x 5 best), inflating apparent progress.
+      const en = mergedEntry(w, exId);
+      if (!en) continue;
+      const st = entryStats(en);
+      if (st.sets) sessions.push({ date: w.date, st, sets: en.sets || [] });
     }
     if (!sessions.length) return null;
     const last = sessions[sessions.length - 1];
@@ -1203,7 +1207,11 @@ const Engine = (() => {
        someone who had trained every single day since installing it. Days before
        the account existed are not rest days — they are not days. */
     const first = (state.workouts || []).map((w) => w.date).filter(Boolean).sort()[0] || null;
-    const span = first ? Math.min(days, Math.max(1, daysBetween(first, dstr(anchor)) + 1)) : days;
+    /* No sessions at all: the account is empty, not a year of missed days. Return
+       an empty map so the grid shows an empty state instead of 371 blank cells.
+       Only a real first workout anchors the span. */
+    if (!first) return out;
+    const span = Math.min(days, Math.max(1, daysBetween(first, dstr(anchor)) + 1));
     for (let i = 0; i < span; i++) {
       const d = new Date(anchor); d.setDate(d.getDate() - i);
       out[dstr(d)] = { sets: 0, tonnage: 0, sessions: 0, groups: [] };

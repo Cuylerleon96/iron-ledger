@@ -1,14 +1,16 @@
 {
-  "versionCode": 36,
-  "versionName": "1.0.35",
+  "versionCode": 37,
+  "versionName": "1.0.36",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "26d238372f543e8b7d46e517bc9e67b11d23309e1c9849bab7df6a506f80ca55",
-  "sizeBytes": 3276255,
+  "sha256": "14a4362459fcc38b07f8a69edb1bfb58afdd8aeb618acbcbef3383d37f8abe93",
+  "sizeBytes": 3278177,
   "published": "2026-11-08",
   "notes": [
-    "Muscle-balance card: the bars and the radar now use the same effort-weighted scale as the status and score, with the raw set count still shown and labelled raw",
-    "Bodyweight load factors: the gate now admits every movement that has a factor, so lunges, split squats, step-ups, calf raises, inverted rows and v-ups are counted instead of being silently dropped",
-    "Track-as: the Log screen's mode override now saves for short exercise ids too - it used to skip ids 9 to 99, including Bench Press id 73",
-    "Removed the dead 'Hide from lists' button from the exercise detail modal - it had no listener and did nothing"
+    "Track-as: re-confirmed the Log screen control and the exercise detail modal both save the mode override through one shared path with no id-length gate, so Bench Press id 73 and every 9-99 id persists",
+    "publish.py now sets JAVA_HOME to the JDK 17 and ANDROID_HOME/ANDROID_SDK_ROOT to the SDK root, and fails loudly if either is missing, so a release no longer needs the shell pre-configured",
+    "Next-session target now merges an exercise's cards within a session, so an exercise logged twice in one workout counts as one session and its trend is no longer measured against its own second card",
+    "Custom exercises can be renamed and deleted from the exercise detail modal; deleting keeps the logged sets but detaches them from the muscle-group analysis",
+    "Data screen: a clearly-labelled, confirm-guarded 'Restore from file (replace all)' now sits beside Import (merge), and its confirmation names exactly what will be lost",
+    "A brand-new account now shows an empty Consistency card instead of a year of empty cells, and the 'Load my 7 Nov session' button is reachable again"
   ]
 }

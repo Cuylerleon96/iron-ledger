@@ -191,7 +191,12 @@ const Store = (() => {
     state.custom = state.custom.filter((x) => x.id !== id);
     // Past sessions KEEP their sets. Each entry carries its own name and mode, so
     // the history still renders correctly — and silently rewriting training the
-    // user already logged is data loss they never asked for.
+    // user already logged is data loss they never asked for. But the deleted id
+    // must stop polluting the muscle-group analysis: exInfo() falls back to a
+    // default with g:["Core"], so every orphaned set would keep scoring into Core
+    // forever. An explicit empty group override DETACHES the leftover history
+    // from the analysis while the sets stay in the log.
+    state.overrides[id] = Object.assign({}, state.overrides[id], { g: [] });
     save(true);
     allowShrink = false;
   }

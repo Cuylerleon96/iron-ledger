@@ -45,6 +45,71 @@
     Store.setOverride(id, { mode });
   }
 
+  /* ================= custom exercises + import ================= */
+  /* Custom exercises are user-created, or auto-created by the notes importer's
+     fuzzy-match fallback. Without an edit/delete path a typo was permanent and
+     kept feeding the muscle-group analysis. These are the real actions behind
+     the detail-modal controls, kept separate so they can be tested directly. */
+  function isCustomEx(id) { return !!(S.custom || []).find((x) => x.id === id); }
+
+  function renameCustomEx(id, name) {
+    const n = (name == null ? "" : String(name)).trim();
+    if (!n) return false;
+    const prev = (findEx(id) || {}).n;
+    if (prev === n) return true;
+    Store.updateCustom(id, { n });
+    buildIndex();
+    return true;
+  }
+
+  /* Deleting a custom exercise DETACHES its logged sets rather than blocking:
+     the sets stay in the history (Store.deleteCustom) so past training is not
+     silently rewritten, but an empty group override stops the orphaned id
+     contributing phantom groups to the muscle analysis. */
+  function deleteCustomEx(id) {
+    Store.deleteCustom(id);
+    buildIndex();
+    return true;
+  }
+
+  /* The detail-modal controls, only for a custom exercise. */
+  function customControlsHTML(id) {
+    if (!isCustomEx(id)) return "";
+    return `<div class="row">
+        <button class="btn ghost tiny" id="dt-rename" title="Rename this custom exercise">Rename</button>
+        <button class="btn ghost tiny" id="dt-del" title="Delete this custom exercise">Delete</button>
+      </div>`;
+  }
+
+  /* Import is used two ways: additive MERGE (safe) and REPLACE, which discards
+     everything currently on the device. The warning names exactly what is lost. */
+  function importData(text, mode) {
+    Store.importJSON(text, mode);
+    S = Store.state;
+    draft = null;
+    buildIndex();
+    render();
+    return S;
+  }
+  function replaceImportWarning() {
+    const n = (S.workouts || []).length, b = (S.bodylog || []).length, c = (S.custom || []).length;
+    const p = S.profile || {};
+    return "Replace ALL data on this device with this file?\n\n" +
+      "Everything here now will be discarded: " +
+      `${n} workout${n === 1 ? "" : "s"}, ${b} bodyweight log${b === 1 ? "" : "s"}, ` +
+      `${c} custom exercise${c === 1 ? "" : "s"}, your profile` +
+      `${p.name ? ` (${p.name})` : ""}, targets, achievements and settings.\n\n` +
+      "This cannot be undone. Export a backup first if you are unsure.";
+  }
+
+  /* The seed affordance is a manual load, not auto-seeding: show it whenever the
+     7 Nov session is not already in the log, so it is reachable on demand. */
+  function shouldShowSeed() {
+    const seedId = (typeof SEED_WORKOUT !== "undefined" && SEED_WORKOUT) ? SEED_WORKOUT.id : null;
+    if (!seedId) return false;
+    return !(S.workouts || []).some((w) => w.id === seedId);
+  }
+
   /* ================= toasts ================= */
   function toast(msg, kind = "", ms = 2600) {
     const t = el("div", { class: "toast " + kind }, msg);
@@ -428,9 +493,17 @@
   function dashConsistency(host) {
     const dm = Engine.dayMap(S, 371);
     const keys = Object.keys(dm);
+    const card = el("section", { class: "card" });
+    /* No sessions at all: an empty account is an empty state, not a grid of
+       blank cells claiming a year of rest days. */
+    if (!keys.length) {
+      card.innerHTML = `<div class="card-head"><h3>Consistency</h3><span class="muted">No sessions yet</span></div>
+        <p class="muted small">Log your first workout and your year of showing up starts here.</p>`;
+      host.append(card);
+      return;
+    }
     const trained = Object.values(dm).filter((d) => d.sessions > 0).length;
     const span = keys.length;
-    const card = el("section", { class: "card" });
     card.innerHTML = `<div class="card-head"><h3>Consistency</h3>
       <span class="muted">${trained} of the last ${span} ${pl(span, "day")}${span < 371 ? " — since you started" : ""}</span></div>`;
     const h = el("div", { class: "hm-host" });
@@ -1064,6 +1137,7 @@
         ${S.targets[id] ? `<button class="btn ghost tiny" id="dt-tclear">Clear</button>` : ""}
       </div>
       ${targetProgressLine(id)}
+      ${customControlsHTML(id)}
       <div id="dt-chart" class="chart-host"></div>
       <div class="row end"><button class="btn ghost" id="dt-x">Close</button><button class="btn primary" id="dt-log">Log this now</button></div>`;
     openModal(box, "wide");
@@ -1088,6 +1162,20 @@
     });
     const tclr = $("#dt-tclear", box);
     if (tclr) tclr.addEventListener("click", () => { Store.clearTarget(id); toast("Target cleared"); closeModal(); render(); });
+    const rn = $("#dt-rename", box);
+    if (rn) rn.addEventListener("click", () => {
+      const cur = (findEx(id) || {}).n || "";
+      const nn = window.prompt("Rename exercise", cur);
+      if (nn == null) return;
+      if (!renameCustomEx(id, nn)) { toast("Enter a name", "warn"); return; }
+      toast("Renamed", "good"); closeModal(); render();
+    });
+    const dl = $("#dt-del", box);
+    if (dl) dl.addEventListener("click", () => {
+      const nm = (findEx(id) || {}).n || "this exercise";
+      if (!confirm(`Delete "${nm}"? Its logged sets stay in your history, but it will no longer appear in the exercise list or count toward your muscle-group analysis.`)) return;
+      deleteCustomEx(id); toast("Deleted", "warn"); closeModal(); render();
+    });
     $("#dt-log").addEventListener("click", () => { closeModal(); draft = draft || newDraft(); addEntry({ id, n: info.n }); setView("log"); });
     const chartHost = $("#dt-chart", box);
     const pts = series.filter((p) => (Engine.exMode(S, id) === "weight_reps" ? p.est1RM : p.top) > 0)
@@ -1283,11 +1371,12 @@
       <div class="row">
         <button class="btn" id="d-exp">Export JSON</button>
         <button class="btn" id="d-csv">Export CSV</button>
-        <button class="btn" id="d-imp">Import JSON</button>
+        <button class="btn" id="d-imp">Import JSON (merge)</button>
+        <button class="btn danger" id="d-replace" title="Discard everything here and load a clean export over it">Restore from file (replace all)</button>
         ${Store.hasBackup() ? `<button class="btn ghost" id="d-bak">Restore last backup</button>` : ""}
         <button class="btn danger" id="d-reset">Reset everything</button>
       </div>
-      ${S.settings.seeded === false ? `<div class="row"><button class="btn ghost" id="d-seed">Load my 7 Nov session</button></div>` : ""}`;
+      ${shouldShowSeed() ? `<div class="row"><button class="btn ghost" id="d-seed">Load my 7 Nov session</button></div>` : ""}`;
     host.append(data);
 
     $("#p-save", c).addEventListener("click", () => {
@@ -1329,16 +1418,8 @@
     $$(".bdel", bw).forEach((b) => b.addEventListener("click", () => { Store.deleteBodyLog(b.dataset.d); render(); }));
     $("#d-exp", data).addEventListener("click", () => download("iron-ledger-" + today() + ".json", Store.exportJSON(), "application/json"));
     $("#d-csv", data).addEventListener("click", () => download("iron-ledger-" + today() + ".csv", Store.exportCSV(), "text/csv"));
-    $("#d-imp", data).addEventListener("click", () => {
-      const inp = el("input", { type: "file", accept: ".json,application/json" });
-      inp.addEventListener("change", () => {
-        const f = inp.files[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => { try { Store.importJSON(r.result, "merge"); toast("Imported (merged)", "good"); render(); } catch (e) { toast("Bad file", "warn"); } };
-        r.readAsText(f);
-      });
-      inp.click();
-    });
+    $("#d-imp", data).addEventListener("click", () => pickImport("merge"));
+    $("#d-replace", data).addEventListener("click", () => pickImport("replace"));
     const bak = $("#d-bak", data); if (bak) bak.addEventListener("click", () => {
       // This replaces everything currently in the app with an older snapshot.
       if (!confirm("Replace everything with the previous backup? Current data will be discarded.")) return;
@@ -1355,6 +1436,23 @@
     if (!S.workouts.find((w) => w.id === SEED_WORKOUT.id)) Store.upsertWorkout(JSON.parse(JSON.stringify(SEED_WORKOUT)));
     S.settings.seeded = true; Store.save(true); buildIndex();
     toast("Loaded your 7 Nov session", "good");
+  }
+
+  /* Pick a JSON file and import it, either merged (additive) or replacing
+     everything. Replace is confirm-guarded with the exact losses spelled out. */
+  function pickImport(mode) {
+    const inp = el("input", { type: "file", accept: ".json,application/json" });
+    inp.addEventListener("change", () => {
+      const f = inp.files[0]; if (!f) return;
+      if (mode === "replace" && !confirm(replaceImportWarning())) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try { importData(r.result, mode); toast(mode === "replace" ? "Restored — replaced with the file" : "Imported (merged)", "good"); }
+        catch (e) { toast("Bad file", "warn"); }
+      };
+      r.readAsText(f);
+    });
+    inp.click();
   }
 
   /* An <a download> of a blob URL is a NO-OP inside a WebView: no download is
@@ -1396,8 +1494,10 @@
     /* No auto-seeding. This used to insert a real session on first run, so a
        brand-new account's charts, XP, badges, muscle bars and Discipline all
        counted a workout the user never did — data they did not enter, presented
-       as their own. The Profile button "Load my 7 Nov session" stays, so it is
-       available on purpose and never imposed. */
+       as their own. The Profile button "Load my 7 Nov session" is shown whenever
+       that session is not already logged (shouldShowSeed), so it is reachable on
+       purpose and never imposed. The seeded flag is still set so nothing here
+       ever auto-inserts. */
     if (!S.settings.seeded) { S.settings.seeded = true; Store.save(true); }
     // award anything already earned (matters after a restore or import)
     const earned = Engine.newAchievements(S);
@@ -1478,5 +1578,6 @@
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
+    isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();
