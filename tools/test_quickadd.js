@@ -160,6 +160,43 @@ console.log("=== a weight field shows display units, storage stays kg ===");
   eq("kg mode is a straight pass-through", kg.A.U.w(kg.A.U.wi(102.5)), 102.5);
 }
 
+console.log("=== adding a later set must not alter an earlier one ===");
+{
+  /* the owner's report: "if you type in the next set, sometimes it changes the value
+     that was in the first set." Reproduced exactly — type 180x12 into set 1, add
+     the next set from the shorthand box, and set 1's field fell back to
+     81.64662740915384, because setRow re-rendered the raw stored kg. The model was
+     right the whole time; only what he was shown was wrong, which is the worst
+     kind of wrong because the number he trusted changed under him.
+     The invariant: a set's displayed value depends ONLY on that set. */
+  const e = load("lb");
+  const field = (s) => {                       // exactly what setRow writes out
+    let v = s.w;
+    if (v !== undefined && v !== null && v !== "") {
+      v = String(Math.round(Number(e.A.U.w(Number(v))) * 100) / 100);
+    }
+    return v;
+  };
+  const first = { w: e.A.U.wi(180), r: 12 };
+  const before = field(first);
+  const beforeW = first.w;
+
+  // now add the next set, the way he does it
+  const second = e.A.parseSet("190x10", "weight_reps");
+  const sets = [first, second];
+
+  eq("set 1 was 180 to begin with", before, "180");
+  eq("adding set 2 leaves set 1's display alone", field(sets[0]), "180");
+  eq("adding set 2 leaves set 1's stored weight alone", sets[0].w, beforeW);
+  eq("set 2 read the shorthand into kg", Math.round(sets[1].w * 100) / 100, Math.round((190 / LB) * 100) / 100);
+  eq("...and displays as 190", field(sets[1]), "190");
+
+  // the footer must agree with the two sets, not with a stale half
+  const st = e.E.entryStats({ mode: "weight_reps", sets });
+  near("tonnage is 180x12 + 190x10 = 4,060 lb", e.A.U.w(st.tonnage), 4060, 1);
+  console.log(`        (before the fix this sequence showed set 1 as 81.64662740915384 and 6,349 lb)`);
+}
+
 console.log("=== the empty-box path adds a blank set instead of refusing ===");
 {
   const src = fs.readFileSync(path.join(B, "js/app.js"), "utf8");
