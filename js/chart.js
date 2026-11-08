@@ -198,17 +198,26 @@ const Chart = (() => {
     const top = Math.max(1, ...keys.map((k) => days[k].sets));
     const grid = document.createElement("div");
     grid.className = "hm-grid";
+    // The grid is a picture of a year of training, so it gets a name of its own
+    // and every cell carries a TEXT alternative — the same fact as the tooltip,
+    // but as an accessible name rather than a title (which many users never see,
+    // and which a cell that is only shaded cannot convey at all).
+    grid.setAttribute("role", "group");
+    grid.setAttribute("aria-label", `Consistency calendar: ${keys.length} day${keys.length === 1 ? "" : "s"} from ${keys[0]} to ${keys[keys.length - 1]}.`);
+    const cellText = (k, d) => `${k}: ${d.sets ? d.sets + (d.sets === 1 ? " set" : " sets") : "rest day"}`;
     // pad the first column so every row is a fixed weekday
     const lead = (new Date(keys[0] + "T12:00:00").getDay() + 6) % 7;   // 0 = Monday
     for (let i = 0; i < lead; i++) {
-      const b = document.createElement("i"); b.className = "hm-cell pad"; grid.append(b);
+      const b = document.createElement("i"); b.className = "hm-cell pad"; b.setAttribute("aria-hidden", "true"); grid.append(b);
     }
     for (const k of keys) {
       const d = days[k];
       const lvl = d.sets <= 0 ? 0 : Math.min(4, 1 + Math.floor((d.sets / top) * 4));
       const c = document.createElement("i");
       c.className = "hm-cell l" + lvl;
-      c.title = `${k} — ${d.sets ? d.sets + (d.sets === 1 ? " set" : " sets") : "rest"}`;
+      c.title = cellText(k, d);
+      c.setAttribute("role", "img");
+      c.setAttribute("aria-label", cellText(k, d));
       grid.append(c);
     }
     host.append(grid);

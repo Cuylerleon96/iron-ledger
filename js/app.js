@@ -28,6 +28,11 @@
     wi(disp) { return this.kg ? disp : disp / LB; },   // display -> kg
     d(m) { return this.kg ? m : m * 3.28084; },
     dlab() { return this.kg ? "m" : "ft"; },
+    /* Tape measurements follow the same rule as weight: one canonical stored
+       value (centimetres), shown in whatever unit the user reads. */
+    len(cm) { return this.kg ? cm : cm / 2.54; },      // cm -> display
+    li(disp) { return this.kg ? disp : disp * 2.54; }, // display -> cm
+    llab() { return this.kg ? "cm" : "in"; },
   };
 
   let S = Store.state;
@@ -118,20 +123,51 @@
   }
 
   /* ================= modal ================= */
+  /* A modal is a dialog, not just a floating panel: while it is open the Tab key
+     must stay inside it (a focus TAB TRAP), Escape must close it, and closing
+     must hand focus back to whatever opened it — otherwise a keyboard or screen
+     reader user is dropped at the top of the page with no way back. */
+  let modalOpener = null;
+  const focusablesIn = (root) => $$(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    root
+  ).filter((e) => e.offsetParent !== null || e === document.activeElement);
   function openModal(node, cls = "") {
     const box = $("#modal-box");
     box.className = "modal-box " + cls;
     box.innerHTML = "";
     box.append(node);
+    const active = document.activeElement;
+    modalOpener = (active && active.focus && active !== document.body && !box.contains(active)) ? active : null;
     $("#modal").classList.remove("hidden");
     // Lock the page behind the dialog: without this a touch-scroll on a phone
     // moved the dashboard underneath the open modal.
     document.body.classList.add("modal-open");
+    // Move focus into the dialog so the trap has a starting point. Callers that
+    // want a specific field (the exercise search box) still focus it themselves.
+    const first = focusablesIn(box)[0];
+    if (first) first.focus();
+    else { box.setAttribute("tabindex", "-1"); if (box.focus) box.focus(); }
   }
   const closeModal = () => {
     $("#modal").classList.add("hidden");
     document.body.classList.remove("modal-open");
+    // Return focus to the control that opened the dialog, when it is still here.
+    if (modalOpener && modalOpener.focus) { try { modalOpener.focus(); } catch (e) { /* detached */ } }
+    modalOpener = null;
   };
+  document.addEventListener("keydown", (e) => {
+    const modal = $("#modal");
+    if (!modal || modal.classList.contains("hidden")) return;
+    if (e.key === "Escape") { e.preventDefault(); closeModal(); return; }
+    if (e.key !== "Tab") return;
+    const f = focusablesIn($("#modal-box"));
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !modal.contains(active))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (active === last || !modal.contains(active))) { e.preventDefault(); first.focus(); }
+  });
   $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
 
   /* ================= glossary wiring ================= */
@@ -187,10 +223,30 @@
   }
 
   /* ================= quick-set parser ================= */
-  /* Understands the notes-app shorthand: 100x10, 100 x 10 @8, 60s, 1:30, 5km 24:00 */
+  /* Understands the notes-app shorthand: 100x10, 100 x 10 @8, 60s, 1:30, 5km 24:00
+     and, in front of any of those, a set type: "warmup 60x10", "drop 100x8",
+     "failure 100x5" (short forms w/d/f need a separator: "w: 60x10").
+     An unrecognised prefix is left untouched, so a plain set parses exactly as
+     before. The canonical words are the same ones the notes exporter writes. */
+  function takeSetType(t) {
+    const words = [
+      [/^(?:warm-?up|wu)\b[\s:.,\-–—]*/, "warmup"],
+      [/^(?:drop(?:set)?)\b[\s:.,\-–—]*/, "drop"],
+      [/^(?:fail(?:ure)?)\b[\s:.,\-–—]*/, "failure"],
+    ];
+    for (const [re, v] of words) if (re.test(t)) return { value: v, rest: t.replace(re, "") };
+    const short = t.match(/^([wdf])(?:\s*[:.]\s*|\s+)/);
+    if (short) return { value: { w: "warmup", d: "drop", f: "failure" }[short[1]], rest: t.slice(short[0].length) };
+    return { value: undefined, rest: t };
+  }
+
   function parseSet(text, mode) {
-    const t = text.trim().toLowerCase().replace(/×/g, "x");
+    let t = text.trim().toLowerCase().replace(/×/g, "x");
     if (!t) return null;
+    const setTy = takeSetType(t);
+    t = setTy.rest.trim();
+    if (!t) return null;
+    const ty = setTy.value;
     const rpeM = t.match(/@\s*(\d+(?:\.\d+)?)/);
     const rpe = rpeM ? parseFloat(rpeM[1]) : undefined;
     // rest token: "r90" (seconds). Letters are unambiguous — time uses "s"/"m",
@@ -212,34 +268,34 @@
 
     if (mode === "time") {
       const s = clockM ? secs(clockM) : num(body.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|secs)?\s*$/));
-      return s ? { t: s, rpe, rest } : null;
+      return s ? { t: s, rpe, rest, ty } : null;
     }
     if (mode === "reps") {
       const r = num(body.match(/^(\d+(?:\.\d+)?)/));
-      return r ? { r, rpe, rest } : null;
+      return r ? { r, rpe, rest, ty } : null;
     }
     if (mode === "distance_time") {
       const kmM = body.match(/(\d+(?:\.\d+)?)\s*km/), mM = body.match(/(\d+(?:\.\d+)?)\s*m\b/);
       const d = kmM ? parseFloat(kmM[1]) * 1000 : mM ? parseFloat(mM[1]) : undefined;
       const time = clockM ? secs(clockM) : num(body.match(/(\d+(?:\.\d+)?)\s*(?:min|m(?:in)?s?)$/));
       const tt = clockM ? secs(clockM) : (time !== undefined && !kmM && !mM ? undefined : time);
-      return { d, t: clockM ? secs(clockM) : tt, rpe, rest };
+      return { d, t: clockM ? secs(clockM) : tt, rpe, rest, ty };
     }
     if (mode === "weight_time") {
       const w = num(body.match(/^(\d+(?:\.\d+)?)/));
       const s = clockM ? secs(clockM) : num(body.match(/[x*]\s*(\d+(?:\.\d+)?)/)) ?? num(body.match(/(\d+(?:\.\d+)?)\s*(?:s|sec)/));
-      return w ? { w: wIn(w), t: s, rpe, rest } : null;
+      return w ? { w: wIn(w), t: s, rpe, rest, ty } : null;
     }
     if (mode === "weight_distance") {
       const w = num(body.match(/^(\d+(?:\.\d+)?)/));
       const d = num(body.match(/[x*]\s*(\d+(?:\.\d+)?)/)) ?? num(body.match(/(\d+(?:\.\d+)?)\s*m/));
-      return w ? { w: wIn(w), d, rpe, rest } : null;
+      return w ? { w: wIn(w), d, rpe, rest, ty } : null;
     }
     // weight_reps
     const m = body.match(/^(\d+(?:\.\d+)?)\s*(?:kg|lb|#)?\s*[x*\/\s]\s*(\d+(?:\.\d+)?)/);
-    if (m) return { w: wIn(parseFloat(m[1])), r: parseFloat(m[2]), rpe, rest };
+    if (m) return { w: wIn(parseFloat(m[1])), r: parseFloat(m[2]), rpe, rest, ty };
     const one = body.match(/^(\d+(?:\.\d+)?)/);
-    if (one) return { w: wIn(parseFloat(one[1])), r: undefined, rpe, rest };
+    if (one) return { w: wIn(parseFloat(one[1])), r: undefined, rpe, rest, ty };
     return null;
   }
 
@@ -787,6 +843,7 @@
       ${cmpBanner}
       ${targetLine}
       <div class="sets" id="sets-${idx}"></div>
+      <div class="muted small settype-hint">${term("set-type", "Set type")} — a warm-up is not a working set; a drop or failure set counts for more effort.</div>
       <div class="entry-rest">
         <label>Rest between sets <input class="inp num rest-default" type="number" inputmode="numeric" min="0" step="5" placeholder="secs" value="${en.restDefault ?? ""}" style="width:72px"> sec</label>
         <span class="muted small">Applies to every set — blank sets fall back to it.</span>
@@ -797,6 +854,7 @@
       </div>
       <div class="entry-foot">
         <span>${st.sets} ${pl(st.sets, "set")}</span>
+        ${st.warmups ? `<span>+${st.warmups} warm-up</span>` : ""}
         ${st.tonnage ? `<span>${fmt(U.w(st.tonnage) / 1, 0)} ${U.label()} tonnage</span>` : ""}
         ${st.est1RM ? `<span>${term("e1rm", "best e1RM")} <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
         ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
@@ -840,7 +898,7 @@
   }
 
   const quickHint = (m) => ({
-    weight_reps: "e.g. 100x10  ·  80x8@9", reps: "e.g. 12  ·  15@8",
+    weight_reps: "e.g. 100x10  ·  80x8@9  ·  w 40x5", reps: "e.g. 12  ·  15@8",
     time: "e.g. 60s  ·  1:30", weight_time: "e.g. 20x45s",
     distance_time: "e.g. 5km 24:00", weight_distance: "e.g. 24x40m",
   }[m] || "100x10");
@@ -863,13 +921,20 @@
        placeholder is not a label, and a bare "reps"/"secs" box told a screen
        reader nothing about WHICH set it belonged to. */
     const sl = `Set ${si + 1}`;
+    /* Set type. It is a real control, not a tag: choosing Warm-up takes the set
+       out of the working-set volume and tonnage, and Drop / Failure feed the
+       effort path harder. The words come from the engine's own table. */
+    const tyOpts = [["", "Set"], ["warmup", "Warm-up"], ["drop", "Drop"], ["failure", "Failure"]];
+    const tySel = `<select class="mini setty" aria-label="${sl} type" title="Set type — a warm-up is not counted as a working set; a drop or failure set counts for more effort.">${tyOpts.map(([v, l]) => `<option value="${v}" ${(s.ty || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+    if (s.ty === "warmup") row.classList.add("is-warmup");
+    else if (s.ty === "drop" || s.ty === "failure") row.classList.add("is-hard");
     const f = (k, ph, w = 56, aria = "") => {
       let v = s[k];
       if (k === "w" && v !== undefined && v !== null && v !== "") v = fmtW(U.w(Engine.num(v)));
       const lab = aria ? ` aria-label="${esc(aria)}"` : "";
       return `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${v ?? ""}" style="width:${w}px"${lab}>`;
     };
-    let inner = `<span class="set-n" aria-hidden="true">${si + 1}</span>`;
+    let inner = `<span class="set-n" aria-hidden="true">${si + 1}</span>` + tySel;
     if (en.mode === "weight_reps") inner += f("w", U.label(), 56, `${sl} weight`) + `<span class="times">×</span>` + f("r", "reps", 48, `${sl} reps`);
     else if (en.mode === "reps") inner += f("r", "reps", 48, `${sl} reps`);
     else if (en.mode === "time") inner += f("t", "secs", 64, `${sl} seconds`) + `<span class="unit">s</span>`;
@@ -906,6 +971,16 @@
       if (e1) { const val = Engine.est1RM(Engine.num(s.w), Engine.num(s.r)); e1.textContent = val ? fmtW(U.w(val)) + " e1RM" : ""; }
       updateEntryFoot(idx);
     }));
+    /* The set-type select changes what the set COUNTS for, so the footer is
+       recomputed on change. An empty value means a straight working set, so the
+       field is removed rather than stored as "" — one fact, present or absent. */
+    $(".setty", row).addEventListener("change", (e) => {
+      const v = e.target.value;
+      if (v) s.ty = v; else delete s.ty;
+      row.classList.toggle("is-warmup", v === "warmup");
+      row.classList.toggle("is-hard", v === "drop" || v === "failure");
+      updateEntryFoot(idx);
+    });
     /* button.x, not .x: the multiplication sign used to share that class, and
        querySelector returns the FIRST match in document order — so this delete
        handler was bound to the "×" between weight and reps. Tapping the times
@@ -921,6 +996,7 @@
     const foot = $$(".card.entry")[idx] && $(".entry-foot", $$(".card.entry")[idx]);
     if (!foot) return;
     foot.innerHTML = `<span>${st.sets} ${pl(st.sets, "set")}</span>
+      ${st.warmups ? `<span>+${st.warmups} warm-up</span>` : ""}
       ${st.tonnage ? `<span>${fmt(U.w(st.tonnage))} ${U.label()} tonnage</span>` : ""}
       ${st.est1RM ? `<span>best e1RM <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
       ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
@@ -1152,13 +1228,16 @@
   }
 
   function setText(s, mode) {
+    // the set type is shown, not hidden: a warm-up or a drop set has to be
+    // readable in history, or the fact was only ever collected to sit unread.
+    const ty = s.ty === "warmup" ? "W/U " : s.ty === "drop" ? "DROP " : s.ty === "failure" ? "FAIL " : "";
     const rpe = s.rpe ? `@${s.rpe}` : "";
-    if (mode === "weight_reps") return `${fmtW(U.w(Engine.num(s.w)))}×${s.r ?? "?"}${rpe}`;
-    if (mode === "reps") return `${s.r ?? "?"} reps${rpe}`;
-    if (mode === "time") return `${s.t ?? "?"}s${rpe}`;
-    if (mode === "weight_time") return `${fmtW(U.w(Engine.num(s.w)))}×${s.t ?? "?"}s${rpe}`;
-    if (mode === "distance_time") return `${fmt(Engine.num(s.d))}m ${s.t ? s.t + "s" : ""}${rpe}`;
-    if (mode === "weight_distance") return `${fmtW(U.w(Engine.num(s.w)))}×${fmt(Engine.num(s.d))}m${rpe}`;
+    if (mode === "weight_reps") return `${ty}${fmtW(U.w(Engine.num(s.w)))}×${s.r ?? "?"}${rpe}`;
+    if (mode === "reps") return `${ty}${s.r ?? "?"} reps${rpe}`;
+    if (mode === "time") return `${ty}${s.t ?? "?"}s${rpe}`;
+    if (mode === "weight_time") return `${ty}${fmtW(U.w(Engine.num(s.w)))}×${s.t ?? "?"}s${rpe}`;
+    if (mode === "distance_time") return `${ty}${fmt(Engine.num(s.d))}m ${s.t ? s.t + "s" : ""}${rpe}`;
+    if (mode === "weight_distance") return `${ty}${fmtW(U.w(Engine.num(s.w)))}×${fmt(Engine.num(s.d))}m${rpe}`;
     return "";
   }
 
@@ -1456,19 +1535,35 @@
           : " · no body-fat check-in yet"}</p>
         ${bfp.belowEssential ? `<p class="muted small">Under about ${floor}% is below the essential-fat floor — not a level anyone holds.</p>` : ""}` : ""}
       ${bfReadings.length >= 2 ? `<p class="muted small chart-cap">Body fat % over time</p><div class="chart-host" id="bf-chart"></div>` : ""}` : "";
+    /* Tape measurements: same log, same place to enter them, shown as a trend
+       and as the latest figure. Each series is one measurement, in the user's
+       unit; the engine holds the canonical cm. */
+    const measSeries = Engine.MEASURES.map((m) => ({
+      label: m.label, color: m.color,
+      points: Engine.bodyMeasureSeries(S, m.key).map((pt) => ({ x: pt.date, y: U.len(pt.value) })),
+    }));
+    const measShown = measSeries.some((s) => s.points.length >= 2);
+    const latestMeas = Engine.MEASURES.map((m) => ({ m, last: Engine.bodyMeasureLatest(S, m.key) })).filter((x) => x.last);
+    const measBlock = (measShown || latestMeas.length) ? `
+      ${measShown ? `<p class="muted small chart-cap">Measurements over time (${U.llab()})</p><div class="chart-host" id="meas-chart"></div>` : ""}
+      ${latestMeas.length ? `<p class="muted small">Latest: ${latestMeas.map((x) => `${x.m.label} ${fmtW(U.len(x.last.value))} ${U.llab()}`).join(" · ")}</p>` : ""}` : "";
     bw.innerHTML = `
       <div class="card-head"><h3>Bodyweight log</h3><span class="muted">${(S.bodylog || []).length} check-ins</span></div>
       <div class="row"><input class="inp" type="date" id="b-date" value="${today()}" style="max-width:160px">
         <input class="inp" id="b-w" type="number" step="0.1" placeholder="Weight (${U.label()})" style="max-width:140px">
         <input class="inp" id="b-bf" type="number" step="0.1" placeholder="Body fat %" style="max-width:130px">
+        ${Engine.MEASURES.map((m) => `<input class="inp meas" data-mkey="${m.key}" type="number" step="0.1" placeholder="${m.label} (${U.llab()})" style="max-width:130px">`).join("")}
         <button class="btn" id="b-add">Log</button></div>
       ${bfBlock}
+      ${measBlock}
       <div class="chart-host" id="bw-chart"></div>
-      <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmtW(U.w(b.weightKg))} ${U.label()}</span><span class="muted">${b.bodyFatPct ? b.bodyFatPct + "%" : ""}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
+      <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmtW(U.w(b.weightKg))} ${U.label()}</span><span class="muted">${[b.bodyFatPct ? b.bodyFatPct + "%" : "", ...Engine.MEASURES.filter((m) => Engine.num(b[m.key]) > 0).map((m) => `${m.label} ${fmtW(U.len(Engine.num(b[m.key])))}${U.llab()}`)].filter(Boolean).join(" · ")}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
     host.append(bw);
     Chart.line($("#bw-chart", bw), { points: (S.bodylog || []).map((b) => ({ x: b.date, y: U.w(b.weightKg) })), color: "#a878f8", unit: " " + U.label() });
     const bfHost = $("#bf-chart", bw);
     if (bfHost) Chart.line(bfHost, { points: bfReadings.map((b) => ({ x: b.date, y: Engine.num(b.bodyFatPct) })), color: "#e878a8", unit: "%", fillArea: false });
+    const measHost = $("#meas-chart", bw);
+    if (measHost) Chart.multi(measHost, { series: measSeries, fixedMax: 0, unit: " " + U.llab() });
 
     const upd = el("section", { class: "card" });
     upd.innerHTML = `
@@ -1514,7 +1609,10 @@
       const wKg = g("#p-w") ? U.wi(parseFloat(g("#p-w"))) : null;
       const bfPct = g("#p-bf") ? parseFloat(g("#p-bf")) : null;
       if (wKg) {
-        Store.addBodyLog({ date: today(), weightKg: wKg, bodyFatPct: bfPct || null });
+        // Merge over today's existing check-in rather than replacing it, so
+        // re-saving the profile never wipes a measurement logged earlier today.
+        const prev = (S.bodylog || []).find((b) => b.date === today()) || {};
+        Store.addBodyLog(Object.assign({}, prev, { date: today(), weightKg: wKg, bodyFatPct: bfPct || prev.bodyFatPct || null }));
       } else {
         p.weightKg = null;
         if (bfPct) p.bodyFatPct = bfPct;
@@ -1535,9 +1633,20 @@
       render();
     });
     $("#b-add", bw).addEventListener("click", () => {
+      const date = $("#b-date", bw).value;
+      // Merge over any check-in already on that date, so logging a tape
+      // measurement does not erase a weight (or vice versa) taken the same day.
+      const prev = (S.bodylog || []).find((b) => b.date === date) || {};
+      const entry = Object.assign({}, prev, { date });
       const w = parseFloat($("#b-w", bw).value);
-      if (!w) { toast("Enter a weight", "warn"); return; }
-      Store.addBodyLog({ date: $("#b-date", bw).value, weightKg: U.wi(w), bodyFatPct: parseFloat($("#b-bf", bw).value) || null });
+      if (w) entry.weightKg = U.wi(w);
+      const bf = parseFloat($("#b-bf", bw).value);
+      if (bf) entry.bodyFatPct = bf;
+      $$(".meas", bw).forEach((i) => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) entry[i.dataset.mkey] = U.li(v); });
+      const any = Engine.num(entry.weightKg) > 0 || Engine.num(entry.bodyFatPct) > 0
+        || Engine.MEASURES.some((m) => Engine.num(entry[m.key]) > 0);
+      if (!any) { toast("Enter a weight or a measurement", "warn"); return; }
+      Store.addBodyLog(entry);
       toast("Check-in logged", "good"); render();
     });
     $$(".bdel", bw).forEach((b) => b.addEventListener("click", () => { Store.deleteBodyLog(b.dataset.d); render(); }));

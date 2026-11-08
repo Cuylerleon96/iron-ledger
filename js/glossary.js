@@ -48,6 +48,11 @@ const Glossary = (() => {
       real: "Each logged set is multiplied by the movement's effort weight (its `g`/effort factor, shown as \"Effort weight\" on the exercise screen, 1.00 = baseline) to give an effort set. Raw sets are the unweighted count. Totals are effort sets per week against the muscle group's MEV / MAV / MRV landmarks.",
     },
     {
+      id: "set-type", term: "Set type", aliases: ["Set type", "Warm-up", "Drop set", "Failure set"],
+      plain: "What kind of set it was. A warm-up is a ramp, not working work: it is logged and shown, but it is not counted as a working set and adds no tonnage. A drop set or a set taken to failure is harder than a straight set, so it counts for more effort.",
+      real: "One field per set (`ty`), one value: warm-up, drop or failure (unset = a straight working set). A warm-up is filtered out of entryStats' working sets and so adds no volume, no tonnage, no reps and no effort. A drop set and a failure set each contribute more than one effort set (×1.25 and ×1.2) to the muscle-group stimulus — the same path the per-exercise effort weight already uses. Raw working-set counts are unchanged.",
+    },
+    {
       id: "rpe", term: "RPE", aliases: ["RPE", "effort (RPE)"],
       plain: "How hard a set felt, on a scale of 1 to 10. A 10 means you could not have done another rep; a 7 means you had about three left in you. It is how the app knows whether effort is climbing even when the weight is not.",
       real: "RPE is Rate of Perceived Exertion, entered per set (@8 in shorthand). It is compared session to session: effort rising while output stalls is the classic shape of accumulated fatigue, and near-maximal effort with no progress is treated as a recovery problem rather than a call to push harder.",

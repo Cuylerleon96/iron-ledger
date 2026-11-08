@@ -54,5 +54,22 @@ console.log(`        VIT detail: ${JSON.stringify(vit.detail.used)} score=${vit.
 eq("body fat came from the log (22%), not the poisoned 99", vit.detail.used.includes("body fat"), true);
 eq("poisoned value did not drive the score", vit.score < 90, true);
 
+console.log("--- body measurements ride on the same check-in ---");
+// Tape measures are stored on the same bodylog entry (one entry per date, one
+// field per measurement) and must not be wiped by a later weight-only check-in.
+Store.addBodyLog({ date: "2026-03-01", weightKg: 76, waistCm: 84, chestCm: 102, armCm: 36.5 });
+const m = Store.state.bodylog.find((b) => b.date === "2026-03-01");
+eq("waist is on the check-in", m.waistCm, 84);
+eq("chest is on the check-in", m.chestCm, 102);
+eq("arm is on the check-in", m.armCm, 36.5);
+
+Store.addBodyLog({ date: "2026-03-08", weightKg: 75.5 });
+const m2 = Store.state.bodylog.find((b) => b.date === "2026-03-08");
+eq("a weight-only check-in carries no measurement it did not take", m2.waistCm, undefined);
+eq("...while the earlier one keeps its measurements", Store.state.bodylog.find((b) => b.date === "2026-03-01").waistCm, 84);
+
+eq("the engine series reads the measurements oldest-first", Engine.bodyMeasureSeries(Store.state, "waistCm").map((p) => p.value), [84]);
+eq("the latest reading is reported", Engine.bodyMeasureLatest(Store.state, "armCm").value, 36.5);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

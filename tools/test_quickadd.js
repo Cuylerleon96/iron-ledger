@@ -244,5 +244,39 @@ console.log("=== the bulk notes export round-trips through the real importer ===
     !parsed.some((p) => /##/.test(p.name)) && !parsed.some((p) => /2026-11-0/.test(p.name)));
 }
 
+console.log("=== set types round-trip through the shorthand ===");
+{
+  const e = load("kg");
+  e.A.buildIndex();
+  eq("warmup prefix parses", e.A.parseSet("warmup 60x10", "weight_reps").ty, "warmup");
+  eq("drop prefix parses", e.A.parseSet("drop 100x8", "weight_reps").ty, "drop");
+  eq("failure prefix parses", e.A.parseSet("failure 100x5", "weight_reps").ty, "failure");
+  eq("the short form needs a separator", e.A.parseSet("w: 60x10", "weight_reps").ty, "warmup");
+  eq("a plain set still has no type", JSON.stringify(e.A.parseSet("100x10", "weight_reps")), JSON.stringify({ w: 100, r: 10, rpe: undefined, rest: undefined }));
+  eq("...and parses exactly as before", e.A.parseSet("100x10", "weight_reps").w, 100);
+
+  // the notes exporter writes the type in front and parseNotes reads it back —
+  // the whole point of the shorthand is that it survives the round trip
+  const e2 = load("kg");
+  e2.A.buildIndex();
+  e2.S.upsertWorkout({ id: "t1", date: "2026-11-01", entries: [{ id: 73, name: "Bench press machine", mode: "weight_reps", sets: [
+    { w: 60, r: 10, ty: "warmup" }, { w: 100, r: 10 }, { w: 100, r: 8, ty: "drop" }, { w: 100, r: 5, ty: "failure" }] }] });
+  const txt = e2.E.exportNoteShorthand(e2.S.state, "t1");
+  console.log("  ----\n" + txt.split("\n").map((l) => "  " + l).join("\n") + "\n  ----");
+  truthy("the type is written in front of its set",
+    /1:warmup 60x10/.test(txt) && /3:drop 100x8/.test(txt) && /4:failure 100x5/.test(txt));
+  const back = e2.A.parseNotes(txt);
+  eq("the importer reads every type back", back[0].sets.map((s) => s.ty || ""), ["warmup", "", "drop", "failure"]);
+  eq("...and the numbers survive", back[0].sets.map((s) => s.w), [60, 100, 100, 100]);
+
+  // the set row carries a real control and history shows the type back
+  const src = fs.readFileSync(path.join(B, "js/app.js"), "utf8");
+  truthy("setRow renders a type control", /class="mini setty"/.test(src));
+  truthy("...bound to a change handler that recomputes the footer", /\$\("\.setty", row\)\.addEventListener\("change"/.test(src) && /updateEntryFoot\(idx\);/.test(src));
+  truthy("the footer reports warm-ups separately", src.includes("+${st.warmups} warm-up"));
+  truthy("history labels a typed set", src.includes('? "W/U " :') && src.includes('? "DROP " :') && src.includes('? "FAIL " :'));
+  truthy("a glossary-linked hint explains the types", src.includes('term("set-type", "Set type")'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

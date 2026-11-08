@@ -904,5 +904,73 @@ console.log("\n=== 31. the seed affordance is reachable (item 5b) ===");
   eq("the dead seeded===false condition is gone", /settings\.seeded === false \?/.test(src), false);
 }
 
+console.log("\n=== 32. set types change what a set counts for ===");
+{
+  /* The type is a fact with consequences, not a decorative tag: a warm-up stops
+     being a working set, and a drop / failure set feeds the effort path harder. */
+  const e = env();
+  const straight = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 100, r: 10 }, { w: 100, r: 10 }] });
+  eq("two straight sets are two working sets", straight.sets, 2);
+  eq("...two effort sets", straight.effSets, 2);
+  eq("...and 2,000 kg of tonnage", straight.tonnage, 2000);
+
+  const withWarm = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 60, r: 10, ty: "warmup" }, { w: 100, r: 10 }] });
+  eq("a warm-up is NOT a working set", withWarm.sets, 1);
+  eq("...it is reported separately", withWarm.warmups, 1);
+  eq("...it adds no tonnage", withWarm.tonnage, 1000);
+  eq("...no volume", withWarm.volume, 1000);
+  eq("...and no effort", withWarm.effSets, 1);
+
+  const drop = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 100, r: 10 }, { w: 100, r: 10, ty: "drop" }] });
+  eq("a drop set is still a working set", drop.sets, 2);
+  truthy("...but counts for more effort than a straight set", drop.effSets > straight.effSets);
+  const fail = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 100, r: 10 }, { w: 100, r: 10, ty: "failure" }] });
+  truthy("a failure set counts for more too", fail.effSets > straight.effSets);
+
+  // it must reach the scoring path the muscle-balance card and score use
+  const plain = e.E.muscleGroups(base({ workouts: [wk(iso(1), [{ w: 40, r: 10 }, { w: 40, r: 10 }])] }), 28).Chest;
+  const harder = e.E.muscleGroups(base({ workouts: [wk(iso(1), [{ w: 40, r: 10 }, { w: 40, r: 10, ty: "drop" }])] }), 28).Chest;
+  eq("the raw working-set count is unchanged", harder.setsPerWk, plain.setsPerWk);
+  truthy("the effort the score reads goes up", harder.effPerWk > plain.effPerWk);
+  const onlyWarm = e.E.muscleGroups(base({ workouts: [wk(iso(1), [{ w: 40, r: 10, ty: "warmup" }])] }), 28).Chest;
+  eq("a warm-up-only session is not training", onlyWarm.setsPerWk, 0);
+
+  const e2 = env();
+  eq("the type table is exposed in one place", Object.keys(e2.E.SET_TYPES), ["normal", "warmup", "drop", "failure"]);
+}
+
+console.log("\n=== 33. body measurements: same log, trended back ===");
+{
+  const e = env();
+  e.S.addBodyLog({ date: "2026-01-01", weightKg: 80, waistCm: 90, chestCm: 100, armCm: 36 });
+  e.S.addBodyLog({ date: "2026-02-01", weightKg: 79, waistCm: 87 });
+  const log = e.S.state.bodylog;
+  eq("a measurement rides on the same check-in as weight", log[0].waistCm, 90);
+  eq("a later check-in updates its own field", log[1].waistCm, 87);
+  eq("...and does not repeat one it did not measure", log[1].chestCm, undefined);
+  eq("the trend series is oldest-first", e.E.bodyMeasureSeries(e.S.state, "waistCm").map((p) => p.value), [90, 87]);
+  eq("the latest reading is reported", e.E.bodyMeasureLatest(e.S.state, "armCm").value, 36);
+  eq("the three measures live in one table", e.E.MEASURES.map((m) => m.key), ["waistCm", "chestCm", "armCm"]);
+
+  const f = env({});
+  f.S.importJSON(e.S.exportJSON(), "replace");
+  eq("measurements survive an export/import", f.S.state.bodylog.map((b) => b.waistCm), [90, 87]);
+
+  // the Profile card must actually surface them (no collected-but-unread field)
+  const srcEnv = appEnv({ bodylog: [
+    { date: iso(30), weightKg: 80, waistCm: 90, chestCm: 100, armCm: 36 },
+    { date: iso(2), weightKg: 79, waistCm: 87, chestCm: 99, armCm: 36 },
+  ] });
+  srcEnv.A.setView("profile");
+  const meas = srcEnv.calls.multi.find((c) => (c.series || []).some((s) => s.label === "Waist"));
+  truthy("the Profile screen charts the measurements", !!meas);
+  eq("all three measures are plotted", meas && meas.series.map((s) => s.label), ["Waist", "Chest", "Arm"]);
+  eq("each series carries its readings", meas && meas.series[0].points.length, 2);
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the entry fields are generated from Engine.MEASURES", /Engine\.MEASURES\.map\(\(m\) => `<input class="inp meas"/.test(src));
+  truthy("the Log handler stores every entered measurement", /entry\[i\.dataset\.mkey\] = U\.li\(v\)/.test(src));
+  truthy("each check-in shows its measurements back", /Engine\.MEASURES\.filter\(\(m\) => Engine\.num\(b\[m\.key\]\) > 0\)/.test(src));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

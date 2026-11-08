@@ -1,13 +1,13 @@
 {
-  "versionCode": 40,
-  "versionName": "1.0.39",
+  "versionCode": 41,
+  "versionName": "1.0.40",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "4b858c0c5646e8dd510cc90512a8f35b1f3791bd70cbe50ce1093dd5b1ebf5c9",
-  "sizeBytes": 3290855,
+  "sha256": "d4e4c51bce7d3f1393bc98d81987504d99430c5f02347495b1e56ef6c11c571c",
+  "sizeBytes": 3295335,
   "published": "2026-11-08",
   "notes": [
-    "No more surprise tour: if you had already seen the walkthrough, it now stays away after this update instead of showing a second time.",
-    "New glossary in plain English: every term the app uses \u2014 MEV, e1RM, RPE, tonnage, deload and the rest \u2014 open it from Profile, or just tap the word on any card.",
-    "The volume chart's Tonnage and Reps views now follow your kg/lb setting; they always read kg before."
+    "Set types: mark a set as a warm-up, a drop set or taken to failure \u2014 a warm-up is no longer counted as a working set or adds tonnage, and drop and failure sets count for more effort.",
+    "Body measurements: log waist, chest and arm alongside your weight in the same bodyweight log, see each as a trend, and they travel with your export.",
+    "Accessibility: the dialog now traps Tab, closes on Escape and returns focus to whatever opened it; the consistency grid's cells read out their date and sets; and the smallest labels are easier to read."
   ]
 }

@@ -426,6 +426,21 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
   truthy("set-row weight inputs carry an aria-label", /\$\{sl\} weight/.test(app));
   truthy("set-row reps inputs carry an aria-label", /\$\{sl\} reps/.test(app));
   truthy("the remove-set button has an aria-label", /aria-label="Remove \$\{sl\.toLowerCase\(\)\}"/.test(app));
+
+  // --- the remaining pass: focus trap, Escape, heatmap text, small type ---
+  const chart = fs.readFileSync(path.join(B, "js", "chart.js"), "utf8");
+  const appSrc = app;
+  truthy("Escape closes the modal", /e\.key === "Escape"/.test(appSrc) && /preventDefault\(\); closeModal\(\);/.test(appSrc));
+  truthy("Tab is intercepted while the modal is open", /e\.key !== "Tab"/.test(appSrc));
+  truthy("a focusable set is collected inside the dialog", /focusablesIn\(/.test(appSrc) && /button:not\(\[disabled\]\)/.test(appSrc));
+  truthy("focus wraps at both ends of the dialog", /last\.focus\(\);/.test(appSrc) && /first\.focus\(\);/.test(appSrc));
+  truthy("opening records the element that opened the modal", /modalOpener = /.test(appSrc));
+  truthy("closing restores focus to it", /modalOpener\.focus\(\)/.test(appSrc));
+  truthy("heatmap cells carry a text alternative of their own", /setAttribute\("role", "img"\)/.test(chart) && /setAttribute\("aria-label", cellText\(k, d\)\)/.test(chart));
+  truthy("...so the grid does not rely on title or shading alone", /cellText\(k, d\)/.test(chart) && /const c = document\.createElement\("i"\);\s*\n\s*c\.className = "hm-cell l" \+ lvl;/.test(chart));
+  truthy("padding cells are hidden from the accessibility tree", /hm-cell pad"; b\.setAttribute\("aria-hidden", "true"\)/.test(chart));
+  truthy("the smallest label sizes were raised, not left at .42rem/9px",
+    !/\.lvl-lab[^}]*font-size: \.42rem/.test(css) && !/\.mraw \{[^}]*font-size: 9px/.test(css));
 }
 
 

@@ -264,10 +264,11 @@ const Store = (() => {
 
   function exportCSV() {
     // `rest` was a declared-but-never-collected field; exporting an always-empty
-    // column is noise, and RPE is real data so it stays.
-    const rows = [["date", "exercise", "mode", "set", "weight_kg", "reps", "seconds", "distance_m", "rpe", "rest_s"]];
+    // column is noise, and RPE is real data so it stays. set_type carries the
+    // canonical value ("warmup"/"drop"/"failure") or blank for a straight set.
+    const rows = [["date", "exercise", "mode", "set", "weight_kg", "reps", "seconds", "distance_m", "rpe", "rest_s", "set_type"]];
     state.workouts.forEach((w) => (w.entries || []).forEach((en) => {
-      (en.sets || []).forEach((s, i) => rows.push([w.date, en.name || en.id, en.mode || "", i + 1, s.w ?? "", s.r ?? "", s.t ?? "", s.d ?? "", s.rpe ?? "", (s.rest ?? en.restDefault ?? "")]));
+      (en.sets || []).forEach((s, i) => rows.push([w.date, en.name || en.id, en.mode || "", i + 1, s.w ?? "", s.r ?? "", s.t ?? "", s.d ?? "", s.rpe ?? "", (s.rest ?? en.restDefault ?? ""), s.ty ?? ""]));
     }));
     return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   }

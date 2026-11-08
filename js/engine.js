@@ -303,11 +303,30 @@ const Engine = (() => {
     }
   }
 
-  /* Every COMPLETED set counts, warm-up or not. Warm-ups are deliberately not
-     marked or distinguished (the owner's call: they are just logged like anything
-     else), so nothing here can tell a ramp from a top set. That is why the UI
-     says "sets", never "working sets" — a working set properly excludes warm-ups,
-     and claiming that precision would misstate what is actually counted. */
+  /* ---------- set types ---------- */
+  /* What KIND of set this was — one fact, one field (`s.ty`). It is not a
+     decorative tag: it changes what the set is worth, in exactly two ways.
+       - a warm-up is NOT a working set: it adds no volume, no tonnage and no
+         effort. It is still logged and shown, just counted separately so the
+         numbers the app reports stay honest about what is a working set.
+       - a drop set and a failure set are harder than a straight set, so they feed
+         the effort path (muscleGroups' effSets) at more than one working set, the
+         same path the per-exercise effort weight already uses.
+     The multipliers are deliberate heuristics, NOT measurements: the smallest
+     numbers that make the difference visible, kept here in one place so there is
+     one thing to tune. A set carries ONE type — the values are mutually exclusive. */
+  const SET_TYPES = {
+    normal:  { label: "Set",      effort: 1,    working: true  },
+    warmup:  { label: "Warm-up",  effort: 0,    working: false },
+    drop:    { label: "Drop set", effort: 1.25, working: true  },
+    failure: { label: "Failure",  effort: 1.2,  working: true  },
+  };
+  const setType = (s) => (s && SET_TYPES[s.ty]) ? s.ty : "normal";
+  const setTypeLabel = (s) => SET_TYPES[setType(s)].label;
+  const isWarmupSet = (s) => !!(s && s.ty === "warmup");
+  /* How much a set counts as a working set for the effort path: 1 for a straight
+     set, more for a drop or failure set, 0 for a warm-up. */
+  const setEffort = (s) => SET_TYPES[setType(s)].effort;
   
   /* Sets logged before bodyweight-aware scoring shipped — or imported from an
      export — carry no `bwKg` stamp, and entryStats has no fallback for a missing
@@ -336,7 +355,7 @@ const Engine = (() => {
   function entryStats(entry) {
     const mode = entry.mode || "weight_reps";
     const bw = isBodyweight(entry.name);
-    const sets = (entry.sets || []).filter((s) => {
+    const valid = (entry.sets || []).filter((s) => {
       // a bodyweight movement is valid on reps alone — the weight box holds only
       // what is strapped on, so requiring it discarded every unweighted set
       if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw);
@@ -347,11 +366,20 @@ const Engine = (() => {
       if (mode === "weight_distance") return num(s.d) > 0;
       return false;
     });
+    /* A warm-up is logged and shown but is NOT a working set: it contributes no
+       volume, no tonnage, no reps and no effort. Everything below runs on the
+       working sets only; the warm-ups are counted so the UI can say so out loud
+       instead of quietly folding a ramp into the totals. */
+    const sets = valid.filter((s) => !isWarmupSet(s));
+    const warmups = valid.length - sets.length;
     let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, bestReps = 0, tonnage = 0, rpeSum = 0, rpeN = 0;
-    let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0;
+    let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0, effSets = 0;
     for (const s of sets) {
       volume += setVolume(s, mode);
       reps += num(s.r); time += num(s.t); dist += num(s.d);
+      // effort sets: a working set is worth 1, a drop or failure set more, and
+      // this is the value muscleGroups weighs by the exercise's own effort factor
+      effSets += setEffort(s);
       /* Tonnage is load x reps and nothing else. It used to run for any set with
          a weight and substitute Math.max(1, reps) when reps were undefined, so a
          20kg x 45s hold scored "20 kg of tonnage" — a number nobody lifted,
@@ -384,7 +412,7 @@ const Engine = (() => {
       workSec += num(s.r) * REP_SECONDS + num(s.t);
     }
     return {
-      sets: sets.length, volume, reps, time, dist, tonnage,
+      sets: sets.length, warmups, effSets, volume, reps, time, dist, tonnage,
       est1RM: mode === "weight_reps" ? best : 0,
       // Epley is only trustworthy to ~12 reps, so est1RM is capped there and a
       // 12-rep and a 20-rep set at the same load estimate the same. Exposed so
@@ -1190,6 +1218,10 @@ const Engine = (() => {
         const rest = num(s.rest) > 0 ? num(s.rest) : num(en.restDefault);
         if (rest > 0) sfx.push("r" + rest);
         const tail = sfx.length ? " " + sfx.join(" ") : "";
+        /* The set type rides in front of the set, and only when it is set: a
+           straight set stays byte-for-byte what he wrote. parseSet reads the same
+           word back, so the notes round-trip is lossless. */
+        const tyTok = s.ty === "warmup" ? "warmup " : s.ty === "drop" ? "drop " : s.ty === "failure" ? "failure " : "";
         let body;
         if (mode === "time") body = `${r2(num(s.t) || num(s.r))}s`;
         else if (mode === "weight_time") body = `${r2(s.w)}x${r2(s.t)}s`;
@@ -1197,7 +1229,7 @@ const Engine = (() => {
         else if (mode === "weight_distance") body = `${r2(s.w)}x${r2(s.d)}m`;
         else if (mode === "reps") body = String(r2(s.r));
         else body = `${r2(s.w)}x${r2(s.r)}`;
-        lines.push(`${i + 1}:${body}${tail}`);
+        lines.push(`${i + 1}:${tyTok}${body}${tail}`);
       });
       lines.push("");
     }
@@ -1245,6 +1277,26 @@ const Engine = (() => {
              pct, met: Math.abs(cur - goal) < 0.5,
              belowEssential: belowEssentialBF(goal, state.profile.sex) };
   }
+
+  /* ---------- body measurements ---------- */
+  /* Tape measures, stored on the SAME bodyweight check-in as weight and body fat
+     (one entry per date, one field per measurement), canonical in centimetres
+     exactly as weight is canonical in kilograms. Only the three that a lifter
+     actually acts on are collected, and each is shown back as a trend — nothing
+     here is entered to sit unread. */
+  const MEASURES = [
+    { key: "waistCm", label: "Waist", color: "#f8d030" },
+    { key: "chestCm", label: "Chest", color: "#58c8f8" },
+    { key: "armCm",   label: "Arm",   color: "#a878f8" },
+  ];
+  const bodyMeasureSeries = (state, key) => (state.bodylog || [])
+    .filter((b) => num(b[key]) > 0)
+    .slice().sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .map((b) => ({ date: b.date, value: num(b[key]) }));
+  const bodyMeasureLatest = (state, key) => {
+    const s = bodyMeasureSeries(state, key);
+    return s.length ? s[s.length - 1] : null;
+  };
 
   /* ---------- consistency calendar ---------- */
   /* A per-day map of the last N days: everything the year grid needs, computed
@@ -1402,8 +1454,8 @@ const Engine = (() => {
       const wgt = exerciseWeight(state, en.id);
       gs.forEach((g, i) => {
         const share = i === 0 ? 1 : 0.5;
-        sets[g] += st.sets * share;             // raw — comparable to MEV/MAV/MRV
-        eff[g] += st.sets * share * wgt;        // stimulus — what the score uses
+        sets[g] += st.sets * share;             // raw working sets — comparable to MEV/MAV/MRV
+        eff[g] += st.effSets * share * wgt;     // stimulus — what the score uses
         vol[g] += st.volume * share;
         const d = w.date; if (!lastTrained[g] || d > lastTrained[g]) lastTrained[g] = d;
       });
@@ -1781,6 +1833,7 @@ const Engine = (() => {
   return {
     DAY, ATTRIBUTES, GROUP_ORDER, LANDMARKS, STANDARDS, TIERS, ACHIEVEMENTS,
     clamp, num, interp, tierOf, est1RM, setVolume, entryStats, liftKey, isCoreLift,
+    SET_TYPES, setType, setTypeLabel, isWarmupSet, setEffort,
     exInfo, exName, exMode, exGroups, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
@@ -1790,6 +1843,7 @@ const Engine = (() => {
     BW_FACTOR, BW_NAME, SUPPLIES_LOAD, hasBwFactor,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, exportNotesShorthand, filterSessions, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
+    MEASURES, bodyMeasureSeries, bodyMeasureLatest,
   };
 })();
 if (typeof module !== "undefined") module.exports = Engine;

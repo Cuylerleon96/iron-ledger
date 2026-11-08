@@ -197,7 +197,7 @@ main > * { min-width: 0; }
 .ring-fg { fill: none; stroke: var(--gold); stroke-width: 8; stroke-linecap: butt; filter: drop-shadow(0 0 5px rgba(248, 208, 48, .8)); transition: stroke-dasharray .6s steps(10); }
 .lvl-in { position: relative; display: flex; flex-direction: column; align-items: center; }
 .lvl-num { font-family: var(--pxd); font-size: 1.25rem; color: var(--cream); text-shadow: var(--outline); line-height: 1.2; }
-.lvl-lab { font-family: var(--pxd); font-size: .42rem; color: var(--gold); text-shadow: var(--outline-sm); letter-spacing: .1em; }
+.lvl-lab { font-family: var(--pxd); font-size: .58rem; color: var(--gold); text-shadow: var(--outline-sm); letter-spacing: .1em; }
 .hero-meta { flex: 1 1 200px; }
 .hero-meta h2 { font-family: var(--pxd); font-size: .78rem; color: var(--gold); text-shadow: var(--outline); }
 .chips { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .45rem; }
@@ -254,7 +254,7 @@ main > * { min-width: 0; }
 .dot { width: 12px; height: 12px; border: 2px solid var(--cream); border-radius: 2px; box-shadow: 0 0 0 1px var(--ink); }
 .attr-name { font-weight: 700; text-shadow: var(--outline-sm); }
 .attr-tier { color: var(--gold); font-weight: 700; font-size: .64rem; text-shadow: var(--outline-sm); }
-.mraw { font-size: 9px; opacity: 0.75; margin-left: 6px; }
+.mraw { font-size: 11px; opacity: 0.75; margin-left: 6px; }
 .attr-score { text-align: right; font-weight: 700; text-shadow: var(--outline-sm); }
 .attr-row .up { color: var(--red-l); font-weight: 700; }
 .attr-row .down { color: var(--sky); font-weight: 700; }
@@ -325,7 +325,7 @@ main > * { min-width: 0; }
 .badge-ico { font-size: .9rem; color: var(--gold); flex: 0 0 auto; text-shadow: var(--outline-sm); }
 .badge-txt { display: flex; flex-direction: column; line-height: 1.5; }
 .badge-txt b { font-size: .64rem; text-shadow: var(--outline-sm); }
-.badge-txt small { color: #b8d0d8; font-size: .56rem; }
+.badge-txt small { color: #b8d0d8; font-size: .62rem; }
 
 /* ---------------- rows / lists ---------------- */
 .pr-row { display: grid; grid-template-columns: 1fr auto auto; gap: .5rem; align-items: center; padding: .32rem .3rem; font-size: .66rem; border-bottom: 2px dotted rgba(255, 255, 255, .14); }
@@ -401,7 +401,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 /* ---------------- freshness + deload ---------------- */
 .fresh-row { display: flex; flex-wrap: wrap; gap: .3rem; margin: .2rem 0 .35rem; }
 .fresh-chip {
-  font-size: .58rem; padding: .16rem .4rem; border-radius: 6px;
+  font-size: .64rem; padding: .16rem .4rem; border-radius: 6px;
   border: 1px solid rgba(255,255,255,.25); text-shadow: var(--outline-sm);
 }
 .fresh-chip.ready  { background: rgba(120,200,80,.22); border-color: rgba(120,200,80,.6); }
@@ -436,7 +436,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   margin: .05rem 0 .5rem; font-size: .66rem; text-shadow: var(--outline-sm);
 }
 .target .t-lab {
-  font-family: var(--pxd); font-size: .48rem; color: var(--ink);
+  font-family: var(--pxd); font-size: .6rem; color: var(--ink);
   background: var(--gold); border: 2px solid var(--cream); border-radius: 4px;
   padding: .06rem .26rem; box-shadow: 0 0 0 1px var(--ink); text-shadow: none;
 }
@@ -470,6 +470,14 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
    because the fields added up to more than the card is wide on a phone */
 .set-row .x { flex: 0 0 auto; padding: .26rem .4rem; }
 .set-row .set-n, .set-row .times, .set-row .unit, .set-row .e1 { flex: 0 0 auto; }
+/* The set-type control: compact, but a real control worth reaching. A warm-up row
+   reads quieter and a drop/failure row reads louder, so the shading matches the
+   fact that the set counts for less (not a working set) or more. */
+.set-row .setty { flex: 0 0 auto; padding: .24rem .2rem; font-size: .62rem; max-width: 6.6rem; }
+.set-row.is-warmup { opacity: .82; }
+.set-row.is-warmup .set-n { color: #b8d0d8; }
+.set-row.is-hard { border-color: var(--gold); }
+.set-row.is-hard .set-n { color: var(--gold-l); }
 .entry-rest {
   display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
   margin: .5rem 0 .15rem; font-size: .64rem;
@@ -501,7 +509,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .lib-row:active { transform: translateX(2px); }
 .lib-row:hover { border-color: var(--gold); background: rgba(248, 208, 48, .14); }
 .lib-name { flex: 1 1 auto; min-width: 0; font-size: .68rem; font-weight: 700; text-shadow: var(--outline-sm); }
-.lib-meta { flex: 0 0 auto; white-space: nowrap; font-size: .58rem; text-align: right; color: #b8d0d8; }
+.lib-meta { flex: 0 0 auto; white-space: nowrap; font-size: .62rem; text-align: right; color: #b8d0d8; }
 #lb-progress { margin-top: .5rem; }
 
 /* ---------------- modal / picker ---------------- */
@@ -652,7 +660,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   border-radius: 7px; padding: .45rem .55rem;
 }
 .gloss-lab {
-  font-family: var(--px); font-size: .56rem; color: var(--gold);
+  font-family: var(--px); font-size: .6rem; color: var(--gold);
   text-transform: uppercase; letter-spacing: .05em; margin-right: .3rem;
 }
 .gloss-list { display: grid; gap: .3rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
