@@ -694,7 +694,12 @@ const Engine = (() => {
     const weekOf = (d) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return dstr(x); };
     const covered = new Set(dates.map(weekOf)).size;
     const coveredScore = interp(Math.min(4, covered) / 4, [0, 0.25, 0.5, 0.75, 1], [0, 25, 52, 78, 100]);
-    const continuity = clamp(0.55 * gapScore + 0.45 * coveredScore);
+    /* Coverage-led rather than gap-led. Coverage (how many of the window's four
+       weeks had a session) is the CHRONIC signal — it moves slowly and cannot be
+       reset by one bad week. The longest-gap term is the acute one. Weighting
+       coverage up gives regular-but-infrequent training its due and takes a
+       sharper view of cramming, without making a single missed week expensive. */
+    const continuity = clamp(0.35 * gapScore + 0.65 * coveredScore);
     // frequency leads, continuity carries real weight but not control
     const score = clamp(0.70 * frequency + 0.30 * continuity);
     return { score, sessions, expected, rate, frequency, continuity, longestGap,

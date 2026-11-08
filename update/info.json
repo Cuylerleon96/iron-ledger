@@ -1,14 +1,12 @@
 {
-  "versionCode": 22,
-  "versionName": "1.0.21",
+  "versionCode": 23,
+  "versionName": "1.0.22",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "9ea5349ae93f3c10ab58e59ae0819789d00bc23a6b6529aabe9eb3a86343098b",
-  "sizeBytes": 3264240,
+  "sha256": "26be429c7deb8b57b398f88bf28feac93bd64fefca45cdb89d1ff7ac036117b9",
+  "sizeBytes": 3264425,
   "published": "2026-11-08",
   "notes": [
-    "Bodyweight exercises can now be graded with no weight entered. An unweighted pull-up or push-up was rejected outright and scored zero. The load is now your bodyweight times a published fraction for the movement - pull-up 1.0, dip 0.95, push-up 0.64, inverted row 0.6 - plus anything strapped on, so a 20 lb belt on a 138 lb body scores as the 158 lb actually moving",
-    "The bodyweight used is recorded at the moment you log the set, so an old session is always scored with the bodyweight that was true that day, not today",
-    "Fix: a movement with no published ratio table, such as pull-ups and dips, entered the Strength average as a zero and dragged it down",
-    "Discipline now has two halves. It was frequency only, and the streak it displayed counted for nothing. Continuity, meaning how regularly you turn up, now carries 30 percent, built from smooth signals rather than a streak counter so that one hard week costs a few points instead of wiping the score"
+    "Discipline continuity is now led by coverage, meaning how many of the last four weeks you trained, rather than by the single longest gap. Cramming a months sessions into a fortnight now reads 3 points lower than spreading them out, while missing one hard week costs exactly what it did before",
+    "In short: regular training is rewarded, cramming is not, and one bad week stays a dent rather than a collapse"
   ]
 }
