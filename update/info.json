@@ -1,16 +1,12 @@
 {
-  "versionCode": 8,
-  "versionName": "1.0.7",
+  "versionCode": 9,
+  "versionName": "1.0.8",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "84432c1ec328ba90c9c59de94b459e40bc4a5b80ba38c75b810f45f0eda43b14",
-  "sizeBytes": 3236137,
+  "sha256": "54317dd25e899d987437e084da5f590720ea207d11208462591c302722e7292b",
+  "sizeBytes": 3236015,
   "published": "2026-11-08",
   "notes": [
-    "Every exercise now shows a NEXT target from your own last session: +1 rep at the same load, or a ~2.5% load step",
-    "The target is built from your best set by estimated 1RM, so a light warmup triple never sets it",
-    "Load steps snap to what you can actually load (multiples of 1.25 kg)",
-    "Fix: weights keep their decimals everywhere - 102.5 kg was being displayed as 103",
-    "Fix: workouts and the bodyweight log are date-ordered on load, so the comparison can no longer read the wrong pair of sessions",
-    "Includes 1.0.6: rest between sets, which feeds Stamina only"
+    "The update feed address is no longer shown or editable in the app - it is an implementation detail, not something you should ever have to paste in",
+    "App updates is now just the status, the Check for updates button, and the installed version"
   ]
 }
