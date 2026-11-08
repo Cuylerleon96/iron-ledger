@@ -6,3 +6,7 @@ android/.gradle/
 android/local.properties
 android/app/src/main/assets/public/
 *.apk
+
+# python bytecode
+tools/__pycache__/
+__pycache__/
