@@ -268,6 +268,17 @@ main > * { min-width: 0; }
 .bar-host { margin-top: .6rem; position: relative; z-index: 2; }
 .barchart { display: grid; gap: .3rem; }
 .bar-row { display: grid; grid-template-columns: 80px 1fr 46px; align-items: center; gap: .45rem; font-size: .64rem; }
+
+/* ---------------- segmented toggle ---------------- */
+/* A small pill switcher in the app's own language, used to pick which weekly
+   volume column (sets / tonnage / reps) the chart plots. */
+.seg { display: inline-flex; gap: .3rem; margin: .1rem 0 .5rem; flex-wrap: wrap; }
+.seg button {
+  font-family: var(--px); font-size: .62rem; color: var(--cream); cursor: pointer;
+  background: rgba(0, 0, 0, .32); border: 2px solid var(--cream); border-radius: 5px;
+  padding: .26rem .5rem; box-shadow: 0 0 0 1px var(--ink);
+}
+.seg button.on { background: var(--gold); color: var(--ink); text-shadow: none; }
 .bar-lab { text-align: left; text-shadow: var(--outline-sm); }
 .bar-track {
   position: relative; height: 14px; border-radius: 3px; overflow: hidden;
@@ -331,6 +342,20 @@ main > * { min-width: 0; }
 }
 .inp:focus, select.inp:focus { background: #fff; box-shadow: 0 0 0 2px var(--gold), inset 0 2px 0 rgba(0, 0, 0, .1); }
 .inp::placeholder { color: #7a8894; }
+
+/* ---------------- keyboard focus ---------------- */
+/* Only .inp had a focus style, so a keyboard or switch user could not see where
+   they were on any button, tab, list row or clickable chip. :focus-visible keeps
+   the ring for keyboard/AT navigation but leaves a mouse or touch tap clean. */
+:where(a, button, [role="button"], .pick-row, .lib-row, .hist-ex, select, textarea, input):focus-visible {
+  outline: 3px solid var(--gold-l);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* A dialog locked the page behind it: a touch-scroll on a phone dragged the
+   dashboard under the open modal. body.modal-open freezes it instead. */
+body.modal-open { overflow: hidden; }
 .note-inp { width: 100%; margin-top: .2rem; }
 .mini {
   font-family: var(--px); font-size: .62rem; color: var(--ink);

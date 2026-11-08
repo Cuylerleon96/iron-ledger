@@ -1,16 +1,17 @@
 {
-  "versionCode": 37,
-  "versionName": "1.0.36",
+  "versionCode": 38,
+  "versionName": "1.0.37",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "14a4362459fcc38b07f8a69edb1bfb58afdd8aeb618acbcbef3383d37f8abe93",
-  "sizeBytes": 3278177,
+  "sha256": "14f073a5794fea90828f657f7d1d24abf0fb53db25c5962c933037900e9f94b9",
+  "sizeBytes": 3279874,
   "published": "2026-11-08",
   "notes": [
-    "Track-as: re-confirmed the Log screen control and the exercise detail modal both save the mode override through one shared path with no id-length gate, so Bench Press id 73 and every 9-99 id persists",
-    "publish.py now sets JAVA_HOME to the JDK 17 and ANDROID_HOME/ANDROID_SDK_ROOT to the SDK root, and fails loudly if either is missing, so a release no longer needs the shell pre-configured",
-    "Next-session target now merges an exercise's cards within a session, so an exercise logged twice in one workout counts as one session and its trend is no longer measured against its own second card",
-    "Custom exercises can be renamed and deleted from the exercise detail modal; deleting keeps the logged sets but detaches them from the muscle-group analysis",
-    "Data screen: a clearly-labelled, confirm-guarded 'Restore from file (replace all)' now sits beside Import (merge), and its confirmation names exactly what will be lost",
-    "A brand-new account now shows an empty Consistency card instead of a year of empty cells, and the 'Load my 7 Nov session' button is reachable again"
+    "Seed affordance: re-confirmed the Profile 'Load my 7 Nov session' button is reachable (its guard keys on whether the session is already in the log, not on the flag boot() sets before first paint)",
+    "Override schema: removed the dead 'rename override' field \u2014 exName never read overrides.n (renames live on custom exercises)",
+    "Work time %: the dashboard chip and the Stamina explainer now name their window (all-time vs the last 28 days) so two different numbers no longer share one label",
+    "Volume & recovery: a Sets / Tonnage / Reps toggle now plots the weekly tonnage and reps the engine already computes \u2014 no second tonnage calculation",
+    "Docs: the vault note no longer claims a rest timer, plate/warm-up calculators, super/drop/failure set types or routines \u2014 none exist in the app (the README was already accurate)",
+    "The first-run tour version is now injected from android/version.properties at build time (loud failure if the anchor is missing), so it can no longer silently stop re-showing",
+    "Accessibility: visible keyboard focus ring, modal role=dialog + aria-modal + background scroll lock, toasts are an aria-live region, and set-row inputs are labelled for screen readers"
   ]
 }

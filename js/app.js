@@ -124,8 +124,14 @@
     box.innerHTML = "";
     box.append(node);
     $("#modal").classList.remove("hidden");
+    // Lock the page behind the dialog: without this a touch-scroll on a phone
+    // moved the dashboard underneath the open modal.
+    document.body.classList.add("modal-open");
   }
-  const closeModal = () => $("#modal").classList.add("hidden");
+  const closeModal = () => {
+    $("#modal").classList.add("hidden");
+    document.body.classList.remove("modal-open");
+  };
   $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
 
   /* ================= library index ================= */
@@ -340,7 +346,7 @@
           <div class="chips">
             <span class="chip">${s.sessions} ${pl(s.sessions, "session")}</span>
             <span class="chip">${fmt(s.tonnage / 1000, 1)} t lifted</span>
-            ${s.density ? `<span class="chip">${s.density}% work time</span>` : ""}
+            ${s.density ? `<span class="chip" title="Share of all logged session time spent working rather than resting — all-time">${s.density}% work time (all-time)</span>` : ""}
             <span class="chip">${s.streak.days}d streak</span>
             <span class="chip">${s.prs} ${pl(s.prs, "PR")} this month</span>
           </div>
@@ -521,7 +527,12 @@
     const fresh = Engine.freshness(S);
     const card = el("section", { class: "card" });
     card.innerHTML = `<div class="card-head"><h3>Volume &amp; recovery</h3>
-      <span class="muted">sets per week, last 12 weeks</span></div>`;
+      <span class="muted" id="vol-cap">sets per week, last 12 weeks</span></div>
+      <div class="seg" id="vol-seg" role="group" aria-label="Volume metric">
+        <button type="button" class="on" data-met="sets" aria-pressed="true">Sets</button>
+        <button type="button" data-met="tonnage" aria-pressed="false">Tonnage</button>
+        <button type="button" data-met="reps" aria-pressed="false">Reps</button>
+      </div>`;
     const ch = el("div", { class: "chart-host" });
     card.append(ch);
     card.append(el("p", { class: "deload " + (del.suggest ? "warn" : "ok") },
@@ -539,10 +550,34 @@
     card.append(fr);
     card.append(el("p", { class: "muted small" }, "Days since each group was last trained — recency, not a measurement of recovery."));
     host.append(card);
-    Chart.line(ch, {
-      fillArea: true, color: "#f8d030", unit: " sets",
-      points: weeks.map((w) => ({ x: Engine.dstr(Date.now() - w.weeksAgo * 7 * 86400000), y: w.sets })),
-    });
+
+    /* Volume, tonnage and reps are ALL already computed per week by
+       Engine.volumeWeeks — this only chooses which of those columns to plot.
+       There is no second tonnage calculation here; it is the same load × reps
+       the engine (and the PR/strength paths) already use. */
+    const METRICS = {
+      sets:    { color: "#f8d030", unit: " sets", cap: "sets per week, last 12 weeks" },
+      tonnage: { color: "#58c8f8", unit: " kg",   cap: "tonnage per week (kg), last 12 weeks" },
+      reps:    { color: "#a8e878", unit: " reps", cap: "reps per week, last 12 weeks" },
+    };
+    const draw = (met) => {
+      const m = METRICS[met];
+      const cap = $("#vol-cap", card); if (cap) cap.textContent = m.cap;
+      Chart.line(ch, {
+        fillArea: true, color: m.color, unit: m.unit,
+        points: weeks.map((w) => ({ x: Engine.dstr(Date.now() - w.weeksAgo * 7 * 86400000), y: w[met] })),
+      });
+    };
+    const seg = $("#vol-seg", card);
+    $$("button", seg).forEach((b) => b.addEventListener("click", () => {
+      $$("button", seg).forEach((x) => {
+        const on = x === b;
+        x.classList.toggle("on", on);
+        x.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      draw(b.dataset.met);
+    }));
+    draw("sets");
   }
 
   function bestLabel(r) {
@@ -570,7 +605,7 @@
         + (x.paceKmh ? ` · average pace ${x.paceKmh.toFixed(1)} km/h` : "")
         + ` · best single set ${x.maxReps} reps · ${Math.round(x.setsPerWk)} sets/wk.`
         + (x.avgRest
-            ? ` Average rest ${fmtRest(x.avgRest)} and ${x.density}% of session time actually working — short rest raises the endurance demand, which is why it counts here and nowhere else.`
+            ? ` Average rest ${fmtRest(x.avgRest)} and ${x.density}% work time over the last 28 days — short rest raises the endurance demand, which is why it counts here and nowhere else.`
             : " Log rest between sets to factor training density in; nothing else reads it.");
       case "POW": return `${x.plyoReps} explosive reps logged · ${x.heavySets} heavy low-rep sets (≤3 reps).`;
       case "MOB": return x.minPerWk > 0
@@ -796,21 +831,26 @@
        straight out, so the moment anything re-rendered, a set the user had typed
        as 180 lb came back as 81.64662740915384 in his own input box. Typing hid
        it (the DOM keeps what you type), which is why it survived this long. */
-    const f = (k, ph, w = 56) => {
+    /* Every field carries an accessible name, not just a placeholder: a
+       placeholder is not a label, and a bare "reps"/"secs" box told a screen
+       reader nothing about WHICH set it belonged to. */
+    const sl = `Set ${si + 1}`;
+    const f = (k, ph, w = 56, aria = "") => {
       let v = s[k];
       if (k === "w" && v !== undefined && v !== null && v !== "") v = fmtW(U.w(Engine.num(v)));
-      return `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${v ?? ""}" style="width:${w}px">`;
+      const lab = aria ? ` aria-label="${esc(aria)}"` : "";
+      return `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${v ?? ""}" style="width:${w}px"${lab}>`;
     };
-    let inner = `<span class="set-n">${si + 1}</span>`;
-    if (en.mode === "weight_reps") inner += f("w", U.label()) + `<span class="times">×</span>` + f("r", "reps", 48);
-    else if (en.mode === "reps") inner += f("r", "reps", 48);
-    else if (en.mode === "time") inner += f("t", "secs", 64) + `<span class="unit">s</span>`;
-    else if (en.mode === "weight_time") inner += f("w", U.label()) + `<span class="times">×</span>` + f("t", "secs", 48) + `<span class="unit">s</span>`;
-    else if (en.mode === "distance_time") inner += f("d", "metres", 62) + `<span class="unit">m</span>` + f("t", "secs", 48) + `<span class="unit">s</span>`;
-    else if (en.mode === "weight_distance") inner += f("w", U.label()) + `<span class="times">×</span>` + f("d", "metres", 56) + `<span class="unit">m</span>`;
-    inner += `<span class="rpe-wrap"><input class="inp num" data-k="rpe" type="number" min="1" max="10" step="0.5" placeholder="RPE" value="${s.rpe ?? ""}" style="width:44px"></span>`;
+    let inner = `<span class="set-n" aria-hidden="true">${si + 1}</span>`;
+    if (en.mode === "weight_reps") inner += f("w", U.label(), 56, `${sl} weight`) + `<span class="times">×</span>` + f("r", "reps", 48, `${sl} reps`);
+    else if (en.mode === "reps") inner += f("r", "reps", 48, `${sl} reps`);
+    else if (en.mode === "time") inner += f("t", "secs", 64, `${sl} seconds`) + `<span class="unit">s</span>`;
+    else if (en.mode === "weight_time") inner += f("w", U.label(), 56, `${sl} weight`) + `<span class="times">×</span>` + f("t", "secs", 48, `${sl} seconds`) + `<span class="unit">s</span>`;
+    else if (en.mode === "distance_time") inner += f("d", "metres", 62, `${sl} distance`) + `<span class="unit">m</span>` + f("t", "secs", 48, `${sl} seconds`) + `<span class="unit">s</span>`;
+    else if (en.mode === "weight_distance") inner += f("w", U.label(), 56, `${sl} weight`) + `<span class="times">×</span>` + f("d", "metres", 56, `${sl} distance`) + `<span class="unit">m</span>`;
+    inner += `<span class="rpe-wrap"><input class="inp num" data-k="rpe" type="number" min="1" max="10" step="0.5" placeholder="RPE" value="${s.rpe ?? ""}" style="width:44px" aria-label="${sl} effort (RPE)"></span>`;
     const restPh = en.restDefault ? String(en.restDefault) : "rest";
-    inner += `<span class="rest-wrap"><input class="inp num" data-k="rest" type="number" inputmode="numeric" min="0" step="5" placeholder="${restPh}" value="${s.rest ?? ""}" style="width:48px" title="Rest after this set, in seconds. Leave blank to use the exercise default."></span>`;
+    inner += `<span class="rest-wrap"><input class="inp num" data-k="rest" type="number" inputmode="numeric" min="0" step="5" placeholder="${restPh}" value="${s.rest ?? ""}" style="width:48px" aria-label="${sl} rest after this set, seconds" title="Rest after this set, in seconds. Leave blank to use the exercise default."></span>`;
     if (en.mode === "weight_reps") {
       const e1 = Engine.est1RM(Engine.num(s.w), Engine.num(s.r));
       // say when the estimate is capped, so 12 and 20 reps at the same load
@@ -822,7 +862,7 @@
         : (capped ? "Epley is only accurate to about 12 reps, so this estimate is capped — it will not rise further at this weight" : "");
       inner += `<span class="e1${capped ? " capped" : ""}${bwMov ? " bw" : ""}" title="${esc(title)}">${e1 ? (capped ? "≥" : "") + fmtW(U.w(e1)) + " e1RM" : ""}</span>`;
     }
-    inner += `<button class="btn ghost tiny x" title="remove">✕</button>`;
+    inner += `<button class="btn ghost tiny x" title="remove" aria-label="Remove ${sl.toLowerCase()}">✕</button>`;
     row.innerHTML = inner;
     $$("input", row).forEach((inp) => inp.addEventListener("input", (e) => {
       const k = e.target.dataset.k;

@@ -407,6 +407,10 @@ const Engine = (() => {
     const c = (state.custom || []).find((x) => x.id === id);
     return c || libById.get(id) || { id, n: "Unknown", c: "Other", m: "weight_reps", g: ["Core"], p: [], s: [], e: [] };
   };
+  /* The name is always the library/custom name. There is deliberately NO rename
+     override: overrides carry only {mode, weight, g}, all of which this engine
+     reads (exMode / exerciseWeight / exGroups). A rename goes through
+     custom[].n, so a stored overrides.n would be written and never read. */
   const exName = (state, id) => exInfo(state, id).n;
   const exMode = (state, id) => (state.overrides && state.overrides[id] && state.overrides[id].mode) || exInfo(state, id).m || "weight_reps";
   const exGroups = (state, id) => {

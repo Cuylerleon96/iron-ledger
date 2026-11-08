@@ -15,7 +15,11 @@ const Store = (() => {
     },
     workouts: [],
     bodylog: [],
-    overrides: {},     // exId -> {mode?, g?, n?}
+    overrides: {},     // exId -> {mode?, weight?, g?} — only fields the engine
+                       // actually reads. 'n' was declared here but exName never
+                       // consulted it (renames of user-created exercises live on
+                       // custom[].n), so it was removed rather than kept as a
+                       // field that could be written and silently ignored.
     custom: [],        // user-created exercises
     achievements: {},  // id -> ISO date
     targets: {},       // exId -> { value, set } — a goal for one exercise

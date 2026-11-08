@@ -13,8 +13,12 @@
        never appear for them. Do not add one.
      * The only way to see it again is a deliberate version bump.
    APP_VERSION below is the single source of truth for "which version has the
-   user seen it for", and must be bumped in step with android/version.properties'
-   versionName by whoever cuts a release. Different from that file, nothing shows.
+   user seen it for". It is NOT hand-kept: tools/build_www.py OVERWRITES this
+   constant in the built bundle with android/version.properties' versionName, so
+   it can never drift (a hand-kept constant silently stops re-showing the tour).
+   The "0.0.0" here is only a placeholder for the raw source / browser dev build;
+   the shipped bundle always carries the real release versionName. The build fails
+   loudly if this anchor line is missing, rather than shipping a stale version.
 
    It never blocks the app: it is a modal overlay opened AFTER the first paint.
    Every control does something — Skip dismisses and persists, the dots jump to a
@@ -23,9 +27,11 @@
 const Welcome = (() => {
   "use strict";
 
-  /* The app version this build is. Kept in step with android/version.properties
-     (versionName). Bumping it is the ONLY way the tour is shown a second time. */
-  const APP_VERSION = "1.0.0";
+  /* The app version this build is. INJECTED at build time from
+     android/version.properties (versionName) by tools/build_www.py. "0.0.0" is
+     only the un-built placeholder. The shipped bundle always carries the real
+     versionName, so the tour re-shows exactly once per release. */
+  const APP_VERSION = "0.0.0";
 
   /* In order: what the app is; shorthand logging; the six attributes; muscle
      balance & weak points; where data lives / backups; the self-update path. */

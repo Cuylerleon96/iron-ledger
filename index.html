@@ -35,8 +35,8 @@
 
 <main id="view"></main>
 
-<div id="toasts"></div>
-<div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
+<div id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Dialog"><div class="modal-box" id="modal-box"></div></div>
 
 <script src="js/data.js"></script>
 <script src="js/seed.js"></script>

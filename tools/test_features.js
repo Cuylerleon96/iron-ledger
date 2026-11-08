@@ -253,5 +253,121 @@ console.log("=== muscle freshness ===");
   eq("a fresh install invents nothing", empty.E.freshness(empty.S.state).Chest.fresh, null);
 }
 
+console.log("=== the 'Load my 7 Nov session' seed button is reachable ===");
+{
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  // The old bug: the button rendered only when settings.seeded was false, but
+  // boot() sets it true before the first render, so the condition never fired.
+  // The guard must now key on whether the seed workout is already in the log.
+  const guard = app.match(/function shouldShowSeed\(\)[\s\S]*?\n  \}/);
+  truthy("shouldShowSeed exists", !!guard);
+  if (guard) {
+    truthy("the guard keys on the seed workout being in the log",
+      /SEED_WORKOUT/.test(guard[0]) && /workouts/.test(guard[0]));
+    truthy("the guard does NOT read settings.seeded", !/settings\.seeded/.test(guard[0]));
+  }
+  truthy("the button is rendered under shouldShowSeed()",
+    /shouldShowSeed\(\) \? `<div class="row"><button[^`]*id="d-seed"/.test(app));
+  truthy("boot() still sets settings.seeded (but nothing gates the button on it)",
+    /if \(!S\.settings\.seeded\) \{ S\.settings\.seeded = true/.test(app));
+}
+
+console.log("=== override schema: only the fields the engine actually reads ===");
+{
+  const e = env({});
+  // 'n' is not part of the schema: exName ignores a rename override entirely.
+  // (A rename lives on custom[].n, not in overrides.)
+  e.S.state.overrides[73] = { n: "Renamed Bench" };
+  eq("exName ignores a rename override (n is not read)", e.E.exName(e.S.state, 73), "Bench Press");
+  // mode IS wired
+  e.S.state.overrides[73] = { mode: "reps" };
+  eq("exMode honours the mode override", e.E.exMode(e.S.state, 73), "reps");
+  // g IS wired — this is the delete-detach path, NOT a dead branch
+  e.S.state.overrides[73] = { g: [] };
+  eq("exGroups honours an empty group override (delete-detach)", e.E.exGroups(e.S.state, 73), []);
+  e.S.state.overrides[73] = { g: ["Legs"] };
+  eq("exGroups honours a non-empty group override", e.E.exGroups(e.S.state, 73), ["Legs"]);
+}
+
+console.log("=== weekly volume carries tonnage and reps, not just sets ===");
+{
+  const e = env({});
+  e.S.upsertWorkout({ id: "vt", date: iso(3), entries: [
+    { id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }, { w: 50, r: 5 }] }] });
+  const v = e.E.volumeWeeks(e.S.state, 4);
+  const wk = v[v.length - 1];               // weeksAgo 0 — the current week
+  eq("this week's sets are counted", wk.sets, 2);
+  eq("this week's reps are counted", wk.reps, 15);
+  eq("this week's tonnage is the computed load x reps", wk.tonnage, 100 * 10 + 50 * 5);
+  // the chart plots whichever of these columns is picked; prove tonnage is the
+  // SAME number the engine already uses for one entry (no second definition)
+  const allTon = v.reduce((a, w) => a + w.tonnage, 0);
+  eq("summed weekly tonnage equals the engine's own entry tonnage",
+     allTon, e.E.entryStats(e.S.state.workouts[0].entries[0]).tonnage);
+}
+
+console.log("=== the two 'work time %' figures name their window ===");
+{
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("dashboard work-time chip is labelled all-time",
+    /\$\{s\.density\}% work time \(all-time\)/.test(app));
+  truthy("stamina work-time figure is labelled 28-day",
+    /\$\{x\.density\}% work time over the last 28 days/.test(app));
+  truthy("no unqualified '% work time' label survives",
+    !/% work time<\/span>/.test(app));
+}
+
+console.log("=== build injects the real app version (welcome constant cannot drift) ===");
+{
+  const { execFileSync } = require("child_process");
+  const PY = `
+import importlib.util, json, pathlib, re
+spec = importlib.util.spec_from_file_location("bw", "tools/build_www.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+ver = m.read_version_name()
+src = pathlib.Path("js/welcome.js").read_text()
+inj = re.search(r'const APP_VERSION = "([^"]*)"', m.inject_version(src, ver)).group(1)
+loud = False
+try:
+    m.inject_version("// no anchor here", "9.9.9")
+except SystemExit:
+    loud = True
+print(json.dumps({"version": ver, "injected": inj, "loud": loud}))
+`;
+  let r = null;
+  try {
+    r = JSON.parse(execFileSync("python3", ["-c", PY], { cwd: B }).toString().trim());
+    truthy("build_www.py exposes an injectable version step", true);
+  } catch (err) {
+    truthy("build_www.py exposes an injectable version step", false);
+    console.log("        " + String(err.message || err).slice(0, 300));
+  }
+  if (r) {
+    const props = fs.readFileSync(path.join(B, "android", "version.properties"), "utf8");
+    const vn = (props.match(/versionName\s*=\s*(\S+)/) || [])[1];
+    eq("injection reads android/version.properties' versionName", r.version, vn);
+    eq("the injected APP_VERSION equals the real versionName", r.injected, vn);
+    truthy("injection fails loudly (SystemExit) when the anchor is missing", r.loud);
+    truthy("source welcome.js still carries the injectable anchor",
+      /const APP_VERSION = "[^"]*"/.test(fs.readFileSync(path.join(B, "js", "welcome.js"), "utf8")));
+  }
+}
+
+console.log("=== accessibility wiring (static: source + markup present) ===");
+{
+  const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(B, "css", "style.css"), "utf8");
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("modal has role=dialog", /id="modal"[^>]*role="dialog"/.test(html));
+  truthy("modal is aria-modal", /id="modal"[^>]*aria-modal="true"/.test(html));
+  truthy("toasts are an aria-live region", /id="toasts"[^>]*aria-live="polite"/.test(html));
+  truthy("a :focus-visible ring exists in the stylesheet", /:focus-visible/.test(css));
+  truthy("opening a modal locks background scroll", /body\.classList\.add\("modal-open"\)/.test(app));
+  truthy("closing a modal releases the scroll lock", /body\.classList\.remove\("modal-open"\)/.test(app));
+  truthy("set-row weight inputs carry an aria-label", /\$\{sl\} weight/.test(app));
+  truthy("set-row reps inputs carry an aria-label", /\$\{sl\} reps/.test(app));
+  truthy("the remove-set button has an aria-label", /aria-label="Remove \$\{sl\.toLowerCase\(\)\}"/.test(app));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
