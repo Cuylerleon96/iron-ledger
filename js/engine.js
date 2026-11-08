@@ -11,7 +11,7 @@ const Engine = (() => {
     { key: "STR", label: "Strength",  sub: "max force",      color: "#ff6b6b" },
     { key: "END", label: "Stamina",   sub: "work capacity",  color: "#ffd166" },
     { key: "POW", label: "Power",     sub: "explosiveness",  color: "#ff9f43" },
-    { key: "MOB", label: "Mobility",  sub: "range of motion",color: "#6ee7b7" },
+    { key: "MOB", label: "Mobility",  sub: "range & control",color: "#6ee7b7" },
     { key: "CON", label: "Discipline",sub: "consistency",    color: "#7cc6fe" },
     { key: "VIT", label: "Vitality",  sub: "body comp",      color: "#c792ea" },
   ];
@@ -575,13 +575,31 @@ const Engine = (() => {
     return { score: clamp(score), plyoReps, heavySets, olympic };
   }
 
-  const MOB_RE = /stretch|mobility|yoga|foam|flexib|range of motion|dynamic warm/i;
+  /* Mobility is the range you can PRODUCE and CONTROL, so two kinds of work feed
+     it: flexibility and joint work (stretching, yoga, foam rolling, joint
+     rotations), and control-at-range work — rotations and anti-movement stability
+     holds, which are the second half of usable range.
+
+     Previously only the first kind counted, and only when the exercise NAME
+     happened to contain one of six words: of 166 mobility and stability movements
+     in the library, 96 scored zero, including Plank, Side Plank, Bird Dog,
+     Deadbug, Pallof Press, Turkish Get-Up and Thoracic Rotation.
+
+     Loaded spinal FLEXION under a short range is deliberately excluded, however
+     much core work it represents: a crunch trains about 30 degrees of flexion
+     against resistance and lengthens nothing. Counting it would make this axis
+     stop measuring range — and the point of the axis is to be accurate. */
+  const MOB_RE = /stretch|mobility|yoga|foam|flexib|range of motion|dynamic warm|rotat|pallof|anti.?rotation|bird ?dog|dead ?bug|deadbug|clamshell|\bcars?\b|dislocat|thoracic|cervical|90\/90|hip opener|get.?up|cat.?cow|world'?s greatest|bear crawl|plank|\bhold\b|side.?lying|scapular|ankle|wrist|hip circle|shoulder circle|arm circle|leg swing|deep squat/i;
+  // strength done in a short range, not range itself
+  const NOT_MOB_RE = /crunch|sit.?up|roll ?out|jack|knee.?raise|leg ?raise|v.?up|hanging|toe touch|good morning/i;
+  const isMobility = (name) => MOB_RE.test(name) && !NOT_MOB_RE.test(name);
+
   function mobilityScore(state, ws) {
     let min = 0, sessions = 0;
     for (const w of ws) {
       let touched = false;
       for (const en of w.entries || []) {
-        if (!MOB_RE.test(exInfo(state, en.id).n)) continue;
+        if (!isMobility(exInfo(state, en.id).n)) continue;
         touched = true;
         for (const s of en.sets || []) min += (num(s.t) / 60) || num(s.r) * 0.5;
       }
@@ -1381,7 +1399,7 @@ const Engine = (() => {
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep, exerciseWeight, isIsolation,
+    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };

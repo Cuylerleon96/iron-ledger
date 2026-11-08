@@ -1,14 +1,13 @@
 {
-  "versionCode": 20,
-  "versionName": "1.0.19",
+  "versionCode": 21,
+  "versionName": "1.0.20",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d61ec69e17d8c63cd6879213dcfc38cc8be206fe58bc7c2c560c7eb02ef6cdd8",
-  "sizeBytes": 3260993,
+  "sha256": "63ef9ec04983f44bef94e31247c96df39e60512c614e2277f18945a5b1c6c2df",
+  "sizeBytes": 3261934,
   "published": "2026-11-08",
   "notes": [
-    "Fix: the estimated Strength score read whatever your heaviest lift happened to be against the BENCH PRESS standards. A big leg press, judged as a bench press, could hand you a Very good rating on pressing you have never done. Every lift is now scored against its own published table",
-    "Fix: a bodyweight check-in recording only body fat wiped out your known weight, so Strength silently fell back to a guessed 80 kg and Vitality lost its BMI reading",
-    "Fix: logging one exercise on two cards in the same session counted as two separate sessions, so the app could compare a session against itself and report progress that did not happen",
-    "Fix: cardio intervals counted as strength working sets, inflating your volume tolerance with work you did not do with weights"
+    "Mobility now counts control-at-range work, not only stretching. Plank, side plank, bird dog, deadbug, Pallof press, Turkish get-up, thoracic and landmine rotation, cat-cow, 9090 hip and deep squat holds all count. 96 real movements were scoring zero because the app only recognised six words in the exercise name",
+    "The Mobility axis is now labelled range and control, because that is what it measures",
+    "Crunches and sit-ups still do not count toward Mobility, deliberately. They train a short range under load, which is strength and not range, and counting them would stop the axis measuring range at all. The app now explains that on screen instead of leaving you a bare zero"
   ]
 }

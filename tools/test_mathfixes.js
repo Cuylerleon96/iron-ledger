@@ -267,5 +267,36 @@ console.log("\n=== 14. round 2: cardio intervals are not strength sets ===");
   truthy("but the cardio minutes still count", s.cardioMinPerWk > 0);
 }
 
+console.log("\n=== 15. what counts as Mobility ===");
+{
+  const e = env();
+  // control-at-range and flexibility work was invisible unless the name happened
+  // to contain one of six words; 96 of 166 real movements scored zero
+  const counts = ["Plank", "Side Plank", "Bird Dog", "Deadbug", "Pallof Press", "Turkish Get-Up",
+    "Thoracic Rotation", "Landmine Rotation", "Cat-Cow", "90/90 Hip", "Deep Squat Hold",
+    "Hip Flexor Stretch", "Foam Roll Quads", "Shoulder Dislocates"];
+  for (const n of counts) truthy(`${n} counts as mobility`, e.E.isMobility(n));
+  // loaded flexion under a short range is strength, not range — however much core work it is
+  const excluded = ["Incline Crunches", "Crunches", "Sit-Up", "Hanging Leg Raise",
+    "Barbell Ab Rollout", "Decline Bench Leg Raise", "Bicycle Crunch"];
+  for (const n of excluded) eq(`${n} does NOT count as mobility`, e.E.isMobility(n), false);
+
+  // and it must actually move the score
+  // the engine reads the name through exInfo (library/custom by id), so the
+  // exercise has to actually exist — else it is "Unknown" and matches nothing
+  const customs = [{ id: "p1", n: "Plank", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: [], m: "time" },
+                   { id: "c1x", n: "Incline Crunches", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: ["Incline bench"], m: "weight_reps" }];
+  const mob = base({ custom: customs, workouts: [wk(iso(1), [{ t: 600 }], "p1", "Plank", "time")] });
+  eq("a plank session scores mobility", e.E.attributes(mob, 28, 0).MOB.score > 0, true);
+  const core = base({ custom: customs, workouts: [wk(iso(1), [{ w: 20, r: 15 }], "c1x", "Incline Crunches")] });
+  eq("a crunch session does not", e.E.attributes(core, 28, 0).MOB.score, 0);
+  const why = e.E.attributes(core, 28, 0).MOB;
+  console.log(`        MOB detail: ${Math.round(why.detail.minPerWk)} min/wk, ${why.detail.sessions} sessions`);
+  // the explanation must tell him why it is zero rather than leaving it a mystery
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the UI explains the rule for a zero", /Crunches and sit-ups do not/.test(src));
+  truthy("the axis is labelled range & control, not range of motion", /sub: "range & control"/.test(fs.readFileSync(path.join(B, "js", "engine.js"), "utf8")));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

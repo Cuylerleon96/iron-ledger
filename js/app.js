@@ -485,7 +485,9 @@
             ? ` Average rest ${fmtRest(x.avgRest)} and ${x.density}% of session time actually working — short rest raises the endurance demand, which is why it counts here and nowhere else.`
             : " Log rest between sets to factor training density in; nothing else reads it.");
       case "POW": return `${x.plyoReps} explosive reps logged · ${x.heavySets} heavy low-rep sets (≤3 reps).`;
-      case "MOB": return `${Math.round(x.minPerWk)} min/wk of mobility or stretching work.`;
+      case "MOB": return x.minPerWk > 0
+        ? `${Math.round(x.minPerWk)} min/wk across ${x.sessions} ${pl(x.sessions, "session")} of mobility and control work — stretching, joint work, and stability or rotation drills. Loaded flexion like crunches is strength, not range, so it counts toward Core instead.`
+        : "No mobility or control work logged. Stretching, foam rolling, joint rotations, or stability and rotation drills (plank, bird dog, Pallof press, Turkish get-up) all count. Crunches and sit-ups do not — they train a short range under load, which is strength.";
       case "CON": return `${x.sessions} ${pl(x.sessions, "session")} in 28 days against a target of ${fmt(x.expected)} · ${x.streakDays}-day streak.`;
       case "VIT": return (x.basis && x.basis !== "no data")
         ? `Scored from ${x.basis}${x.log ? ` · ${x.log} bodyweight check-in${x.log > 1 ? "s" : ""}` : ""}.`
