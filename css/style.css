@@ -259,10 +259,10 @@ main > * { min-width: 0; }
 .attr-row .up { color: var(--red-l); font-weight: 700; }
 .attr-row .down { color: var(--sky); font-weight: 700; }
 .attr-row .flat { color: #8fa8b0; }
-.status-belowMEV, .status-untrained { color: #ffb3a3; }
-.status-MEVMAV { color: var(--gold); }
-.status-optimal { color: var(--green-l); }
-.status-overMRV { color: var(--orange); }
+.status-roomtogrow, .status-nottrainedyet { color: #ffb3a3; }
+.status-building { color: var(--gold); }
+.status-sweetspot { color: var(--green-l); }
+.status-overitslimit { color: var(--orange); }
 
 /* ---------------- bars ---------------- */
 .bar-host { margin-top: .6rem; position: relative; z-index: 2; }

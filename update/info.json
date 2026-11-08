@@ -1,15 +1,13 @@
 {
-  "versionCode": 47,
-  "versionName": "1.0.46",
+  "versionCode": 48,
+  "versionName": "1.0.47",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "7c102d7c31219a0b4cd1e7d16e8f3330a185fd26d3ba9670957130cebc0332b7",
-  "sizeBytes": 3303781,
+  "sha256": "117235721263bef6f8c9b589852e0ab79726995b631490d69d14db5abf85d9fa",
+  "sizeBytes": 3305028,
   "published": "2026-11-08",
   "notes": [
-    "Big Session replaces Volume King: the badge now rewards a hard, well-spread session kept within your weekly volume limits, not 20+ raw sets of junk volume.",
-    "Perfect Week and Unbreakable now reward hitting your weekly session target, not training consecutive days.",
-    "Eight new badges: your first weigh-in, logging a tape measurement, a bodyweight squat and a bodyweight row, 25 km of cardio, training every muscle group, 180 minutes of mobility, and taking a recovery week.",
-    "Renamed the weekend badge to Weekend Warrior - 'No Days Off' pushed rest as failure.",
-    "Big moments now get a full-screen GBA-style badge-get: a level up, a new title, a personal record, or a major badge. Small badges stay as the usual toast."
+    "Reworded clinical and scolding labels into plain, encouraging language across the app - the muscle-balance card now reads 'room to grow', 'sweet spot' and 'not trained yet' instead of 'below MEV' and 'untrained', and no score band is called 'No good'.",
+    "Three in a Row is now Three on Target: it rewards meeting your weekly session target in three weeks, not three days in a row - the last consecutive-day reward, in badges and in XP, is gone.",
+    "Celebrations now fire only after you save a session, and everything earned in one save arrives as a single celebration you dismiss in one tap."
   ]
 }

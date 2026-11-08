@@ -71,7 +71,12 @@ console.log("\n=== summary + weak points ===");
 {
   const sm = E.summary(st);
   eq("level", sm.level.level, 2);
-  eq("total XP", sm.xp, 330);
+  /* XP was 330 while the lifetime bonus paid st.bestDays * 15 (his 2-day run:
+     +30). That consecutive-day term was removed app-wide (a 3-day badge was the
+     last of them), and the bonus is now weeks-at-target * 15 — he has 2 sessions
+     against a target of 4, so 0 weeks, and XP is 300. His LEVEL is unchanged
+     (300 is exactly the level-2 floor). */
+  eq("total XP", sm.xp, 300);
   eq("title", sm.title, "Rookie");
   eq("density %", sm.density, 56);
   eq("streak days", sm.streak.days, 2);
@@ -79,7 +84,7 @@ console.log("\n=== summary + weak points ===");
   const wp = E.weakPoints(st, 28);
   eq("weak point count", wp.length, 6);
   eq("no tilde in any advice", wp.some((w) => /~/.test(w.fix || "")), false);
-  // legs now reads MEV->MAV and chest optimal, so only core and shoulders remain
+  // legs now reads "building" and chest "sweet spot", so only core and shoulders remain
   eq("advice wording", wp.filter((w) => w.kind === "volume").map((w) => w.fix),
     ["Add about 3 sets/week of shoulders work.", "Add about 2 sets/week of core work."]);
 }

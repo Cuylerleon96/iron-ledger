@@ -53,9 +53,14 @@ const Engine = (() => {
   /* ratio → score. Anchors map the five published tiers onto 0-100. */
   const TIER_SCORE = [30, 45, 62, 82, 96];
 
+  /* The word under a score is a plain-English BAND, not a grade (the glossary
+     says so). The bottom four used to read "Decent / Not great / Poor / No good",
+     which a beginner reads as a mark against them; they are now a plain
+     progression that states the same band without the scolding. No threshold
+     moved — only the label. */
   const TIERS = [
     [95, "Best"], [85, "Fantastic"], [72, "Very good"], [58, "Pretty good"],
-    [44, "Decent"], [28, "Not great"], [12, "Poor"], [0, "No good"],
+    [44, "Getting there"], [28, "Building up"], [12, "Early days"], [0, "Just starting"],
   ];
 
   /* Name → standard key. Order matters: most specific first. */
@@ -1480,7 +1485,7 @@ const Engine = (() => {
       // 100 = at or above the adaptive sweet spot; below that, linear to MEV.
       /* 0 -> 55 up to MEV, 55 -> 95 across MEV..MAV, then a small top-up to 100
          at MRV, and it FALLS past MRV. It used to keep climbing, so 24 sets/wk
-         (flagged "over MRV") scored 100 while 18 sets/wk ("optimal") scored 98 —
+         (flagged "over its limit") scored 100 while 18 sets/wk ("sweet spot") scored 98 —
          the number and the flag disagreed about which week was better. */
       let score = effPerWk <= 0 ? 0
         : effPerWk < L.mev ? (effPerWk / L.mev) * 55
@@ -1490,9 +1495,13 @@ const Engine = (() => {
       score = clamp(Math.round(score));
       /* Judged on the SAME stimulus-weighted value the score uses. Reading raw
          sets here while the score read weighted ones let the flag and the number
-         disagree — a group could be "optimal" and score like it was under MEV. */
-      const status = effPerWk <= 0 ? "untrained" : effPerWk < L.mev ? "below MEV"
-        : effPerWk <= L.mrv ? (effPerWk < L.mav ? "MEV→MAV" : "optimal") : "over MRV";
+         disagree — a group could read "sweet spot" and score like it was under MEV.
+         The words are plain and encouraging, not clinical: "not trained yet",
+         "room to grow", "building", "sweet spot", "over its limit". Each one maps
+         to a glossary entry (see js/glossary.js STATUS_ID), and the thresholds
+         they are placed against are unchanged. */
+      const status = effPerWk <= 0 ? "not trained yet" : effPerWk < L.mev ? "room to grow"
+        : effPerWk <= L.mrv ? (effPerWk < L.mav ? "building" : "sweet spot") : "over its limit";
       out[g] = { group: g, score,
                  setsPerWk: Math.round(perWk * 10) / 10,
                  effPerWk: Math.round(effPerWk * 10) / 10,
@@ -1514,24 +1523,24 @@ const Engine = (() => {
 
     // 1. lagging muscle groups
     /* Groups below their MEV are lagging by the same bands the card prints next to
-       them. Without this, Core showed "below MEV" in the status list while the
+       them. Without this, Core showed "room to grow" in the status list while the
        weak-point list ignored it — two halves of one card disagreeing about the
        same group because one used a score threshold and the other a volume band. */
     const lag = GROUP_ORDER.filter((g) => mg[g].setsPerWk > 0
-      && (mg[g].score < Math.max(45, mean * 0.7) || mg[g].status === "below MEV"))
+      && (mg[g].score < Math.max(45, mean * 0.7) || mg[g].status === "room to grow"))
       .sort((a, b) => mg[a].score - mg[b].score);
     for (const g of lag.slice(0, 3)) {
       const need = Math.max(0, Math.ceil(mg[g].landmarks.mev - mg[g].setsPerWk));
       out.push({ kind: "volume", severity: mg[g].score < 40 ? "high" : "med", group: g,
-        title: `${g} is under-trained`, detail: `${mg[g].setsPerWk} sets/wk vs a ${mg[g].landmarks.mev}–${mg[g].landmarks.mav} target.`,
+        title: `${g} has room to grow`, detail: `${mg[g].setsPerWk} sets/wk vs a ${mg[g].landmarks.mev}–${mg[g].landmarks.mav} target.`,
         fix: need > 0
           ? `Add about ${need} ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
           : `Progressively overload ${g.toLowerCase()}.` });
     }
-    // 2. completely untrained
+    // 2. not trained at all
     const untrained = GROUP_ORDER.filter((g) => mg[g].setsPerWk <= 0 && g !== "Calves");
     if (untrained.length) out.push({ kind: "gap", severity: untrained.length > 2 ? "high" : "med",
-      title: `No data for ${untrained.join(", ")}`, detail: "No sets logged for these groups in the last 4 weeks.",
+      title: `${untrained.join(", ")} not trained yet`, detail: "Nothing logged for these groups in the last 4 weeks — an easy place to start.",
       fix: `Add a compound movement for ${untrained.length === 1 ? "it" : "each"}: ${untrained.map((g) => suggestFor(g)).join("; ")}.` });
 
     // 3. push / pull balance
@@ -1539,10 +1548,10 @@ const Engine = (() => {
     const pull = mg.Back.volume + mg.Arms.volume * 0.5;
     if (push > 0 && pull > 0) {
       const ratio = push / pull;
-      if (ratio > 1.35) out.push({ kind: "balance", severity: "med", title: "Push-dominant imbalance",
+      if (ratio > 1.35) out.push({ kind: "balance", severity: "med", title: "Pushing ahead of pulling",
         detail: `Push volume is ${ratio.toFixed(2)}× pull volume. A 1.0–1.2 ratio keeps shoulders healthy.`,
         fix: "Add rows, pulldowns or face-pulls to bring pulling up to match pressing." });
-      else if (ratio < 0.75) out.push({ kind: "balance", severity: "low", title: "Pull-dominant imbalance",
+      else if (ratio < 0.75) out.push({ kind: "balance", severity: "low", title: "Pulling ahead of pushing",
         detail: `Pull volume is ${(1 / ratio).toFixed(2)}× push volume.`, fix: "Add pressing volume (bench, OHP, dips)." });
     }
     // 4. quad / hamstring balance
@@ -1559,7 +1568,7 @@ const Engine = (() => {
         if (info.p.includes("Hamstrings") || info.p.includes("Glutes")) ham += st.sets;
       }
       if (quad > 0 && ham > 0 && quad / ham > 1.8) out.push({ kind: "balance", severity: "med",
-        title: "Quad / hamstring gap", detail: `Quads ${Math.round(quad)} sets vs hamstrings ${Math.round(ham)}.`,
+        title: "Quads ahead of hamstrings", detail: `Quads ${Math.round(quad)} sets vs hamstrings ${Math.round(ham)}.`,
         fix: "Add Romanian deadlifts, leg curls or good mornings for the posterior chain." });
     }
     // 5. stagnant lifts. Deliberately a longer window than the muscle analysis:
@@ -1611,7 +1620,7 @@ const Engine = (() => {
     // 7. low attributes
     for (const a of ATTRIBUTES) {
       if (attrs[a.key].score < 30 && attrs[a.key].score > 0)
-        out.push({ kind: "attribute", severity: "low", title: `${a.label} is your weakest attribute`,
+        out.push({ kind: "attribute", severity: "low", title: `${a.label} is where you can gain the most`,
           detail: `Score ${attrs[a.key].score}/100 (${attrs[a.key].tier}).`,
           fix: FIXES[a.key] });
     }
@@ -1701,10 +1710,12 @@ const Engine = (() => {
       if (wset.has(wk(d))) weeks++;
       else if (i > 0) break;
     }
-    /* Longest run ever. XP is recomputed from state on every render, so paying
-       XP for the CURRENT streak made it fall the moment a streak broke: identical
-       training scored 60 XP less ten days later and a level could go DOWN. Paying
-       for the best run instead only ever moves one way. */
+    /* Longest run ever, kept as a statistic (the streak display and the audit
+       read it). XP is recomputed from state on every render, so paying XP for the
+       CURRENT streak made it fall the moment a streak broke: identical training
+       scored 60 XP less ten days later and a level could go DOWN. That is why XP
+       never pays for a current streak — and, since consecutive-day rewards were
+       removed app-wide, it no longer pays for bestDays at all (see xp()). */
     let bestDays = 0, runD = 0;
     for (let i = 0; i < dates.length; i++) {
       runD = i > 0 && daysBetween(dates[i - 1], dates[i]) === 1 ? runD + 1 : 1;
@@ -1760,6 +1771,19 @@ const Engine = (() => {
   /* Monday-start week key for a date. Pure in the date itself, so XP does not
      depend on when it happened to be rendered. */
   const weekKeyOf = (d) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return dstr(x); };
+
+  /* How many Monday-start weeks met the weekly session target. This is the ONE
+     "sessions against the weekly target" measure: the XP consistency term and the
+     Perfect Week / Unbreakable / Three on Target badges all read it, so they
+     cannot disagree. Order-free and monotonic — adding a session can only add to
+     the count, never remove one — so anything built on it only ever moves up.
+     NOTHING here counts consecutive days. */
+  function weeksAtTarget(state) {
+    const target = num(state.profile.weeklyTarget) || 4;
+    const byWeek = {};
+    for (const w of state.workouts || []) { const k = weekKeyOf(w.date); byWeek[k] = (byWeek[k] || 0) + 1; }
+    return Object.values(byWeek).filter((n) => n >= target).length;
+  }
 
   /* PRs per calendar date — the same one achievement per exercise per session
      prCount reports, built once so xp() stays linear. */
@@ -1849,8 +1873,16 @@ const Engine = (() => {
     const weekSets = {};
     let total = 0;
     for (const w of state.workouts || []) total += sessionXp(state, w, { prs, weekSets }).xp;
-    const st = streaks(state);
-    total += st.bestDays * 15 + st.bestWeeks * 50;   // best ever, never current
+    /* Consistency is SESSIONS PER WEEK AGAINST THE WEEKLY TARGET, never
+       consecutive days. This used to add st.bestDays * 15 — a reward for the
+       longest run of consecutive training DAYS, the exact daily-training push the
+       deload guidance warns about. It is now the count of weeks that met the
+       weekly target, the same measure the Perfect Week / Unbreakable / Three on
+       Target badges and the per-session consistency scaler use. bestWeeks
+       (consecutive WEEKS with at least one session) is a weekly measure, not a
+       consecutive-day one, so it stays. Both terms only ever grow as data is
+       added, so a level can still never go down. */
+    total += weeksAtTarget(state) * 15 + streaks(state).bestWeeks * 50;
     total += (state.bodylog || []).length * 10;
     return total;
   }
@@ -1887,7 +1919,7 @@ const Engine = (() => {
      deload. Every badge is relative to the user's own numbers or their own
      target, so none of them punishes a beginner.
 
-     Two badges were re-cut so they stop contradicting the app's own advice:
+     Three badges were re-cut so they stop contradicting the app's own advice:
 
        - "Volume King" paid for 20+ RAW sets in one session — exactly the junk
          volume the muscle-balance card flags and the XP rebalance stopped
@@ -1895,14 +1927,18 @@ const Engine = (() => {
          session (the same stimulus-equivalent units the muscle card uses),
          spread over several muscle groups, that does NOT sit in an over-MRV
          week. Effort-weighted volume, not raw set count.
-       - "Perfect Week" and "Unbreakable" were CONSECUTIVE-DAY streaks, which
-         push daily training — the overtraining pattern the deload guidance
-         warns about. They now measure what the XP consistency scaler already
-         measures: SESSIONS PER WEEK AGAINST THE WEEKLY TARGET. No consecutive
-         days are rewarded anywhere.
+       - "Perfect Week", "Unbreakable" and "Three in a Row" were CONSECUTIVE-DAY
+         streaks, which push daily training — the overtraining pattern the deload
+         guidance warns about. They now measure what the XP consistency scaler
+         already measures: SESSIONS PER WEEK AGAINST THE WEEKLY TARGET. No
+         consecutive days are rewarded anywhere. ("Three in a Row" is now "Three
+         on Target": meet the weekly target in three separate weeks. Its id stays
+         "s3" because a saved state has recorded it.)
 
-     `tier` decides the celebration: a "major" unlock earns the full-screen
-     moment, a "minor" one stays as the ordinary toast. */
+     The week-run badges (wk4/wk12/wk52) stay on CONSECUTIVE WEEKS with at least
+     one session. That is a weekly measure, not a consecutive-day one — a rest day
+     inside the week is fine — so it does not push daily training and is
+     deliberately left alone. */
   const BIG_SESSION_MIN = 18;    // effort-weighted sets in one session
   const BIG_SESSION_GROUPS = 3;  // ...spread over at least this many groups
 
@@ -1917,7 +1953,9 @@ const Engine = (() => {
     { id: "pr1",       name: "New Best",         desc: "Set your first PR",                 tier: "major", test: (c) => c.prs >= 1 },
     { id: "pr10",      name: "PR Hunter",        desc: "Set 10 PRs",                        tier: "minor", test: (c) => c.prs >= 10 },
     { id: "pr50",      name: "Record Breaker",   desc: "Set 50 PRs",                        tier: "major", test: (c) => c.prs >= 50 },
-    { id: "s3",        name: "Three in a Row",   desc: "3-day training streak",             tier: "minor", test: (c) => c.streakDays >= 3 },
+    /* was a 3-day streak -> SESSIONS PER WEEK vs the weekly target, 3 weeks.
+       The last consecutive-day badge. Id kept: a saved state references "s3". */
+    { id: "s3",        name: "Three on Target",  desc: "Meet your weekly session target in 3 weeks", tier: "minor", test: (c) => c.weeksAtTarget >= 3 },
     /* was a 7-day streak -> SESSIONS PER WEEK vs the weekly target */
     { id: "s7",        name: "Perfect Week",     desc: "Meet your weekly session target",   tier: "minor", test: (c) => c.weeksAtTarget >= 1 },
     /* was a 30-day streak -> 12 weeks meeting the weekly target */
@@ -2032,17 +2070,15 @@ const Engine = (() => {
     const goal = num(state.profile.goalWeightKg), cur = bodyweight(state);
     /* Sessions per week against the weekly target — the SAME measure the XP
        consistency scaler uses, so the badges and the XP cannot disagree. This
-       replaced the old consecutive-DAY streak conditions on s7/s30. */
-    const target = num(state.profile.weeklyTarget) || 4;
-    const byWeek = {};
-    for (const w of ws) { const k = weekKeyOf(w.date); byWeek[k] = (byWeek[k] || 0) + 1; }
-    const weeksAtTarget = Object.values(byWeek).filter((n) => n >= target).length;
+       replaced the old consecutive-DAY streak conditions on s3/s7/s30; the one
+       definition lives in weeksAtTarget(). No consecutive-day value is exposed
+       here any more, so no badge can read one. */
     return {
       sessions: ws.length, tonnage, cardioKm, mobilityMin, weekend,
-      ratio, prs: prCount(state, 3650), streakDays: st.days, streakWeeks: st.weeks,
+      ratio, prs: prCount(state, 3650), streakWeeks: st.weeks,
       balanced: trainedG.length >= 5 && trainedG.every((g) => mg[g].score >= 60),
       groupsWeek: trainedG.length, weighins: (state.bodylog || []).length,
-      weeksAtTarget,
+      weeksAtTarget: weeksAtTarget(state),
       measures: (state.bodylog || []).filter((b) => MEASURES.some((m) => num(b[m.key]) > 0)).length,
       deloads: deloadWeeks(state),
       bigSession: bigSession(state, ws),
@@ -2122,7 +2158,7 @@ const Engine = (() => {
     SET_TYPES, setType, setTypeLabel, setEffort,
     exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
-    sessionXp, composeMult, XP, weekKeyOf, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
+    sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,

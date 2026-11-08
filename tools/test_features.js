@@ -482,7 +482,7 @@ console.log("=== glossary: every term the UI shows has ONE entry, and every entr
   eq("every required term has an entry", REQUIRED.filter((id) => !G.has(id)), []);
 
   // 3. every muscle-balance status word the engine can emit maps to an entry
-  const STATUSES = ["below MEV", "MEV→MAV", "optimal", "over MRV", "untrained"];
+  const STATUSES = ["room to grow", "building", "sweet spot", "over its limit", "not trained yet"];
   truthy("the engine really emits these status words",
     STATUSES.every((s) => engine.includes(s)));
   eq("every status word maps to a glossary entry", STATUSES.map(G.statusId).filter(Boolean).length, STATUSES.length);
@@ -553,6 +553,31 @@ console.log("=== glossary: every term the UI shows has ONE entry, and every entr
     /closest\("\[data-term\]"\)/.test(app));
   truthy("the stylesheet gives the tappable term its GBA look",
     /\.term-link\s*\{/.test(fs.readFileSync(path.join(B, "css", "style.css"), "utf8")));
+}
+
+console.log("=== glossary follows the display: a renamed term's entry is renamed with it ===");
+{
+  /* The app's rule (glossary.js): every term the UI DISPLAYS has one entry, and
+     no entry exists for a term the UI never shows. So when a displayed term is
+     renamed, its entry must be renamed to match — otherwise the card shows one
+     word and the glossary explains another. This pins that for the muscle-balance
+     status words, the clearest offenders in the tone pass. */
+  const G = require(path.join(B, "js", "glossary.js"));
+  const engine = fs.readFileSync(path.join(B, "js", "engine.js"), "utf8");
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+
+  // (a) every word the engine can emit resolves to an entry...
+  const emitted = ["room to grow", "building", "sweet spot", "over its limit", "not trained yet"];
+  eq("every emitted muscle-status word has a glossary entry", emitted.filter((w) => !G.statusId(w)), []);
+  // (b) ...and that entry's OWN heading is exactly the word on screen
+  eq("...and the entry's heading IS the word shown (entry follows display)",
+     emitted.filter((w) => { const e = G.get(G.statusId(w)); return !e || e.term !== w; }), []);
+  // (c) the card renders the entry through statusId, not a stale literal
+  truthy("the muscle card links each status word through Glossary.statusId",
+    /GLOSS\.statusId\(m\.status\)/.test(app) && /term\(sid,/.test(app));
+  // (d) the old clinical words are gone from the engine's display surface
+  const CLINICAL = ['"below MEV"', '"over MRV"', '"untrained"', '"MEV→MAV"', '"MEV->MAV"', '"optimal"'];
+  eq("no clinical muscle-status word survives in the engine source", CLINICAL.filter((w) => engine.includes(w)), []);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -140,7 +140,7 @@ console.log("\n[5] Does one improvement count as several PRs?");
 }
 
 /* ---------------------------------------------------------------- 6 */
-console.log("\n[6] Does 'over MRV' score WORSE than 'optimal'? (it should)");
+console.log("\n[6] Does the 'over its limit' band score WORSE than the 'sweet spot'? (it should)");
 {
   const e = env();
   // 3 sessions/wk of 8 chest sets each = 24 sets/wk: above chest MRV (22)
@@ -153,10 +153,10 @@ console.log("\n[6] Does 'over MRV' score WORSE than 'optimal'? (it should)");
   const optimal = mkState({ workouts: [wk(iso(1), Array.from({ length: 5 }, () => ({ w: 100, r: 10 }))), wk(iso(4), Array.from({ length: 5 }, () => ({ w: 100, r: 10 })))] });
   const oc = e.E.muscleGroups(optimal, 28).Chest;
   console.log(`     at MAV for comparison: ${oc.setsPerWk} sets/wk status="${oc.status}" score=${oc.score}`);
-  if (c.status === "over MRV" && c.score >= oc.score)
-    finding(6, "Muscle score keeps RISING past MRV, so 'over MRV' reads as better than 'optimal'",
-      `Chest ${c.setsPerWk}/wk is flagged "over MRV" yet scores ${c.score}, vs ${oc.score} at the sweet spot — the flag and the number disagree`);
-  else check("over MRV scores lower", c.score < oc.score, true);
+  if (c.status === "over its limit" && c.score >= oc.score)
+    finding(6, "Muscle score keeps RISING past MRV, so the 'over its limit' band reads as better than the 'sweet spot'",
+      `Chest ${c.setsPerWk}/wk is flagged "over its limit" yet scores ${c.score}, vs ${oc.score} at the sweet spot — the flag and the number disagree`);
+  else check("over its limit scores lower", c.score < oc.score, true);
 }
 
 /* ---------------------------------------------------------------- 7 */

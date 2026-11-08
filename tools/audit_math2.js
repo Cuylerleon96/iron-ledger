@@ -130,7 +130,7 @@ console.log("\n[7] quietZero: is a zero-scoring attribute ever flagged?");
   const a = e.E.attributes(st, 28, 0);
   const wp = e.E.weakPoints(st, 28).filter((x) => x.kind === "attribute");
   console.log(`     Mobility scores ${a.MOB.score} (no mobility work at all) and is flagged: ${wp.some((x) => /Mobility/.test(x.title))}`);
-  console.log(`     flagged attributes: ${wp.map((x) => x.title.replace(/ is your weakest attribute/, "")).join(", ") || "(none)"}`);
+  console.log(`     flagged attributes: ${wp.map((x) => x.title.replace(/ is where you can gain the most/, "")).join(", ") || "(none)"}`);
 }
 
 console.log(`\n${bad} demonstrated bug(s) in this batch.`);

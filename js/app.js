@@ -1035,14 +1035,21 @@
     return b;
   }
 
-  function saveDraft() {
-    const entries = draft.entries
+  /* The ONE save path. Everything that awards a badge, a PR or a level-up hangs
+     off THIS function, and it commits the session (Store.upsertWorkout) BEFORE it
+     evaluates or celebrates anything — so an unsaved or discarded session can
+     never hand out a badge or a PR. `draftIn` lets the test suite drive this real
+     path with a draft it built; the app itself calls it with no argument and the
+     live draft is used. */
+  function saveDraft(draftIn) {
+    const d = draftIn || draft;
+    const entries = d.entries
       .map((en) => ({ ...en, sets: en.sets.filter((s) => Object.values(s).some((v) => v !== undefined && v !== null && v !== "")) }))
       .filter((en) => en.sets.length);
     if (!entries.length) { toast("Add at least one set", "warn"); return; }
-    const isNew = !draft.id;                          // an edit is not a fresh milestone
+    const isNew = !d.id;                          // an edit is not a fresh milestone
     const before = Engine.summary(Store.state);       // level/title BEFORE this save
-    const w = Store.upsertWorkout({ id: draft.id || undefined, date: draft.date, note: draft.note, entries });
+    const w = Store.upsertWorkout({ id: d.id || undefined, date: d.date, note: d.note, entries });
     const after = Engine.summary(Store.state);
     const sx = Engine.sessionXp(Store.state, w);
     const prs = isNew ? Engine.sessionPRs(Store.state, w.date) : [];
@@ -1906,7 +1913,7 @@
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
-    celebrate, awardBadges,
+    celebrate, awardBadges, saveDraft,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

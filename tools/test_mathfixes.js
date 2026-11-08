@@ -175,7 +175,7 @@ console.log("\n=== 6. over MRV must score below optimal ===");
   const over = e.E.muscleGroups(mk(96), 28).Chest;
   console.log(`     ${opt.setsPerWk} sets/wk (${opt.status}) score ${opt.score}`);
   console.log(`     ${over.setsPerWk} sets/wk (${over.status}) score ${over.score}`);
-  eq("over MRV is flagged", over.status, "over MRV");
+  eq("over its limit is flagged", over.status, "over its limit");
   truthy("...and scores lower than optimal", over.score < opt.score);
 }
 
@@ -1408,10 +1408,140 @@ console.log("\n=== 43. what earns a full celebration, and what does not ===");
   const bootSrc = appSrc.slice(appSrc.indexOf("function boot()"), appSrc.indexOf("function recoverFromDeviceStorage"));
   truthy("the celebration never runs at boot (cannot delay the UI)", !/celebrate\(/.test(bootSrc));
   truthy("saveDraft celebrates only when there is a milestone", /if \(ev\.length\) celebrate\(ev\)/.test(appSrc));
-  truthy("an edit is not treated as a fresh milestone", /const isNew = !draft\.id/.test(appSrc));
+  truthy("an edit is not treated as a fresh milestone", /const isNew = !d\.id/.test(appSrc));
   truthy("the old plain unlock modal is gone", !/function showBadges/.test(appSrc));
   truthy("the celebration has its own style in the app's language", /\.modal-box\.celebrate/.test(cssSrc));
   truthy("...and it respects reduced-motion", /prefers-reduced-motion/.test(cssSrc));
+}
+
+console.log("\n=== 44. no consecutive-day reward anywhere: badges AND xp ===");
+{
+  const e = env();
+  const acc = (id, st) => e.E.achievements(st).find((a) => a.id === id);
+  const A = e.E.ACHIEVEMENTS;
+
+  // the id a saved state references is kept; the old name and condition are gone
+  truthy("the old s3 id is preserved (saved states keep working)", A.some((a) => a.id === "s3"));
+  truthy("its old consecutive-day name is gone", !A.some((a) => a.name === "Three in a Row"));
+  eq("it no longer reads a consecutive-day value",
+     /streakDays/.test(acc("s3", base()).test.toString()), false);
+
+  // 3 CONSECUTIVE days does NOT earn it — that is the whole point of the fix
+  const t3 = { ...base().profile, weeklyTarget: 3 };
+  const threeDays = base({ profile: t3, workouts: ["2026-06-01", "2026-06-02", "2026-06-03"].map((d) => wk(d, [{ w: 100, r: 8 }])) });
+  eq("3 consecutive training days alone does not earn it", acc("s3", threeDays).met, false);
+
+  // meeting the target in 3 SEPARATE weeks DOES, however the days fall
+  const dayPlus = (d, n) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+  const weeksAt = (n, per = 3) => { const ws = []; for (let i = 0; i < n; i++) { const m = dayPlus("2026-01-05", i * 7); for (let k = 0; k < per; k++) ws.push(wk(dayPlus(m, k), [{ w: 100, r: 8 }])); } return base({ profile: { ...base().profile, weeklyTarget: 3 }, workouts: ws }); };
+  eq("3 weeks meeting the weekly target earns it", acc("s3", weeksAt(3)).met, true);
+  eq("2 weeks does not", acc("s3", weeksAt(2)).met, false);
+
+  // XP: the lifetime bonus pays for weeks at target, never for consecutive days
+  const consecWeek = base({ profile: t3, workouts: ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06"].map((d) => wk(d, [{ w: 100, r: 8 }])) });
+  const spreadWeek = base({ profile: t3, workouts: ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-05", "2026-06-06", "2026-06-07"].map((d) => wk(d, [{ w: 100, r: 8 }])) });
+  eq("the two really differ in their longest consecutive-day run",
+     e.E.streaks(consecWeek).bestDays === e.E.streaks(spreadWeek).bestDays, false);
+  eq("XP ignores the consecutive-day run (same week, same sessions, same XP)",
+     e.E.xp(consecWeek), e.E.xp(spreadWeek));
+  truthy("the lifetime XP bonus is built from weeks-at-target, not bestDays",
+     /weeksAtTarget\(state\)/.test(e.E.xp.toString().replace(/\/\*[\s\S]*?\*\//g, ""))
+     && !/bestDays/.test(e.E.xp.toString().replace(/\/\*[\s\S]*?\*\//g, "")));
+  eq("weeksAtTarget is the ONE shared measure (both states: 1 week at target)",
+     [e.E.weeksAtTarget(consecWeek), e.E.weeksAtTarget(spreadWeek)], [1, 1]);
+}
+
+console.log("\n=== 45. celebrations fire only after a save, and collapse into ONE ===");
+{
+  /* Loads the REAL app.js behind a DOM stub that MEMOISES its nodes, so the test
+     can see what the celebration actually opened: every node appended to
+     #modal-box is recorded. This drives the app's real save path, not a copy. */
+  const uiEnv = (seed) => {
+    const store = {};
+    const opened = [];
+    const nodes = {};
+    const mkNode = (id) => ({
+      id, _html: "", className: "", dataset: {}, style: {}, children: [],
+      set innerHTML(v) { this._html = String(v); }, get innerHTML() { return this._html; },
+      addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+      append(c) { if (id === "#modal-box") opened.push(c); this.children.push(c); },
+      prepend() {}, remove() {}, click() {}, focus() {}, contains: () => false,
+      querySelector: () => mkNode("q"), querySelectorAll: () => [],
+      getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    });
+    const get = (sel) => (nodes[sel] = nodes[sel] || mkNode(sel));
+    const s = {
+      console: { log() {}, warn() {}, error() {}, info() {} },
+      Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
+      isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+      setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+      document: {
+        addEventListener() {}, removeEventListener() {},
+        querySelector: get, querySelectorAll: () => [], getElementById: get,
+        createElement: () => mkNode("e"), createElementNS: () => mkNode("ns"),
+        body: mkNode("body"), visibilityState: "visible", activeElement: null,
+      },
+      navigator: { clipboard: { writeText: async () => {} } },
+      localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+      Blob: function () {}, URL: { createObjectURL: () => "blob:x" },
+      module: { exports: {} },
+    };
+    s.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+    s.window = s; s.globalThis = s;
+    vm.createContext(s);
+    vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(base(seed || {})))});`, s);
+    const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/app.js"]
+      .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+    vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "ui.js" });
+    return { A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, opened };
+  };
+
+  // (a) TIMING: a session that is entered but never saved earns NOTHING.
+  const h = uiEnv({});
+  h.A.buildIndex();
+  const before = h.E.summary(h.S.state);
+  const draft = { id: null, date: iso(0), note: "", entries: [
+    { id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] };
+  eq("an unsaved session is invisible to the engine (no badge)",
+     h.E.newAchievements(h.S.state), []);
+  eq("...no permanent unlock is written", Object.keys(h.S.state.achievements).length, 0);
+  eq("...and no celebration can be built for it",
+     h.E.milestoneEvents(before, before, h.E.sessionPRs(h.S.state, draft.date), []), []);
+  eq("...nothing was opened", h.opened.length, 0);
+
+  // (b) the SAVE path commits FIRST, then celebrates exactly once
+  h.A.saveDraft(draft);
+  eq("saving committed the session", h.S.state.workouts.length, 1);
+  truthy("the first session unlocked First Blood (a real, permanent unlock)", !!h.S.state.achievements.first);
+  eq("one save -> exactly ONE celebration", h.opened.length, 1);
+  truthy("...and it names the badge it earned", /First Blood/.test(h.opened[0].innerHTML));
+
+  // (c) COLLAPSE: several things earned in one save arrive as ONE celebration
+  const g = uiEnv({ workouts: [wk(iso(7), [{ w: 100, r: 8 }])] });
+  g.A.buildIndex();
+  const d2 = { id: null, date: iso(0), note: "", entries: [
+    { id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 120, r: 8 }] }] };
+  g.A.saveDraft(d2);
+  const prs = g.E.sessionPRs(g.S.state, d2.date);
+  truthy("the save earned at least one PR", prs.length >= 1);
+  eq("a save earning a PR and badges opens exactly ONE celebration", g.opened.length, 1);
+  const body = g.opened[0].innerHTML;
+  truthy("...listing the PR", /Bench Press/.test(body));
+  truthy("...and the badge", /New Best/.test(body));
+  eq("...with a single dismiss control", (body.match(/id="celeb-ok"/g) || []).length, 1);
+
+  // and the collapse itself: three earned things -> one celebration, three lines
+  const h3 = uiEnv({});
+  const n0 = h3.opened.length;
+  h3.A.celebrate([
+    { kind: "level", level: 5, title: "Lifter" },
+    { kind: "pr", items: [{ id: 73, name: "Bench Press", hit: ["e1RM"] }] },
+    { kind: "badge", badges: [{ id: "squat15", name: "Squat Club", desc: "Squat 1.5x bodyweight" }] },
+  ]);
+  eq("three things earned at once yield exactly ONE celebration", h3.opened.length - n0, 1);
+  eq("...listing all three", (h3.opened[h3.opened.length - 1].innerHTML.match(/class="celeb-line"/g) || []).length, 3);
+  eq("...dismissed in a single tap", (h3.opened[h3.opened.length - 1].innerHTML.match(/id="celeb-ok"/g) || []).length, 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

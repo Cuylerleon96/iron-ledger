@@ -73,27 +73,27 @@ const Glossary = (() => {
       real: "MEV = minimum effective volume, MAV = maximum adaptive volume, MRV = maximum recoverable volume. Reference ranges come from Renaissance Periodization's published volume-landmark tables (Israetel et al.), mid-range values. The muscle-balance bars mark MEV; a group is placed against its own MEV→MAV→MRV band.",
     },
     {
-      id: "below-mev", term: "below MEV", aliases: ["below MEV", "status-belowMEV"],
+      id: "below-mev", term: "room to grow", aliases: ["room to grow", "below MEV"],
       plain: "You are training that muscle less than it needs to grow. It is not a warning — it is the app telling you where the next easy gain is.",
       real: "Effort sets per week for the group are under its MEV. Nothing is lost; the fix is simply more sets for that group.",
     },
     {
-      id: "mev-mav", term: "MEV→MAV", aliases: ["MEV→MAV", "MEV-MAV"],
+      id: "mev-mav", term: "building", aliases: ["building", "MEV→MAV", "MEV-MAV"],
       plain: "You are past the minimum and on the way to the sweet spot. This is productive territory — keep going.",
       real: "Effort sets per week for the group are at or above its MEV and below its MAV. Growth is expected here.",
     },
     {
-      id: "optimal", term: "optimal", aliases: ["optimal", "status-optimal"],
+      id: "optimal", term: "sweet spot", aliases: ["sweet spot", "optimal", "status-optimal"],
       plain: "That muscle is being trained right in the band where it grows best — neither starved nor overworked.",
       real: "Effort sets per week for the group are at or above its MAV and at or below its MRV.",
     },
     {
-      id: "over-mrv", term: "over MRV", aliases: ["over MRV", "status-overMRV"],
+      id: "over-mrv", term: "over its limit", aliases: ["over its limit", "over MRV", "status-overMRV"],
       plain: "You are doing more for that muscle than it can recover from. More sets now cost you rather than build you.",
       real: "Effort sets per week for the group exceed its MRV, so the muscle-group score falls rather than rises — the flag and the number agree.",
     },
     {
-      id: "untrained", term: "untrained", aliases: ["untrained"],
+      id: "untrained", term: "not trained yet", aliases: ["not trained yet", "untrained"],
       plain: "No sets at all for that group in the window. Nothing logged means nothing to judge.",
       real: "Zero completed working sets for the group in the last 28 days.",
     },
@@ -133,9 +133,9 @@ const Glossary = (() => {
       real: "Double progression: hold the load and push reps to the top of the range, then increase the load and drop back to the bottom. The NEXT line offers concrete options derived from your own last session; if you set an explicit Target, progress and an ETA are shown only when there is a real trend to extrapolate.",
     },
     {
-      id: "tiers", term: "Score tiers", aliases: ["Best", "Fantastic", "Pretty good", "Decent", "Not great"],
+      id: "tiers", term: "Score tiers", aliases: ["Best", "Fantastic", "Pretty good", "Getting there", "Building up"],
       plain: "The word under each score is just the number in plain English — a rough band, not a grade. Only the number matters.",
-      real: "A 0-100 score maps to a word: 95+ Best, 85+ Fantastic, 72+ Very good, 58+ Pretty good, 44+ Decent, 28+ Not great, 12+ Poor, else No good.",
+      real: "A 0-100 score maps to a word: 95+ Best, 85+ Fantastic, 72+ Very good, 58+ Pretty good, 44+ Getting there, 28+ Building up, 12+ Early days, else Just starting.",
     },
     /* ---- the six attributes: the basis behind each name ---- */
     {
@@ -175,10 +175,13 @@ const Glossary = (() => {
   const has = (id) => !!INDEX[id];
   const list = () => TERMS.slice();
 
-  /* Map an engine muscle-balance status word onto its entry id. */
+  /* Map an engine muscle-balance status word onto its entry id. The keys are the
+     words the engine actually emits and the card actually shows, so a renamed
+     status word must be renamed here too — test_features proves every emitted
+     word resolves, and that the entry's own heading is the word on screen. */
   const STATUS_ID = {
-    "below MEV": "below-mev", "MEV→MAV": "mev-mav", "MEV->MAV": "mev-mav",
-    "optimal": "optimal", "over MRV": "over-mrv", "untrained": "untrained",
+    "room to grow": "below-mev", "building": "mev-mav",
+    "sweet spot": "optimal", "over its limit": "over-mrv", "not trained yet": "untrained",
   };
   const statusId = (status) => STATUS_ID[status] || null;
 
