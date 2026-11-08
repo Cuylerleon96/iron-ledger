@@ -438,10 +438,17 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
   truthy("the remove-set button has an aria-label", /aria-label="Remove \$\{sl\.toLowerCase\(\)\}"/.test(app));
 
   // --- the logged-food row: the ✕ stays inline and is named ---
-  truthy("a logged-food row keeps its ✕ inline (has-del modifier, not the base 3-column grid)", /class="pr-row has-del"/.test(app));
+  truthy("a logged-food row keeps its ✕ inline (has-del modifier, not the base 3-column grid)", /class="pr-row has-del food-log-row"/.test(app));
   truthy("the logged-food ✕ carries an aria-label, not a bare ✕ glyph", /aria-label="Remove ' \+ esc\(e\.name\) \+ '"/.test(app));
   truthy("the has-del row is a 4-column grid whose name cell can shrink", /\.pr-row\.has-del \{ grid-template-columns: minmax\(0, 1fr\) auto auto auto; \}/.test(css));
   truthy("the logged-food ✕ gets a 48 px tap target without inflating the row", /\.pr-row\.has-del \.food-del::before/.test(css) && /width: 48px; height: 48px/.test(css));
+  /* The four-fact row does not fit one line at the Pixel 6 width (412 CSS px):
+     the macro line's max-content width collapsed the name track and the name
+     overflowed across the portion and macros. It is now TWO lines — name + ✕
+     above portion + macros. Re-expressed against the two-line rule, and proven
+     scoped so the three-fact bodyweight row keeps its single line. */
+  truthy("the logged-food row is a two-line grid (name/first line, portion+macros/second)", /\.pr-row\.food-log-row \{[^}]*grid-template-rows: auto auto/.test(css));
+  truthy("the two-line rule is scoped to the logged-food row, not the bodyweight row", /\.pr-row\.food-log-row > span:nth-child\(1\) \{ grid-column: 1 \/ 3; grid-row: 1; \}/.test(css) && !/\.pr-row\.has-del \{[^}]*grid-template-rows/.test(css));
 
   // --- the bodyweight-log row: the same defect, the same inline fix ---
   truthy("the bodyweight-log row keeps its ✕ inline (has-del modifier)", /<div class="pr-row has-del"><span>\$\{b\.date\}/.test(app));
@@ -449,13 +456,13 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
   truthy("the bodyweight ✕ shares the 48 px tap target (has-del .bdel)", /\.pr-row\.has-del \.bdel::before/.test(css));
 
   // --- .pr-row call-site census: three sites, each with its expected child count ---
-  const prSites = [...app.matchAll(/(?:class="pr-row( has-del)?"|class: "pr-row( has-del)?")/g)].map((m) => m[0]);
-  eq(".pr-row call-site census: three sites, in source order", prSites, ['class: "pr-row"', 'class="pr-row has-del"', 'class="pr-row has-del"']);
+  const prSites = [...app.matchAll(/(?:class="pr-row( has-del( food-log-row)?)?"|class: "pr-row( has-del)?")/g)].map((m) => m[0]);
+  eq(".pr-row call-site census: three sites, in source order", prSites, ['class: "pr-row"', 'class="pr-row has-del food-log-row"', 'class="pr-row has-del"']);
   const kids = (tpl) => (tpl.match(/<span/g) || []).length + (tpl.match(/<button/g) || []).length;
   const recentTpl = (app.match(/class: "pr-row" \},\s*`([\s\S]*?)`\)\)/) || [])[1] || "";
   eq("Recent-records row has 3 children (name, best, date) — base grid, no ✕", kids(recentTpl), 3);
   truthy("Recent-records row carries no delete control", !/<button/.test(recentTpl));
-  const foodTpl = (app.match(/class="pr-row has-del">([\s\S]*?)<\/div>'\)\.join/) || [])[1] || "";
+  const foodTpl = (app.match(/class="pr-row has-del food-log-row">([\s\S]*?)<\/div>'\)\.join/) || [])[1] || "";
   eq("logged-food row has 4 children (3 cells + ✕)", kids(foodTpl), 4);
   truthy("logged-food ✕ is named", /aria-label="Remove '/.test(foodTpl));
   const bwTpl = (app.match(/class="pr-row has-del">(<span>\$\{b\.date\}[\s\S]*?)<\/div>`\)\.join/) || [])[1] || "";

@@ -1,11 +1,11 @@
 {
-  "versionCode": 59,
-  "versionName": "1.0.58",
+  "versionCode": 60,
+  "versionName": "1.0.59",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "9d3155104497e55c88f393b8309af86aad402a96cebc594093483018829a5f6c",
-  "sizeBytes": 3862505,
+  "sha256": "51f71aca28e7789719615c6cf032b1e86eebd054e8c386eea6ee63c27205ce63",
+  "sizeBytes": 3862869,
   "published": "2026-11-08",
   "notes": [
-    "The Profile bodyweight log's remove \u2715 now sits inline on its row and names what it deletes."
+    "Nutrition: a logged-food row now reads on two lines at phone width (412 px) - the food name and its remove x on the first line, the portion and macros on the second - so the name no longer overlaps the grams."
   ]
 }
