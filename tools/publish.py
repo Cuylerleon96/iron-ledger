@@ -120,6 +120,8 @@ def main():
     ap.add_argument("--bump", choices=["patch", "minor", "major"], default="patch")
     ap.add_argument("--dry-run", action="store_true", help="build and stage, do not publish")
     ap.add_argument("--no-bump", action="store_true", help="keep the current version")
+    ap.add_argument("--replace-release", action="store_true",
+                    help="deliberately re-cut an existing tag (replaces its asset AND notes)")
     args = ap.parse_args()
 
     code, name = read_version()
@@ -127,6 +129,33 @@ def main():
         code, name = bump(code, name, args.bump)
     VERSION_FILE.write_text(f"versionCode={code}\nversionName={name}\n")
     print(f"publishing v{name} (versionCode {code})")
+
+    # Guard: versionCode must strictly increase. If the live feed already
+    # advertises this version or higher, an update would be a silent no-op and
+    # every installed app would sit on "up to date" forever. This is what a
+    # stale android/version.properties copied over the bumped one causes — so
+    # fail loudly here instead of publishing something nobody can install.
+    if not args.dry_run and not (args.replace_release or args.no_bump):
+        try:
+            with urllib.request.urlopen(
+                f"https://raw.githubusercontent.com/{OWNER}/{REPO}/{BRANCH}"
+                f"/update/info.json?t={int(time.time())}", timeout=30) as r:
+                live = json.load(r)
+            live_code = int(live.get("versionCode", 0))
+            if live_code >= code:
+                sys.exit(f"refusing to publish: the live feed is already at "
+                         f"versionCode {live_code} (v{live.get('versionName')}) and this build is "
+                         f"{code} (v{name}). versionCode MUST increase or no app will update.\n"
+                         f"Check android/version.properties was not overwritten by a stale copy.")
+            print(f"  live feed is at versionCode {live_code} — ok to publish {code}")
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+            print("  no live feed yet — first release")
+        except SystemExit:
+            raise
+        except Exception as e:                                  # noqa: BLE001
+            print(f"  (could not read the live feed to compare versions: {e})")
 
     print("building web bundle…")
     run(["python3", "tools/build_www.py"])
@@ -159,21 +188,34 @@ def main():
     ensure_repo()
 
     tag = f"v{name}"
-    print(f"creating release {tag}…")
+    body = "\n".join("- " + n for n in feed["notes"])
+
+    # Never silently reuse a tag: replacing an asset under an existing tag leaves
+    # the release body describing different content, and the app sees no update
+    # because the versionCode never moved.
     try:
+        existing = api("GET", f"/repos/{OWNER}/{REPO}/releases/tags/{tag}")
+    except RuntimeError:
+        existing = None
+    if existing and not args.replace_release:
+        sys.exit(f"release {tag} already exists — refusing to overwrite it.\n"
+                 f"Bump the version (android/version.properties) or pass "
+                 f"--replace-release to re-cut this tag deliberately.")
+
+    if existing:
+        print(f"re-cutting release {tag} (notes and asset replaced)…")
+        rel = api("PATCH", f"/repos/{OWNER}/{REPO}/releases/{existing['id']}",
+                  {"name": f"Iron Ledger {tag}", "body": body,
+                   "draft": False, "prerelease": False})
+    else:
+        print(f"creating release {tag}…")
         rel = api("POST", f"/repos/{OWNER}/{REPO}/releases", {
             "tag_name": tag,
             "name": f"Iron Ledger {tag}",
-            "body": "\n".join("- " + n for n in feed["notes"]),
+            "body": body,
             "draft": False,
             "prerelease": False,
         })
-    except RuntimeError as e:
-        if "-> 422" in str(e):
-            print("  release already exists, reusing it")
-            rel = api("GET", f"/repos/{OWNER}/{REPO}/releases/tags/{tag}")
-        else:
-            raise
 
     # replace any existing asset with the same name
     for asset in rel.get("assets", []):

@@ -53,16 +53,18 @@ body {
     repeating-linear-gradient(45deg, rgba(255, 255, 255, .022) 0 5px, transparent 5px 10px),
     repeating-linear-gradient(-45deg, rgba(0, 0, 0, .06) 0 5px, transparent 5px 10px),
     linear-gradient(180deg, #0d3b38 0%, #0a2a2a 55%, #071e20 100%);
-  background-attachment: fixed;
   min-height: 100vh;
   padding-bottom: 40px;
-  image-rendering: pixelated;
 }
+/* only the glyph-bearing bits want nearest-neighbour scaling */
 /* faint LCD scanlines over everything */
+/* LCD scanlines. Deliberately NO mix-blend-mode: a blended full-screen layer
+   forces the entire viewport to be recomposited every frame, which is what
+   makes this janky on a software renderer (and on weak phones). Plain alpha
+   looks the same here and costs nothing. */
 body::after {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 500;
-  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, .10) 0 1px, transparent 1px 3px);
-  mix-blend-mode: multiply; opacity: .5;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, .055) 0 1px, transparent 1px 3px);
 }
 h1, h2, h3, h4 { margin: 0; font-weight: 400; line-height: 1.5; }
 p { margin: .35rem 0; line-height: 1.7; }
@@ -84,6 +86,7 @@ b, strong { font-weight: 700; }
 }
 .brand { display: flex; align-items: center; gap: .45rem; }
 .logo {
+  image-rendering: pixelated;
   display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 auto;
   background: var(--gold); color: var(--ink); font-size: .55rem;
   border: 2px solid var(--cream); border-radius: 4px;
