@@ -176,6 +176,10 @@ const Nutrition = (() => {
       { key: "carbs", label: "Carbs", value: plan.carbs.g, unit: "g", reason: carbsReason(plan) },
     ];
 
+    /* --- the rounding note for THIS plan (honesty: grams to 5 g, target to 10
+           kcal, so the two can differ by a few kcal — said plainly) --- */
+    const roundingNote = roundingNoteFor(plan);
+
     /* --- maintenance estimate --- */
     const ffm = /^ffm-/.test(plan.bmr.method);
     const EQ = {
@@ -253,6 +257,7 @@ const Nutrition = (() => {
       '<p class="n-blurb muted small" id="n-blurb">' + esc(phase.blurb) + "</p>" +
       conflictHtml +
       '<div class="n-targets" id="n-targets">' + targetRows + "</div>" +
+      '<p class="muted small n-rounding" id="n-rounding">' + esc(roundingNote) + "</p>" +
       '<div class="n-maint" id="n-maint">' +
         '<div class="card-head"><h3>Maintenance estimate</h3><span class="muted">a starting value</span></div>' +
         "<p class=\"small\">RMR <b>" + maintenance.rmr + "</b> kcal/day — " + esc(maintenance.equation) + ".</p>" +
@@ -273,8 +278,8 @@ const Nutrition = (() => {
       '<p class="muted small n-limits">' + esc(limits) + "</p>";
 
     return Object.assign(base, {
-      state: "ok", age, goal, phase: { key: phase.key, label: phase.label, blurb: phase.blurb },
-      recommended: rec.key, targets, maintenance, conflict, limits, plan, html,
+      state: "ok", age, goal, phase: { key: phase.key, label: phase.label, blurb: phase.blurb, goal: phase.goal },
+      recommended: rec.key, targets, maintenance, conflict, limits, roundingNote, plan, html,
     });
   }
 
@@ -321,39 +326,90 @@ const Nutrition = (() => {
     return (isFinite(g) && g > 0) ? round2(g) : null;
   }
 
-  /* Today's totals read against the tab's targets. TONE (a hard rule): a total
-     BELOW target is never framed as failure and a total ABOVE is never a
-     warning — no red, no "over", no "exceeded", no "cheat". Being over on one
-     day is ordinary. No good/bad-food framing, no exercise-earned-food language.
+  /* ---------- Today's totals read against the tab's targets ----------
+     TONE, and it is GOAL-AWARE. The wording is driven by the SAME phase (goal)
+     the targets were built from — the caller passes `_nutriView.phase.goal` — so
+     the numbers and the sentence can never disagree about the goal.
+       - a GAIN phase: "to go" IS offered, because on a gaining goal the remaining
+         figure is what you are aiming to eat.
+       - a LOSS phase: the remaining figure is NEVER framed as something to
+         consume. It is stated as progress ("still in today's budget"), so the row
+         cannot read as pressure to eat up to the target.
+       - AT OR ABOVE the target, on EVERY goal: ordinary, stated neutrally and
+         encouragingly. Never red, never "over" / "exceeded" / "too much", never a
+         warning colour; no good/bad-food framing; no exercise-earned-food talk.
      The tab's target keys are kcal/protein/fat/carbs; the intake log stores
      kcal/protein/fat/carb/fibre — `carbs` (the tab) is `carb` (the log). */
   const TARGET_TO_LOG = { carbs: "carb" };
-  function intakeSummary(targets, totals) {
+  const goalWord = (g) => (g === "lose" || g === "gain") ? g : "maintain";
+
+  function intakeSummary(targets, totals, goal) {
     totals = totals || {};
+    const g = goalWord(goal);
     return (targets || []).map((t) => {
       const key = TARGET_TO_LOG[t.key] || t.key;
       const logged = (typeof totals[key] === "number") ? totals[key] : 0;
       const target = t.value;
       const remaining = round2(target - logged);
-      const text = (logged < target)
-        ? logged + " of " + target + " " + t.unit + " — " + remaining + " to go"
-        : logged + " " + t.unit + " — your target is " + target + " " + t.unit;
-      return { key: t.key, label: t.label, unit: t.unit, logged, target, remaining, text };
+      let text;
+      if (logged >= target) {
+        /* neutral on EVERY goal — a day at or above a target is ordinary */
+        text = logged + " " + t.unit + " — your target is " + target + " " + t.unit;
+      } else if (g === "gain") {
+        text = logged + " of " + target + " " + t.unit + " — " + remaining + " to go";
+      } else if (g === "lose") {
+        /* progress, NOT an instruction to eat */
+        text = logged + " of " + target + " " + t.unit + " so far — " + remaining + " still in today's budget";
+      } else {
+        text = logged + " of " + target + " " + t.unit + " today";
+      }
+      return { key: t.key, label: t.label, unit: t.unit, logged, target, remaining, text, goal: g };
     });
   }
 
-  /* One encouraging headline for the Today card. Neutral on both sides of the
-     target: "to go" when below, "a normal day" when at or above. */
-  function intakeHeadline(rows, count) {
+  /* One encouraging headline for the Today card, on the same goal. Neutral on
+     both sides of the target: an under day is never framed as failure to eat up,
+     and an at-or-above day is never a warning. */
+  function intakeHeadline(rows, count, goal) {
     if (!count) return "Nothing logged yet today — add your first food below.";
+    const g = goalWord(goal);
     const kcal = (rows || []).find((r) => r.key === "kcal");
     if (!kcal) return "Logged today: " + count + (count === 1 ? " item." : " items.");
-    return (kcal.logged < kcal.target)
-      ? "Nice. " + kcal.remaining + " kcal to go if you want to land on target today."
-      : "That's a normal day — a target is a guide, not a rule.";
+    if (kcal.logged >= kcal.target) {
+      return "That's a normal day — " + kcal.logged + " kcal logged, and a target is a guide, not a rule.";
+    }
+    if (g === "gain") {
+      return "Nice. " + kcal.remaining + " kcal to go if you want to land on target today.";
+    }
+    if (g === "lose") {
+      return kcal.logged + " kcal logged today — " + kcal.remaining +
+        " still in today's budget, and no need to eat up to it.";
+    }
+    return kcal.logged + " kcal logged today — a target is a guide, not a rule, so take it at your own pace.";
+  }
+
+  /* ---------- the rounding note (honesty) ----------
+     The macro grams are each rounded on their own to 5 g and the calorie target
+     to 10 kcal, so adding the grams up can land a few kcal away from the target
+     (the owner's own plan: 145 P / 75 F / 230 C = 2175 kcal against a 2170 target).
+     Say that plainly rather than leaving an unexplained discrepancy. */
+  const MACRO_ROUNDING_NOTE =
+    "Grams are rounded on their own to the nearest 5 g, and the calorie target to the nearest 10 kcal, " +
+    "so the macro grams can add up to a few kcal different from the calorie target. Both numbers are " +
+    "right — only the rounding differs.";
+
+  /* The note with THIS plan's own arithmetic spelled out, so the gap is never a
+     mystery. Built from the engine's figures; nothing is computed twice. */
+  function roundingNoteFor(plan) {
+    const macroKcal = plan.protein.g * 4 + plan.fat.g * 9 + plan.carbs.g * 4;
+    const gap = Math.round((macroKcal - plan.target.kcal) * 100) / 100;
+    return MACRO_ROUNDING_NOTE + " Here: " + plan.protein.g + " g protein + " + plan.fat.g + " g fat + " +
+      plan.carbs.g + " g carbs = " + macroKcal + " kcal against the " + plan.target.kcal + " kcal target" +
+      (gap ? " (" + Math.abs(gap) + " kcal apart)." : " (they agree).");
   }
 
   return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE,
-    NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline };
+    NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline,
+    MACRO_ROUNDING_NOTE, roundingNoteFor };
 })();
 if (typeof module !== "undefined") module.exports = Nutrition;

@@ -58,6 +58,31 @@ const Macros = (() => {
                 "FAO/WHO/UNU 2004.",
     goalConflict: "Lean-mass arithmetic is definitional (LBM = weight x (1 - bf/100)). The 'large' " +
                 "cut-point is OUR arrangement, not a published number.",
+    /* Added for the nutrition-polish batch. These THREE refusals previously
+       carried the INTAKE-FLOOR citation (SOURCES.floor), which is evidence for a
+       calorie floor — not for being under 18, pregnant, or at eating-disorder
+       risk. Each now carries its own source. Verified 2026-11-08 against:
+         - PMID 2305711 (Mifflin-St Jeor): "498 healthy subjects ... aged 19-78 y"
+         - CDC, Weight Gain During Pregnancy: "about 340 additional daily calories
+           during the second trimester and about 450 additional daily calories
+           during the third trimester"
+         - NICE NG69, Eating disorders: recognition and treatment (2017, updated
+           2020), rec. 1.1.x and "Only offer dietary counselling as part of a
+           multidisciplinary approach." */
+    under18: "Mifflin MD et al., Am J Clin Nutr 1990;51(2):241-247, PMID 2305711 — the equation was " +
+                "derived in 498 healthy ADULTS aged 19-78 y, so it is OUTSIDE its validation range " +
+                "under 18. NOT CITED AS EVIDENCE: the 'needs medical supervision' part. No specific " +
+                "publication was verified that sets a supervised adolescent calorie target — that is a " +
+                "clinical-care statement, not a numeric claim, so it is stated as guidance rather than " +
+                "dressed up as a citation.",
+    pregnancy: "CDC, Weight Gain During Pregnancy — about +340 kcal/day in the 2nd trimester and " +
+                "+450 kcal/day in the 3rd, and lactation carries its own added energy requirement. A " +
+                "Mifflin-RMR x PAL formula has no term for any of those additions, so it cannot " +
+                "produce a pregnancy or lactation target.",
+    eatingDisorder: "NICE NG69, Eating disorders: recognition and treatment (2017, updated 2020) — " +
+                "assessment and treatment are clinical, and dietary counselling is offered only as part " +
+                "of a multidisciplinary approach. A formula-derived calorie/macro target is part of that " +
+                "clinical care, not something the app can hand out.",
   };
 
   /* ---------- constants ---------- */
@@ -313,11 +338,11 @@ const Macros = (() => {
     if (ageY == null || !isFinite(ageY))
       return refuse("Age is required for Mifflin-St Jeor (the app has no age field yet).", SOURCES.mifflin);
     if (ageY < 18)
-      return refuse("Under 18 — adolescent energy and macro targets need medical supervision, not a formula.", SOURCES.floor);
+      return refuse("Under 18 — adolescent energy and macro targets need medical supervision, not a formula.", SOURCES.under18);
     if (inputs.pregnant || inputs.lactating)
-      return refuse("Pregnancy or lactation — needs clinician-set targets, not a formula.", SOURCES.floor);
+      return refuse("Pregnancy or lactation — needs clinician-set targets, not a formula.", SOURCES.pregnancy);
     if (inputs.eatingDisorderRisk)
-      return refuse("Disclosed eating-disorder risk — calorie and macro targets are not appropriate here.", SOURCES.floor);
+      return refuse("Disclosed eating-disorder risk — calorie and macro targets are not appropriate here.", SOURCES.eatingDisorder);
     if (weightKg == null || heightCm == null || !isFinite(weightKg) || !isFinite(heightCm))
       return refuse("Weight and height are required.", SOURCES.mifflin);
     if (sex !== "M" && sex !== "F")

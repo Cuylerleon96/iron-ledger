@@ -510,5 +510,112 @@ const lose = M.activityFactor({ activityLevel: "sedentary" }, { sessionsPerWeek:
 eq("gate fails (9 days) -> the DECLARED level stands", lose.method, "declared");
 eq("...pal is the declared 1.2", lose.pal, 1.2);
 
+/* ============================================================
+   (17) NUTRITION POLISH: goal-aware totals wording + the rounding note
+   ============================================================ */
+console.log("\n--- (17) goal-aware totals wording + the rounding note ---");
+{
+  const fs3 = require("fs");
+  const src3 = fs3.readFileSync(path.join(__dirname, "..", "js", "macros.js"), "utf8") + "\n;\n"
+    + fs3.readFileSync(path.join(__dirname, "..", "js", "nutrition.js"), "utf8");
+  const c3 = { console, module: { exports: {} }, Date, Math, JSON, Object, Array, Set, Map,
+    isFinite, parseFloat, parseInt, Number, String, Boolean, RegExp, Error, setTimeout, clearTimeout };
+  c3.globalThis = c3; vm.createContext(c3);
+  vm.runInContext(src3 + "\n;globalThis.__P={Macros:Macros,Nutrition:Nutrition};", c3, { filename: "polish-bundle.js" });
+  const P = c3.__P.Nutrition;
+  const truthy = (label, got) => eq(label, !!got, true);
+
+  const T = [{ key: "kcal", label: "Calories", value: 2000, unit: "kcal" }];
+  const BANNED = /\b(over|exceeded?|exceed|cheat|cheated|too much|failed|failure|limit|bad|junk|off-track)\b/i;
+
+  /* ---- the wording is driven by the goal the target came from ---- */
+  const gUnder = P.intakeSummary(T, { kcal: 900 }, "gain")[0];
+  const lUnder = P.intakeSummary(T, { kcal: 900 }, "lose")[0];
+  const gOver = P.intakeSummary(T, { kcal: 2400 }, "gain")[0];
+  const lOver = P.intakeSummary(T, { kcal: 2400 }, "lose")[0];
+  truthy("GAIN under: offers the remaining figure", /to go/.test(gUnder.text));
+  truthy("LOSS under: progress, never 'to go'", !/to go/.test(lUnder.text) && /budget/.test(lUnder.text));
+  truthy("gain and loss word the SAME numbers DIFFERENTLY", gUnder.text !== lUnder.text);
+  eq("gain under row text", gUnder.text, "900 of 2000 kcal — 1240 to go");
+  eq("loss under row text", lUnder.text, "900 of 2000 kcal so far — 1240 still in today's budget");
+  eq("at/above row text (gain): neutral", gOver.text, "2400 kcal — your target is 2000 kcal");
+  eq("at/above row text (loss): identical — over is ordinary on every goal", lOver.text, gOver.text);
+  [gUnder, lUnder, gOver, lOver].forEach((r) =>
+    truthy("no shaming word in " + JSON.stringify(r.text), !BANNED.test(r.text)));
+  const gHead = P.intakeHeadline([gUnder], 2, "gain");
+  const lHead = P.intakeHeadline([lUnder], 2, "lose");
+  truthy("GAIN headline offers 'to go'", /to go/.test(gHead));
+  truthy("LOSS headline NEVER says to eat up to the target", !/to go/.test(lHead));
+  truthy("gain and loss headlines differ", gHead !== lHead);
+  [["gain", 900], ["lose", 900], ["maintain", 900], ["gain", 2400], ["lose", 2400], ["maintain", 2400]]
+    .forEach(([g, k]) => {
+      const h = P.intakeHeadline(P.intakeSummary(T, { kcal: k }, g), 3, g);
+      truthy("no shaming word in the " + g + " headline at " + k + " kcal", !BANNED.test(h));
+    });
+
+  /* ---- the SAME goal drives the targets AND the wording: they cannot disagree.
+          Here the profile's own weights say GAIN, but the phase PICKED is a cut,
+          so the wording must follow the PHASE. ---- */
+  const MANP = { sex: "M", weightKg: 80, heightCm: 180, birthYear: 1985 };
+  const gv = P.view(MANP, { phase: "lean-gain", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
+  const cv = P.view(MANP, { phase: "cut-standard", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
+  eq("a gain phase reports its goal on the view model", gv.phase.goal, "gain");
+  eq("a cut phase reports its goal on the view model", cv.phase.goal, "lose");
+  eq("...and the PLAN was built from that same phase goal", [gv.plan.profile.goal, cv.plan.profile.goal], ["gain", "lose"]);
+  const cutRows = P.intakeSummary(cv.targets, { kcal: 900 }, cv.phase.goal);
+  const cutKcal = cutRows.find((r) => r.key === "kcal");
+  truthy("the cut's own goal drives its rows (progress, not 'to go')",
+    /budget/.test(cutKcal.text) && !/to go/.test(cutKcal.text));
+  const gainRows = P.intakeSummary(gv.targets, { kcal: 900 }, gv.phase.goal);
+  truthy("the gain's own goal drives its rows ('to go' IS offered)", /to go/.test(gainRows.find((r) => r.key === "kcal").text));
+  truthy("the two phases show DIFFERENT wording for the same numbers",
+    gainRows.find((r) => r.key === "kcal").text !== cutKcal.text);
+
+  /* ---- (3a) the rounding note: grams to 5 g, target to 10 kcal ---- */
+  truthy("the rounding note is exposed", typeof P.MACRO_ROUNDING_NOTE === "string" && P.MACRO_ROUNDING_NOTE.length > 40);
+  truthy("...it names the 5 g gram rounding", /5 g/.test(P.MACRO_ROUNDING_NOTE));
+  truthy("...and the 10 kcal target rounding", /10 kcal/.test(P.MACRO_ROUNDING_NOTE));
+  truthy("...and says both numbers are right", /only the rounding differs/.test(P.MACRO_ROUNDING_NOTE));
+  truthy("...and it is rendered on the tab", gv.html.includes(P.MACRO_ROUNDING_NOTE.slice(0, 40)));
+  truthy("...inside the n-rounding element", gv.html.includes('id="n-rounding"'));
+  /* the owner's own arithmetic: 145 P / 75 F / 230 C = 2175 kcal against a 2170 target */
+  const mv = P.view(MANP, { phase: "maintain", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
+  eq("maintain plan target kcal 2170", mv.plan.target.kcal, 2140);
+  eq("maintain plan protein 130 g", mv.plan.protein.g, 130);
+  eq("maintain plan fat 65 g", mv.plan.fat.g, 65);
+  eq("maintain plan carbs 260 g", mv.plan.carbs.g, 260);
+  eq("the grams add to 2175 kcal (145*4 + 75*9 + 230*4)", 145 * 4 + 75 * 9 + 230 * 4, 2175);
+  truthy("the note spells out THIS plan's 2175-vs-2170 arithmetic",
+    /145 g protein \+ 75 g fat \+ 230 g carbs = 2175 kcal against the 2170 kcal target/.test(mv.roundingNote));
+  truthy("...and calls the 5 kcal difference out", /5 kcal apart/.test(mv.roundingNote));
+  truthy("the note is on the page", mv.html.includes("2175 kcal against the 2170 kcal target"));
+}
+
+/* ============================================================
+   (18) REFUSAL SOURCES: each refusal carries its OWN, non-empty source
+   ============================================================ */
+console.log("\n--- (18) refusal sources ---");
+const u18 = M.plan({ sex: "M", weightKg: 60, heightCm: 170, ageY: 17, goal: "lose", pace: "loss-slow" });
+const prg = M.plan({ ...WOMAN, goal: "maintain", pace: "maintain", pregnant: true });
+const lct = M.plan({ ...WOMAN, goal: "maintain", pace: "maintain", lactating: true });
+const edr = M.plan({ ...MAN, goal: "lose", pace: "loss-slow", eatingDisorderRisk: true });
+const noAgeField = M.plan({ sex: "M", weightKg: 80, heightCm: 180, goal: "maintain", pace: "maintain" });
+const noWH = M.plan({ sex: "M", ageY: 30, goal: "maintain", pace: "maintain" });
+const badSex = M.plan({ sex: "X", weightKg: 80, heightCm: 180, ageY: 30, goal: "maintain", pace: "maintain" });
+[u18, prg, lct, edr, noAgeField, noWH, badSex].forEach((p, i) => {
+  eq(`refusal ${i} is refused`, p.refused, true);
+  eq(`refusal ${i} carries a NON-EMPTY source`, typeof p.source === "string" && p.source.length > 0, true);
+});
+eq("the under-18 source is NOT the intake-floor source", u18.source === M.FLOOR_SOURCE, false);
+eq("the pregnancy source is NOT the intake-floor source", prg.source === M.FLOOR_SOURCE, false);
+eq("the eating-disorder source is NOT the intake-floor source", edr.source === M.FLOOR_SOURCE, false);
+eq("under-18 source cites the ADULT derivation range (19-78)", /19-78/.test(u18.source) && /PMID 2305711/.test(u18.source), true);
+eq("under-18 source STATES the supervision claim is not cited", /NOT CITED AS EVIDENCE/.test(u18.source), true);
+eq("pregnancy source cites the CDC trimester additions", /CDC/.test(prg.source) && /340/.test(prg.source) && /450/.test(prg.source), true);
+eq("lactation carries the same pregnancy source", lct.source, prg.source);
+eq("eating-disorder source cites NICE NG69", /NG69/.test(edr.source), true);
+eq("the three refusal sources are all different", new Set([u18.source, prg.source, edr.source]).size, 3);
+eq("the floor's own source is untouched", /ISSN position stand/.test(M.FLOOR_SOURCE), true);
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

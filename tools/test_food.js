@@ -231,16 +231,36 @@ ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.te
   eq('...and the total falls to the remaining entry', IS.dayTotals(localToday).kcal, 298.5);
   ok('removeIntake on a gone id returns false', IS.removeIntake(r1.id) === false);
 
-  /* 6) TONE: no shaming on either side of the target (the owner's hard rule) */
+  /* 6) TONE: no shaming on either side of the target, DRIVEN BY THE GOAL
+        (the owner's hard rule) — a cut is never told to eat UP, and an at-or-above
+        day is ordinary on every goal. */
   const T = [{ key: 'kcal', label: 'Calories', value: 2000, unit: 'kcal' }];
-  const under = INut.intakeSummary(T, { kcal: 900 })[0];
-  const over = INut.intakeSummary(T, { kcal: 2600 })[0];
-  const BANNED = /\b(over|exceeded?|exceed|cheat|cheated|too much|failed|failure|limit|bad)\b/i;
-  ok('below-target wording has no shaming word', !BANNED.test(under.text), under.text);
-  ok('above-target wording has no shaming word', !BANNED.test(over.text), over.text);
-  ok('above-target headline avoids warning words', !BANNED.test(INut.intakeHeadline([over], 3)), INut.intakeHeadline([over], 3));
-  ok('below-target reading offers what is left ("to go")', /to go/.test(under.text), under.text);
-  eq('an over day is stated with the target, neutrally', over.text, '2600 kcal — your target is 2000 kcal');
+  const BANNED = /\b(over|exceeded?|exceed|cheat|cheated|too much|failed|failure|limit|bad|junk|off-track)\b/i;
+  const gainUnder = INut.intakeSummary(T, { kcal: 900 }, 'gain')[0];
+  const lossUnder = INut.intakeSummary(T, { kcal: 900 }, 'lose')[0];
+  const gainOver = INut.intakeSummary(T, { kcal: 2600 }, 'gain')[0];
+  const lossOver = INut.intakeSummary(T, { kcal: 2600 }, 'lose')[0];
+  ok('GAIN, under target: the remaining figure IS offered', /to go/.test(gainUnder.text), gainUnder.text);
+  ok('LOSS, under target: the remaining figure is NOT something to consume',
+    !/to go/.test(lossUnder.text) && /still in today's budget/.test(lossUnder.text), lossUnder.text);
+  ok('gain and loss word the SAME numbers differently', gainUnder.text !== lossUnder.text,
+    [gainUnder.text, lossUnder.text]);
+  [gainUnder, lossUnder, gainOver, lossOver].forEach((r) =>
+    ok('no shaming word (' + r.goal + (r.logged >= r.target ? ', at/above target' : ', under target') + ')',
+      !BANNED.test(r.text), r.text));
+  eq('an at-or-above day is stated with the target, neutrally',
+    gainOver.text, '2600 kcal — your target is 2000 kcal');
+  eq('...and identically for a cut (over is ordinary on every goal)', lossOver.text, gainOver.text);
+  ['gain', 'lose', 'maintain'].forEach((g) => {
+    const hOver = INut.intakeHeadline([INut.intakeSummary(T, { kcal: 2600 }, g)[0]], 3, g);
+    const hUnder = INut.intakeHeadline([INut.intakeSummary(T, { kcal: 900 }, g)[0]], 3, g);
+    ok('no shaming word in the ' + g + ' at/above headline', !BANNED.test(hOver), hOver);
+    ok('no shaming word in the ' + g + ' under headline', !BANNED.test(hUnder), hUnder);
+  });
+  ok('the LOSS headline never tells you to eat up to the target',
+    !/to go/.test(INut.intakeHeadline([lossUnder], 3, 'lose')), INut.intakeHeadline([lossUnder], 3, 'lose'));
+  ok('the GAIN headline still offers "to go"',
+    /to go/.test(INut.intakeHeadline([gainUnder], 3, 'gain')), INut.intakeHeadline([gainUnder], 3, 'gain'));
   /* the tab's target key is `carbs`; the log stores `carb` — the two must join */
   const carbRow = INut.intakeSummary([{ key: 'carbs', label: 'Carbs', value: 265, unit: 'g' }], { carb: 51.1 })[0];
   eq('the tab\'s "carbs" target reads the log\'s "carb" total', carbRow.logged, 51.1);
@@ -249,6 +269,96 @@ ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.te
   /* 7) the intake log counts as history for the mirror/backup gate */
   ok('richness counts intake entries (so a food-log-only state still backs up)',
     IS.richness({ intakelog: [{ id: 'x' }] }) >= 1);
+
+  /* 8) THE FOOD DEDUPE CANNOT TOUCH LOGGED HISTORY — it only shapes a result LIST.
+        Log the kept row AND its collapsed twin; re-running the collapse and
+        searching again must leave the log byte-identical. */
+  IS.importJSON(EMPTY, 'replace');
+  const bananaRow = Food.search(DB, 'banana', 50).find((f) => Food.nameKey(f.name) === 'banana raw');
+  const bananaTwin = (bananaRow.alternates || [])[0];
+  ok('the raw-banana search row carries its collapsed twin', !!bananaTwin, bananaRow.alternates);
+  IS.logIntake(INut.intakeEntry(bananaRow, 100));
+  IS.logIntake(INut.intakeEntry(bananaTwin, 100));
+  const logBefore = JSON.stringify(IS.intakesOn(localToday));
+  Food.dedupe(DB.foods);              // collapse everything again
+  Food.search(DB, 'banana', 50);      // and search again
+  eq('the log is byte-identical after a dedupe + search', JSON.stringify(IS.intakesOn(localToday)), logBefore);
+  eq('both twins keep their OWN snapshotted kcal (89 and 97)',
+    IS.intakesOn(localToday).map((e) => e.macros.kcal).sort((a, b) => a - b).join(','), '89,97');
+  eq('the day total is the sum of the snapshots (a collapsed row is not lost)',
+    IS.dayTotals(localToday).kcal, 186);
+  eq('the kept row logged its own name', IS.intakesOn(localToday)[0].name === bananaRow.name ||
+    IS.intakesOn(localToday)[0].name === bananaTwin.name, true);
+}
+
+/* ---------- (i) DUPLICATE COLLAPSE: one row per food, nothing made unreachable ----
+   The bundle carries FNDDS AND SR Legacy, which overlap. Food.dedupe collapses the
+   RESULT LIST only (never the dataset). RULE: equal normalised name (case,
+   punctuation and simple plurals folded) AND per-100 g energy within 5 kcal or
+   15%, keeping the row with more usable portioning measures. See js/food.js. */
+console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
+{
+  /* the normaliser folds exactly the plural that separates the real pair */
+  eq('nameKey folds "Bananas, raw" onto "Banana, raw"',
+    Food.nameKey('Bananas, raw'), Food.nameKey('Banana, raw'));
+  eq('...and "Candies, hard" onto "Candy, hard"',
+    Food.nameKey('Candies, hard'), Food.nameKey('Candy, hard'));
+  ok('...but keeps "Banana, baked" distinct',
+    Food.nameKey('Banana, baked') !== Food.nameKey('Banana, raw'), Food.nameKey('Banana, baked'));
+
+  /* the REAL pair (FNDDS 97 vs SR 89 kcal/100 g) IS a twin set */
+  ok('the real banana pair is a twin set', Food.isTwin(fnddsBanana, srBanana),
+    [fnddsBanana.per100.kcal, srBanana.per100.kcal]);
+  /* a genuinely different food sharing the stem is NOT */
+  const baked = DB.foods.find((f) => f.name === 'Banana, baked');
+  ok('"Banana, raw" vs "Banana, baked" is NOT a twin set', !Food.isTwin(fnddsBanana, baked),
+    baked && baked.per100.kcal);
+  /* the energy gate alone keeps a same-name pair apart when the numbers disagree */
+  const kale = DB.foods.filter((f) => Food.nameKey(f.name) === 'kale raw');
+  eq('the real "Kale, raw" pair is present', kale.length, 2);
+  ok('same name but 23% apart in energy is NOT merged',
+    !Food.isTwin(kale[0], kale[1]), kale.map((f) => f.per100.kcal));
+
+  /* the SEARCH list shows the pair ONCE */
+  const rb = Food.search(DB, 'banana', 50);
+  const rawRows = rb.filter((f) => Food.nameKey(f.name) === 'banana raw');
+  eq('searching "banana" returns the raw pair as ONE row', rawRows.length, 1);
+  const keptRow = rawRows[0];
+  const twin = (keptRow.alternates || [])[0];
+  ok('the kept row carries the collapsed twin as .alternates', !!twin, keptRow.alternates && keptRow.alternates.map((a) => a.code));
+  ok('the kept row is the one with the more useful measures',
+    Food.measureScore(keptRow) >= Food.measureScore(twin), [Food.measureScore(keptRow), Food.measureScore(twin)]);
+  ok('the kept row is still a real dataset record', DB.foods.some((f) => f.code === keptRow.code));
+  /* HARD CONSTRAINT: the collapsed twin is STILL REACHABLE (exact name) */
+  const exact = Food.search(DB, twin.name, 50);
+  ok('the collapsed twin is still found by its exact name', exact.some((f) => f.code === twin.code),
+    exact.map((f) => f.code));
+  ok('...and it is still in the dataset, untouched', DB.foods.some((f) => f.code === twin.code));
+
+  /* dataset-wide: exactly the real duplicate rows collapse, and nothing else */
+  const dedup = Food.dedupe(DB.foods);
+  eq('the rule merges exactly the 132 real duplicate rows', dedup.removed, 132);
+  eq('...keeping every other row', dedup.list.length, DB.foods.length - dedup.removed);
+  const groups = new Map();
+  DB.foods.forEach((f) => { const k = Food.nameKey(f.name); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); });
+  let twinPairs = 0, groupsConsidered = 0, groupsHeldApart = 0;
+  groups.forEach((v) => {
+    if (v.length < 2) return;
+    groupsConsidered++;
+    let any = false;
+    for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++) if (Food.isTwin(v[i], v[j])) { twinPairs++; any = true; }
+    if (!any) groupsHeldApart++;
+  });
+  eq('exactly the 132 twin pairs are collapsible', twinPairs, 132);
+  eq('same-name groups with NO energy agreement are held apart (deliberately not merged)', groupsHeldApart, 12);
+  eq('the collapsed + kept rows account for every food', dedup.list.length + dedup.removed, DB.foods.length);
+
+  /* the DATASET is never modified — a returned row is a copy, the record is not */
+  ok('the dataset record itself never gains .alternates',
+    !('alternates' in DB.foods.find((f) => f.code === keptRow.code)), Object.keys(DB.foods.find((f) => f.code === keptRow.code)));
+  ok('but the returned row does carry them', Array.isArray(Food.search(DB, 'banana', 50).find((f) => f.code === keptRow.code).alternates));
+  eq('dataset food count is unchanged', DB.foods.length, 13225);
+  eq('dataset measure count is unchanged', DB.foods.reduce((n, f) => n + f.measures.length, 0), 36494);
 }
 
 console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');

@@ -1,11 +1,11 @@
 {
-  "versionCode": 56,
-  "versionName": "1.0.55",
+  "versionCode": 57,
+  "versionName": "1.0.56",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "da855c68f788c1cca139113e18c9d9c9dec957ff13c0e2b7509aec5023c67a50",
-  "sizeBytes": 3857305,
+  "sha256": "2081b4e0de72306382adc953b1e153f37e08be58b7977b03f84d6ad818c84f2c",
+  "sizeBytes": 3862112,
   "published": "2026-11-08",
   "notes": [
-    "Your maintenance estimate now starts from the activity level you set, then replaces it with a value observed from your own logged intake and weigh-ins."
+    "Nutrition: duplicate foods in search now show as one row, today's totals encourage you in line with your goal, and the target rounding is explained."
   ]
 }

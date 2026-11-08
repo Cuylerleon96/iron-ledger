@@ -1712,6 +1712,16 @@
     const portionInput = (foodUI.measure === "")
       ? '<input class="inp" id="food-grams" type="number" min="0" step="1" inputmode="numeric" placeholder="grams" value="' + esc(foodUI.grams) + '" style="max-width:110px">'
       : '<input class="inp" id="food-qty" type="number" min="0" step="1" inputmode="numeric" placeholder="qty" value="' + esc(foodUI.qty) + '" style="max-width:90px">';
+    /* The database also carries this food twice (FNDDS and SR Legacy). The search
+       list collapses the twin into ONE row; this is where the collapsed twin stays
+       reachable — it is offered here, and picking it logs from that record. */
+    const alts = Array.isArray(f.alternates) ? f.alternates : [];
+    const altHtml = alts.length
+      ? '<p class="muted small" id="food-alts">Also in the database: ' + alts.map((a, i) =>
+          '<button class="btn ghost tiny food-alt" data-alt="' + i + '">' + esc(a.name) +
+            (a.per100 && typeof a.per100.kcal === "number" ? " (" + fmtW(a.per100.kcal) + " kcal/100 g)" : "") +
+          "</button>").join(" ") + "</p>"
+      : "";
     host.innerHTML =
       '<div class="food-picked"><div class="card-head"><h3>' + esc(f.name) + '</h3><span class="muted">' +
         (f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal / 100 g" : "") + "</span></div>" +
@@ -1719,11 +1729,20 @@
         portionInput +
         '<button class="btn primary" id="food-add">Add to today</button>' +
         '<button class="btn ghost tiny" id="food-x" title="Cancel">✕</button></div>' +
-      '<div id="food-preview"></div></div>';
+      '<div id="food-preview"></div>' + altHtml + "</div>";
     $("#food-measure", host).addEventListener("change", (e) => { foodUI.measure = e.target.value; renderFoodPick(); });
     const gEl = $("#food-grams", host); if (gEl) gEl.addEventListener("input", () => { foodUI.grams = gEl.value; renderFoodPreview(); });
     const qEl = $("#food-qty", host); if (qEl) qEl.addEventListener("input", () => { foodUI.qty = qEl.value; renderFoodPreview(); });
     $("#food-x", host).addEventListener("click", () => { foodUI.picked = null; renderFoodPick(); });
+    const altHost = $("#food-alts", host);
+    if (altHost) altHost.addEventListener("click", (e) => {
+      const b = e.target.closest(".food-alt");
+      if (!b) return;
+      const a = alts[Number(b.dataset.alt)];
+      if (!a) return;
+      foodUI.picked = a; foodUI.measure = ""; foodUI.qty = "1"; foodUI.grams = "";
+      renderFoodPick();
+    });
     $("#food-add", host).addEventListener("click", addPickedFood);
     renderFoodPreview();
   }
@@ -1769,17 +1788,21 @@
 
     const totals = Store.dayTotals(date);
     const targets = _nutriView && _nutriView.targets;
+    /* The TONE of the wording is driven by the SAME goal the targets were built
+       from — the current phase's goal, not a re-derived one — so the number and
+       the sentence can never disagree. */
+    const goal = (_nutriView && _nutriView.phase && _nutriView.phase.goal) || "maintain";
     let html;
     if (targets && targets.length) {
-      const rows = Nutrition.intakeSummary(targets, totals);
+      const rows = Nutrition.intakeSummary(targets, totals, goal);
       html = '<div class="n-targets">' + rows.map((r) =>
         '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(r.label) + "</span>" +
         '<span class="n-t-val">' + fmt(r.logged) + '<span class="n-t-unit"> / ' + r.target + " " + esc(r.unit) + "</span></span></div>" +
         '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("") + "</div>" +
-        '<p class="muted small">' + esc(Nutrition.intakeHeadline(rows, items.length)) + "</p>";
+        '<p class="muted small">' + esc(Nutrition.intakeHeadline(rows, items.length, goal)) + "</p>";
     } else {
       html = '<p class="muted small">Totals today: ' + esc(macroLine(totals)) + "</p>" +
-        '<p class="muted small">' + esc(Nutrition.intakeHeadline([], items.length)) + "</p>";
+        '<p class="muted small">' + esc(Nutrition.intakeHeadline([], items.length, goal)) + "</p>";
     }
     tot.innerHTML = html;
   }
@@ -1851,6 +1874,12 @@
     // year, but a person can log a meal either way).
     host.append(todayCard());
     host.append(intakeCard());
+    /* todayCard() calls renderToday() while the card is still DETACHED, and
+       renderToday() looks its own nodes up from the document (`$("#food-list")`),
+       so on first paint it found nothing and returned early — the Today card
+       showed an empty totals area until a food was added or removed. Repaint once
+       the card is actually in the document. */
+    renderToday();
   }
 
   /* ================= profile ================= */

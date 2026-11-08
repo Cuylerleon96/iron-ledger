@@ -18,10 +18,132 @@ const Food = (() => {
   const foodsOf = (db) =>
     (Array.isArray(db) ? db : (db && Array.isArray(db.foods) ? db.foods : []));
 
+  /* ---------- duplicate collapse (the FNDDS vs SR Legacy overlap) ----------
+     The bundle carries BOTH USDA databases, and they describe overlapping foods:
+     searching "banana" returned "Banana, raw" (FNDDS, 97 kcal/100 g) and
+     "Bananas, raw" (SR Legacy, 89 kcal/100 g) as two near-identical rows with
+     different numbers — confusing, and it makes the day's totals look untrust-
+     worthy. THE DATASET IS NOT TOUCHED: this collapses the SEARCH RESULT LIST
+     only, so one food shows one row.
+
+     RULE (stated here and tested in tools/test_food.js):
+       two foods are TWINS when
+         (1) their NORMALISED NAMES are equal — lower-cased, punctuation dropped
+             and simple English plurals folded, so "Bananas, raw" and "Banana,
+             raw" share the key "banana raw"; AND
+         (2) their per-100 g ENERGY agrees within tolerance: <= 5 kcal, or <= 15%
+             of the smaller value. The two databases are sampled and analysed
+             separately, so the SAME food lands a few percent apart (banana: 97
+             vs 89 kcal = 8% — merged); a genuinely different food does not sit
+             that close ("Kale, raw" 35 vs 43 kcal = 23% — deliberately NOT
+             merged). Without (2) a pure name collision could hide a real food.
+       Of a twin set we KEEP the entry with the more useful portioning measures
+       (how many measures carry a real gram weight), then the one stating more
+       nutrients, then the lower code — fully deterministic, so the same search
+       always keeps the same row.
+
+     HARD CONSTRAINTS, both enforced and asserted:
+       - NO FOOD BECOMES UNREACHABLE. The dropped twin is still returned when the
+         query IS its full normalised name, and it is attached to the kept row as
+         `.alternates` so the UI can offer it.
+       - LOGGED HISTORY IS UNTOUCHED. This shapes a returned LIST only: nothing
+         already logged is read, rewritten or recomputed, and an intake entry
+         snapshots its own name and macros at log time (see js/store.js). */
+  const KCAL_TOL_REL = 0.15, KCAL_TOL_ABS = 5;
+
+  /* lower-case + strip punctuation + fold simple plurals. "Bananas, raw" and
+     "Banana, raw" collapse to one key; "Banana, baked" does not. */
+  const singular = (w) =>
+    (w.length > 3 && /ies$/.test(w)) ? w.slice(0, -3) + "y"
+      : (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0, -1)
+        : w;
+  const nameKey = (s) =>
+    norm(s).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).map(singular).join(" ");
+
+  const kcalPer100 = (f) =>
+    (f && f.per100 && typeof f.per100.kcal === "number" && isFinite(f.per100.kcal)) ? f.per100.kcal : null;
+  const measureScore = (f) =>
+    ((f && Array.isArray(f.measures)) ? f.measures : [])
+      .filter((m) => m && m.label && isFinite(m.grams) && m.grams > 0).length;
+  const nutrientCount = (f) => (f && f.per100) ? Object.keys(f.per100).length : 0;
+
+  /* the twin test: name identity AND an agreeing energy figure. Two rows with no
+     usable energy are NEVER merged (nothing is guessed). */
+  const isTwin = (a, b) => {
+    if (!a || !b || a === b) return false;
+    if (nameKey(a.name) !== nameKey(b.name)) return false;
+    const ka = kcalPer100(a), kb = kcalPer100(b);
+    if (ka == null || kb == null) return false;
+    return Math.abs(ka - kb) <= Math.max(KCAL_TOL_ABS, KCAL_TOL_REL * Math.min(ka, kb));
+  };
+
+  /* which of two twins to KEEP (deterministic). */
+  const keepBetter = (a, b) => {
+    const sa = measureScore(a), sb = measureScore(b);
+    if (sa !== sb) return sa > sb ? a : b;
+    const na = nutrientCount(a), nb = nutrientCount(b);
+    if (na !== nb) return na > nb ? a : b;
+    const ca = (a.code == null ? Infinity : a.code), cb = (b.code == null ? Infinity : b.code);
+    return ca <= cb ? a : b;
+  };
+
+  /* Collapse twins in a ranked LIST -> { list, removed }.
+     `list` keeps the surviving rows in their original rank order, and every kept
+     row that absorbed a twin carries `.alternates` (those rows). `removed` is the
+     number of rows dropped. `exactKey`, when supplied, is the normalised name of
+     the QUERY: a food whose own normalised name equals it is NEVER hidden, so a
+     full-name search still finds the row the list would otherwise collapse. */
+  const dedupe = (list, exactKey) => {
+    const rows = Array.isArray(list) ? list : [];
+    const groups = new Map();
+    for (let i = 0; i < rows.length; i++) {
+      const k = nameKey(rows[i] && rows[i].name);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(i);
+    }
+    const drop = new Set();          // indices hidden
+    const alts = new Map();          // kept index -> absorbed rows
+    groups.forEach((idxs) => {
+      if (idxs.length < 2) return;
+      /* cluster inside the name group: only energy-agreeing rows are twins. */
+      const clusters = [];
+      idxs.forEach((i) => {
+        let found = null;
+        for (let j = 0; j < clusters.length; j++) {
+          if (isTwin(rows[clusters[j].rep], rows[i])) { found = clusters[j]; break; }
+        }
+        if (found) found.members.push(i); else clusters.push({ rep: i, members: [i] });
+      });
+      clusters.forEach((c) => {
+        if (c.members.length < 2) return;
+        let rep = c.members[0];
+        for (let j = 1; j < c.members.length; j++) {
+          if (keepBetter(rows[rep], rows[c.members[j]]) === rows[c.members[j]]) rep = c.members[j];
+        }
+        const absorbed = [];
+        c.members.forEach((i) => {
+          if (i === rep) return;
+          if (exactKey != null && nameKey(rows[i].name) === exactKey) return;   // full-name query keeps it
+          drop.add(i); absorbed.push(rows[i]);
+        });
+        if (absorbed.length) alts.set(rep, (alts.get(rep) || []).concat(absorbed));
+      });
+    });
+    const out = [];
+    for (let i = 0; i < rows.length; i++) {
+      if (drop.has(i)) continue;
+      out.push(alts.has(i) ? Object.assign({}, rows[i], { alternates: alts.get(i) }) : rows[i]);
+    }
+    return { list: out, removed: drop.size };
+  };
+
   /* ---------- search ----------
      Ranked matches. A prefix match outranks a substring match; ties break on
      match position, then shorter name, then code, then original order — fully
-     deterministic and stable. Returns the food records themselves, ranked. */
+     deterministic and stable. The ranked list is then TWIN-COLLAPSED (see above)
+     and the cap applied, so a duplicate pair costs the list one row, not two.
+     Records that absorbed a twin come back as shallow copies carrying
+     `.alternates`; every other row is the dataset record itself. */
   const search = (db, query, limit) => {
     const q = norm(query);
     if (!q) return [];
@@ -41,7 +163,8 @@ const Food = (() => {
       (a.len - b.len) ||                // shorter name first
       (a.food.code - b.food.code) ||    // then by code
       (a.idx - b.idx));                 // then original order (stable)
-    return hits.slice(0, cap).map((h) => h.food);
+    const ranked = hits.map((h) => h.food);
+    return dedupe(ranked, nameKey(query)).list.slice(0, cap);
   };
 
   /* ---------- measures -> grams ----------
@@ -187,6 +310,8 @@ const Food = (() => {
     lookupBarcode, BARCODE_LOOKUP_IMPLEMENTED,
     /* internals exposed for callers/tests */
     foodsOf, norm, round2,
+    /* duplicate collapse (FNDDS vs SR Legacy) */
+    dedupe, nameKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS,
   };
 })();
 if (typeof module !== "undefined") module.exports = Food;
