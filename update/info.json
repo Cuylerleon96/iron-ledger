@@ -1,13 +1,11 @@
 {
-  "versionCode": 48,
-  "versionName": "1.0.47",
+  "versionCode": 49,
+  "versionName": "1.0.48",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "117235721263bef6f8c9b589852e0ab79726995b631490d69d14db5abf85d9fa",
-  "sizeBytes": 3305028,
+  "sha256": "ec67494163b99fd9f5ecbeb5619876c28832ca4d65c4d8fa48abd6e363a99354",
+  "sizeBytes": 3305076,
   "published": "2026-11-08",
   "notes": [
-    "Reworded clinical and scolding labels into plain, encouraging language across the app - the muscle-balance card now reads 'room to grow', 'sweet spot' and 'not trained yet' instead of 'below MEV' and 'untrained', and no score band is called 'No good'.",
-    "Three in a Row is now Three on Target: it rewards meeting your weekly session target in three weeks, not three days in a row - the last consecutive-day reward, in badges and in XP, is gone.",
-    "Celebrations now fire only after you save a session, and everything earned in one save arrives as a single celebration you dismiss in one tap."
+    "Removed two unused consecutive-day figures from the Discipline detail, so no consecutive-day value is exposed anywhere in the app for a future badge or XP rule to pick up."
   ]
 }

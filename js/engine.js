@@ -925,7 +925,11 @@ const Engine = (() => {
          still scores 75
        - how many of the window's four weeks had at least one session
      The stretch before a first-ever session is ignored: that is when he started,
-     not evidence of irregularity. */
+     not evidence of irregularity.
+
+     This detail carries NO consecutive-day value (it used to expose streakDays /
+     streakWeeks that nothing read) — consecutive-day rewards were removed
+     app-wide, so nothing here could be wired to one by accident. */
   function consistencyScore(state, ws) {
     const target = num(state.profile.weeklyTarget) || 4;
     const sessions = ws.length;
@@ -936,10 +940,9 @@ const Engine = (() => {
     /* Softer around the target than it used to be: hitting three quarters of your
        plan is still good training, and the old curve read it as a fail. */
     const frequency = clamp(interp(rate, [0, 0.25, 0.5, 0.75, 1, 1.25], [0, 25, 50, 72, 88, 97]));
-    const st = streaks(state);
     if (!sessions) {
       return { score: 0, sessions: 0, expected, rate: 0, frequency: 0, continuity: 0,
-               longestGap: null, weeksCovered: 0, streakDays: st.days, streakWeeks: st.weeks };
+               longestGap: null, weeksCovered: 0 };
     }
     const dates = [...new Set(ws.map((w) => w.date))].sort();
     const t = (d) => new Date(d + "T12:00:00").getTime();
@@ -961,7 +964,7 @@ const Engine = (() => {
     // frequency leads, continuity carries real weight but not control
     const score = clamp(0.70 * frequency + 0.30 * continuity);
     return { score, sessions, expected, rate, frequency, continuity, longestGap,
-             weeksCovered: covered, streakDays: st.days, streakWeeks: st.weeks };
+             weeksCovered: covered };
   }
 
   /* Below this, fat is not leanness any more, it is the essential-fat floor:
