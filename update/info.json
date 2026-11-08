@@ -1,11 +1,11 @@
 {
-  "versionCode": 43,
-  "versionName": "1.0.42",
+  "versionCode": 44,
+  "versionName": "1.0.43",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "9afe7692b1410b1cf20b4c56e6814250614f4695a79de039b03337d9267eacc8",
-  "sizeBytes": 3298082,
+  "sha256": "d2617230484a29787dcb56a25f7adb74566720ec887fc1ee5666e081d7b589a7",
+  "sizeBytes": 3298354,
   "published": "2026-11-08",
   "notes": [
-    "Warm-up marking removed - not a feature you wanted. Drop and failure sets stay, and they still count as the harder work they are."
+    "Titles now run all the way up - the ladder used to stall with one title covering 23 levels."
   ]
 }

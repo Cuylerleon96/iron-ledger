@@ -1837,13 +1837,24 @@ const Engine = (() => {
     while (cum + need <= totalXp && lvl < 200) { cum += need; lvl++; need = Math.round(300 * Math.pow(lvl, 1.28)); }
     return { level: lvl, into: totalXp - cum, need, pct: Math.round(((totalXp - cum) / need) * 100), total: totalXp };
   }
-  const TITLES = ["Rookie", "Trainee", "Grinder", "Lifter", "Ironclad", "Forged", "Veteran", "Beast", "Titan", "Mythic"];
-  /* Titles step every 3 levels, so the first promotion — Rookie to Trainee —
-     lands at level 3 rather than level 6. Five-level steps put Trainee months out
-     for a beginner, which is too long to be told you are still a Rookie. The
-     curve shape is untouched; only the title boundaries moved. */
-  const TITLE_STEP = 3;
-  const title = (lvl) => TITLES[Math.min(TITLES.length - 1, Math.floor(lvl / TITLE_STEP))] + (lvl > 50 ? " ★" + (lvl - 50) : "");
+  /* Titles: the early rungs still step every 3 levels, so the first promotion —
+     Rookie to Trainee — lands at level 3 rather than level 6; five-level steps
+     put Trainee months out for a beginner, which is too long to be told you are
+     still a Rookie. But ten names on a fixed 3-level step collapsed the ladder
+     at the top: Mythic covered levels 27 to 50, twenty-three straight levels of
+     the same word. The step now widens to 5 by the top and the ladder extends
+     past Mythic to level 50, so no single title covers more than 5 levels and
+     each later tier costs proportionally more XP (the curve itself is
+     untouched). The star suffix after level 50 is unchanged. */
+  const TITLES = ["Rookie", "Trainee", "Grinder", "Lifter", "Ironclad", "Forged",
+                  "Veteran", "Beast", "Titan", "Mythic", "Legend", "Ascendant",
+                  "Colossus", "Immortal"];
+  const TITLE_LVLS = [1, 3, 6, 9, 12, 15, 18, 21, 24, 27, 31, 36, 41, 46];
+  const title = (lvl) => {
+    let i = 0;
+    for (let k = 0; k < TITLE_LVLS.length; k++) if (lvl >= TITLE_LVLS[k]) i = k;
+    return TITLES[i] + (lvl > 50 ? " ★" + (lvl - 50) : "");
+  };
 
   /* ---------- achievements ---------- */
   const ACHIEVEMENTS = [

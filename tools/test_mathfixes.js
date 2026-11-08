@@ -1053,5 +1053,50 @@ console.log("\n=== 34. XP rebalance: improvement leads, junk volume pays less, O
   truthy("the save toast carries the same control", /line\.append\(xpChip\(w, sx\)/.test(appSrc));
 }
 
+console.log("\n=== 35. the title ladder reaches the top without stalling ===");
+{
+  /* Ten names on a fixed 3-level step meant Mythic covered levels 27-50 —
+     twenty-three straight levels of the same word. The ladder now extends past
+     Mythic and widens to a 5-level step by the top, so every tier is earned.
+     Boundaries are read off the RENDERED title, so the ★ suffix past level 50
+     counts as its own step (each post-50 level is its own title). */
+  const e = env();
+  const base = (t) => t.replace(/ ★\d+$/, "");
+  const spans = [];
+  let prev = null, start = 1;
+  for (let L = 1; L <= 200; L++) {
+    const t = e.E.title(L);
+    if (t !== prev) {
+      if (prev !== null) spans.push({ title: prev, from: start, to: L - 1, n: L - start });
+      prev = t; start = L;
+    }
+  }
+  const worst = spans.reduce((a, b) => (b.n > a.n ? b : a));
+  console.log(`     longest span: ${worst.title} ${worst.from}-${worst.to} (${worst.n} levels); ${spans.length} steps over 200 levels`);
+
+  truthy("the first promotion is still at level 3", e.E.title(2) === "Rookie" && e.E.title(3) === "Trainee");
+  truthy("no title covers more than 5 levels",
+    spans.every((s) => s.n <= 5));
+
+  const WANT = ["Rookie", "Trainee", "Grinder", "Lifter", "Ironclad", "Forged",
+                "Veteran", "Beast", "Titan", "Mythic", "Legend", "Ascendant",
+                "Colossus", "Immortal"];
+  const seen = new Set(spans.map((s) => base(s.title)));
+  truthy("every title in the ladder is reachable", WANT.every((t) => seen.has(t)));
+  truthy("...and the ladder adds nothing outside the declared list",
+    [...seen].every((t) => WANT.includes(t)));
+  const orig = ["Rookie", "Trainee", "Grinder", "Lifter", "Ironclad", "Forged", "Veteran", "Beast", "Titan", "Mythic"];
+  eq("the original ten keep their names and order",
+    WANT.slice(0, 10).join(" "), orig.join(" "));
+  truthy("the ladder now reaches level 50 before the star suffix",
+    base(e.E.title(50)) === "Immortal" && !/★/.test(e.E.title(50)));
+  truthy("...and the star suffix still starts at level 51", e.E.title(51) === "Immortal ★1");
+
+  // the curve is untouched: the XP each new boundary needs, from levelInfo
+  const xpToReach = (L) => { let lo = 0, hi = 1e9; while (lo < hi) { const m = Math.floor((lo + hi) / 2); if (e.E.levelInfo(m).level >= L) hi = m; else lo = m + 1; } return lo; };
+  eq("level 31 (Legend) needs 318,650 XP", xpToReach(31), 318650);
+  eq("level 46 (Immortal) needs 793,266 XP", xpToReach(46), 793266);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
