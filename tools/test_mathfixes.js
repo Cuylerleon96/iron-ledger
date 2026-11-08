@@ -501,5 +501,39 @@ console.log("\n=== 20. the consistency grid starts at the first logged workout =
   eq("the hardcoded 371-day label is gone", /of the last 371 days/.test(appSrc), false);
 }
 
+console.log("\n=== 21. a bodyweight movement must count the body, not just the plate ===");
+{
+  const e = env();
+  // classify by the names the LIBRARY actually uses, not convenient singulars
+  eq("'Dips' (the real library entry) is bodyweight", e.E.isBodyweight("Dips"), true);
+  eq("...at the published fraction", e.E.bwFactor("Dips"), 0.95);
+  eq("'Pull-ups' is bodyweight", e.E.isBodyweight("Pull-ups"), true);
+  eq("'Incline Crunches' is bodyweight", e.E.isBodyweight("Incline Crunches"), true);
+  eq("...at the trunk fraction", e.E.bwFactor("Incline Crunches"), 0.40);
+  eq("'Plank' is an isometric hold (no load moved)", e.E.bwFactor("Plank"), 0);
+
+  // equipment that supplies its own load must never be counted as bodyweight
+  for (const n of ["Seated Dip Machine", "Assisted Dip Machine", "Cable Crunch", "Machine Chest Press", "Lat Pulldown", "Leg Press"])
+    eq(`'${n}' supplies its own load`, e.E.isBodyweight(n), false);
+
+  // a set logged before bodyweight stamping existed still counts the body
+  const st = base({ profile: Object.assign({}, base().profile, { weightKg: 80 }),
+    workouts: [{ id: "c", date: iso(1), note: "",
+      entries: [{ id: 171, name: "Incline Crunches", mode: "weight_reps", sets: [{ w: 6.8039, r: 20 }] }] }] });
+  const before = e.E.seriesFor(st, 171).slice(-1)[0].top;
+  eq("an unstamped set scores on the plate alone", Math.round(before * 2.2046), 21);
+  eq("backfill stamps it", e.E.backfillBodyweight(st), 1);
+  const after = e.E.seriesFor(st, 171).slice(-1)[0].top;
+  // 6.8039 + 80 x 0.40 = 38.8 kg, x (1 + 12/30) = 54.3 kg
+  eq("...using the bodyweight on that set's own date", Math.round(after * 2.2046), Math.round((6.8039 + 80 * 0.40) * (1 + 12 / 30) * 2.2046));
+  truthy("...which is a far larger, honest load", after > before * 2);
+  eq("it is idempotent", e.E.backfillBodyweight(st), 0);
+  // and it must not invent a weight that was never recorded
+  const none = base({ profile: Object.assign({}, base().profile, { weightKg: null }),
+    workouts: [{ id: "c", date: iso(1), note: "",
+      entries: [{ id: 171, name: "Incline Crunches", mode: "weight_reps", sets: [{ w: 6.8039, r: 20 }] }] }] });
+  eq("with no bodyweight known it leaves the set alone", e.E.backfillBodyweight(none), 0);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

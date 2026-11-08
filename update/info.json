@@ -1,11 +1,12 @@
 {
-  "versionCode": 26,
-  "versionName": "1.0.25",
+  "versionCode": 27,
+  "versionName": "1.0.26",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "356ace498d6eecae3c66b97d0b54d77061895df5f0e4487603a94c806c4cc855",
-  "sizeBytes": 3265677,
+  "sha256": "fff2a81f4633077f327faefa0096d89534952b792c2caff7505f71ef1d257723",
+  "sizeBytes": 3266311,
   "published": "2026-11-08",
   "notes": [
-    "The consistency grid now starts at your first logged workout instead of drawing a full year. Training every day since you installed it read as 2 days out of 371; it now reads 2 of the last 2 days, since you started"
+    "A bodyweight movement now counts your body. A set with no stamped bodyweight contributed zero, so 15 lb on your chest on Incline Crunches scored an e1RM of 21 lb as though you weighed nothing. The load is now 138.2 x 0.40 + 15 = 70.3 lb, e1RM 98.4 lb, tonnage 2,108 lb",
+    "Sets logged before this existed, and imported sets, are now stamped with the bodyweight that was true on their own date. Nothing is invented: with no bodyweight recorded the set still scores on the plate alone"
   ]
 }

@@ -1380,6 +1380,9 @@
       Store.setSaveErrorHandler(() => toast("Storage is full — that change may not have been saved. Export a backup.", "warn", 9000));
     }
     buildIndex();
+    // sets logged before bodyweight scoring existed carry no stamp; fix them once
+    // on load so a weighted crunch is not scored as though the body weighed nothing
+    try { if (Engine.backfillBodyweight(S) > 0) Store.save(true); } catch (e) { console.warn("bodyweight backfill", e); }
     /* No auto-seeding. This used to insert a real session on first run, so a
        brand-new account's charts, XP, badges, muscle bars and Discipline all
        counted a workout the user never did — data they did not enter, presented

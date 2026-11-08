@@ -130,13 +130,21 @@ const Engine = (() => {
     [/plank|hold|isometric|hollow|\bl.?sit\b|dead ?hang|flexed arm hang/i, 0.00],
     [/sit.?up|crunch|leg raise|knee raise|\bv.?up\b/i, 0.40],
   ];
-  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdip\b|inverted row|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
+  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|inverted row|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
   const bwFactor = (name) => {
     const n = String(name || "");
     for (const [re, f] of BW_FACTOR) if (re.test(n)) return f;
     return 0.65;                        // mid-range assumption, labelled as one
   };
-  const isBodyweight = (name) => BW_NAME.test(String(name || ""));
+  /* Equipment that supplies the load itself. "Seated Dip Machine" matches \bdip\b
+     but its resistance is the stack, not the body — counting bodyweight on top of
+     it inflated a machine movement. Anything naming its own load source is not a
+     bodyweight movement, however bodyweight-like its pattern looks. */
+  const SUPPLIES_LOAD = /machine|smith|cable|lever|assisted|band|sled|weighted vest/i;
+  const isBodyweight = (name) => {
+    const n = String(name || "");
+    return BW_NAME.test(n) && !SUPPLIES_LOAD.test(n);
+  };
 
   /* Epley: 1RM = w·(1 + r/30). Accurate to ~12 reps; flagged as an estimate. */
   const est1RM = (w, r) => (w > 0 && r > 0 ? w * (1 + Math.min(r, 12) / 30) : 0);
@@ -159,6 +167,30 @@ const Engine = (() => {
      says "sets", never "working sets" — a working set properly excludes warm-ups,
      and claiming that precision would misstate what is actually counted. */
   
+  /* Sets logged before bodyweight-aware scoring shipped — or imported from an
+     export — carry no `bwKg` stamp, and entryStats has no fallback for a missing
+     one: `num(undefined)` is 0, so the bodyweight quietly contributed nothing.
+     A weighted incline crunch holding 15 lb on the chest scored an e1RM of 21 lb
+     as though the body weighed nothing, when the honest load is 138.2 x 0.40 + 15.
+
+     Stamp each bodyweight set with the bodyweight that was true on its own
+     session's date. Idempotent, and it never invents one: with no bodyweight
+     known at all the set is left alone and still scores on the plate alone. */
+  function backfillBodyweight(state) {
+    let n = 0;
+    for (const w of state.workouts || []) {
+      const bw = bodyweight(state, w.date);
+      if (!(bw > 0)) continue;
+      for (const e of w.entries || []) {
+        if (!isBodyweight(e.name)) continue;
+        for (const s of e.sets || []) {
+          if (!(num(s.bwKg) > 0)) { s.bwKg = bw; n++; }
+        }
+      }
+    }
+    return n;
+  }
+
   function entryStats(entry) {
     const mode = entry.mode || "weight_reps";
     const bw = isBodyweight(entry.name);
@@ -1529,7 +1561,7 @@ const Engine = (() => {
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks,
+    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };
