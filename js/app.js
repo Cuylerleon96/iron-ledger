@@ -891,6 +891,24 @@
     });
   }
 
+  /* A version we could not read is written as "unknown" rather than blanked out,
+     so the reason a check went wrong is visible on the screen. */
+  const instCode = (r) => {
+    const c = r && r.installed && r.installed.versionCode;
+    return c != null ? c : "unknown";
+  };
+
+  /* States what was actually established. "up to date" is only ever returned
+     when a real comparison produced that verdict — an unreachable feed or an
+     unreadable installed version reads as "couldn't check", because a silent
+     false "up to date" is how a user gets stranded on an old build. */
+  function updateStatusText(r) {
+    if (r.state === "available") return "v" + (r.versionName || r.latest) + " available";
+    if (r.state === "current") return "up to date" + (r.latest != null ? " (newest build " + r.latest + ")" : "");
+    if (r.state === "unsupported") return "browser build";
+    return "couldn't check — " + (r.reason || "unknown error");
+  }
+
   async function updateCheck(manual) {
     if (typeof Updater === "undefined") return;
     const status = $("#up-status");
@@ -899,22 +917,19 @@
     try { r = await Updater.check(); }
     catch (e) { r = { state: "error", reason: String((e && e.message) || e) }; }
 
-    if (status) {
-      status.textContent =
-        r.state === "available" ? "v" + r.versionName + " available" :
-        r.state === "current" ? "up to date" :
-        r.state === "unsupported" ? "browser build" :
-        (r.reason || "check failed");
-    }
+    if (status) status.textContent = updateStatusText(r);
     // auto-checks stay quiet unless there is something new; only ever prompt
     // once per version so a dismissed update does not nag on every launch
     if (r.state === "available" && (manual || Updater.offered() !== r.latest)) {
       Updater.markOffered(r.latest);
       showUpdatePrompt(r);
     } else if (manual && r.state === "current") {
-      toast(`Up to date — v${r.installed.versionName} (build ${r.installed.versionCode})`, "good");
-    } else if (manual && r.state === "error") {
-      toast(r.reason || "Update check failed", "warn", 5000);
+      toast(`Up to date — installed build ${instCode(r)}, newest build ${r.latest}`, "good");
+    } else if (manual && r.state === "unknown") {
+      // never a silent "up to date": say what went wrong
+      toast("Couldn't check — " + (r.reason || "unknown reason"), "warn", 6000);
+    } else if (manual && r.state === "unsupported") {
+      toast("This is the browser build — nothing to install.", "warn", 4000);
     }
   }
 
@@ -960,7 +975,9 @@
     $("#up-check", upd).addEventListener("click", () => updateCheck(true));
     if (typeof Updater !== "undefined") Updater.installed().then((i) => {
       const v = $("#up-version", upd);
-      if (v) v.textContent = i ? `installed v${i.versionName} (build ${i.versionCode})` : "browser build — nothing to install";
+      if (v) v.textContent = i
+        ? `installed v${i.versionName || "?"} (build ${i.versionCode != null ? i.versionCode : "unknown"})`
+        : "browser build — nothing to install";
     });
 
     const data = el("section", { class: "card" });
