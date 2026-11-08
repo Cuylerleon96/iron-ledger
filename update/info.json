@@ -1,17 +1,14 @@
 {
-  "versionCode": 15,
-  "versionName": "1.0.14",
+  "versionCode": 16,
+  "versionName": "1.0.15",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "195b67d4909fe4c7ce1711cbed37ca7ed91fc90ca4fbb6f54dcbf0335fbbe182",
-  "sizeBytes": 3252558,
+  "sha256": "1b316b759ae2a0fbf8ed13fcb78653f9cd5f4c3ff946ecd4bc39a40eb3e0169d",
+  "sizeBytes": 3253984,
   "published": "2026-11-08",
   "notes": [
-    "New: Progress over the year - your six stats plotted month by month across 12 months, each point re-read from the sessions that preceded it",
-    "New: a year grid showing every day you trained, one square per day, at a glance",
-    "New: Volume and recovery - weekly sets for the last 12 weeks, a deload read taken from your own logged effort, and days since each muscle group was last trained",
-    "New: set a target for any lift. Progress is always shown; a time estimate only appears when your own logged rate supports it",
-    "New: repeat your last session with one tap from the Log tab, and copy any past session in your notes format",
-    "New: a dated backup is written once a day alongside the on-device copy, keeping the last five",
-    "Fix: the dashboard could overrun the screen sideways on a phone, clipping text at the edge. The page is now locked to the screen width"
+    "New: a goal body fat percentage, sitting right next to your goal weight in Profile",
+    "Your Vitality score now tracks progress toward that goal exactly the way it tracks your weight goal, and the breakdown says which it is using",
+    "New: a body fat percentage over time chart and a progress line on your bodyweight log, showing how far you have come and what is left",
+    "If a body fat goal is set below the essential-fat floor (about 5 percent for men, 13 percent for women) the app says plainly that it is not a level anyone can hold"
   ]
 }
