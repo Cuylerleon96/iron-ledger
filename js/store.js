@@ -50,6 +50,46 @@ const Store = (() => {
     state = DEFAULT();
   }
 
+  /* How much user history a state carries. Used to decide whether a state is
+     safe to mirror — see allowMirror(). Records, not bytes: a state can be
+     large and still be empty of history. */
+  const richness = (s) => s
+    ? (s.workouts || []).length + (s.bodylog || []).length + (s.custom || []).length
+      + Object.keys(s.achievements || {}).length + Object.keys(s.overrides || {}).length
+    : 0;
+
+  let mirrorRichness = 0;     // richness of what we last put on the device
+  let hydrated = false;       // has the boot recovery finished?
+  let allowShrink = false;    // set by deliberate actions (reset, replace-import)
+  let mirrorProtected = false; // the mirror could not be read — do not write to it
+
+  /* Refuse to mirror an EMPTIER state over a richer one. That exact shape is what
+     a boot with evicted localStorage looks like before hydration finishes, and
+     writing it would destroy the last copy of the user's history. Deliberate
+     shrink operations clear the guard instead of fighting it. */
+  function allowMirror(s) {
+    if (!hydrated) return false;              // never mirror before recovery has run
+    if (mirrorProtected) {
+      // We could not read the mirror, so we do not know what it holds. Writing
+      // could destroy history we simply failed to see. localStorage is still the
+      // working copy and the next launch retries the read, so refuse.
+      console.warn("mirror unreadable this session — leaving it untouched");
+      return false;
+    }
+    const r = richness(s);
+    // Only a severe COLLAPSE is refused while the device still holds real history
+    // — the shape of a boot whose recovery failed, not of a user tidying up.
+    // Every deliberate shrink (reset, replace-import, a delete) sets allowShrink,
+    // and the watermark follows the truth, so ordinary editing mirrors normally.
+    if (!allowShrink && mirrorRichness >= 4 && r < mirrorRichness / 2) {
+      console.warn("not mirroring a collapsed state (" + r + " vs " + mirrorRichness
+        + ") — keeping the device copy");
+      return false;
+    }
+    mirrorRichness = r;
+    return true;
+  }
+
   let saveTimer = null;
   function save(immediate) {
     const doIt = () => {
@@ -59,7 +99,9 @@ const Store = (() => {
         localStorage.setItem(KEY, JSON.stringify(state));
         // mirror to device storage when packaged, so a cleared WebView
         // localStorage is recoverable rather than a lost year of training
-        if (typeof Native !== "undefined" && Native.available) Native.write(JSON.stringify(state));
+        if (typeof Native !== "undefined" && Native.available && allowMirror(state)) {
+          Native.write(JSON.stringify(state));
+        }
       } catch (e) { console.error("save failed", e); }
     };
     if (immediate) { clearTimeout(saveTimer); doIt(); return; }
@@ -76,7 +118,7 @@ const Store = (() => {
     save(true);
     return w;
   }
-  function deleteWorkout(id) { state.workouts = state.workouts.filter((w) => w.id !== id); save(true); }
+  function deleteWorkout(id) { allowShrink = true; state.workouts = state.workouts.filter((w) => w.id !== id); save(true); allowShrink = false; }
   function workoutById(id) { return state.workouts.find((w) => w.id === id) || null; }
 
   /* The bodyweight log is the SINGLE SOURCE OF TRUTH for body composition.
@@ -108,9 +150,11 @@ const Store = (() => {
     save(true);
   }
   function deleteBodyLog(date) {
+    allowShrink = true;
     state.bodylog = state.bodylog.filter((b) => b.date !== date);
     syncProfileFromLog();
     save(true);
+    allowShrink = false;
   }
 
   function addCustom(ex) {
@@ -125,9 +169,11 @@ const Store = (() => {
     save(true);
   }
   function deleteCustom(id) {
+    allowShrink = true;
     state.custom = state.custom.filter((x) => x.id !== id);
     state.workouts.forEach((w) => (w.entries = (w.entries || []).filter((e) => e.id !== id)));
     save(true);
+    allowShrink = false;
   }
   const setOverride = (id, patch) => { state.overrides[id] = Object.assign({}, state.overrides[id], patch); save(true); };
 
@@ -141,7 +187,7 @@ const Store = (() => {
 
   function importJSON(text, mode = "replace") {
     const incoming = migrate(JSON.parse(text));
-    if (mode === "replace") state = incoming;
+    if (mode === "replace") { allowShrink = true; state = incoming; }
     else {
       // merge: keep unique workout ids
       const ids = new Set(state.workouts.map((w) => w.id));
@@ -167,24 +213,78 @@ const Store = (() => {
     return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   }
 
-  const reset = () => { state = DEFAULT(); save(true); };
+  const reset = () => { allowShrink = true; state = DEFAULT(); save(true); allowShrink = false; };
   const loadBackup = () => { const b = localStorage.getItem(BAK); if (!b) return false; state = migrate(JSON.parse(b)); save(true); return true; };
   const hasBackup = () => !!localStorage.getItem(BAK);
 
   /* On device: if localStorage is empty but the mirrored file has data,
      restore from the file. Returns true when data was recovered. */
   async function bootstrapNative() {
-    if (typeof Native === "undefined" || !Native.available) return false;
-    const txt = await Native.read();
-    if (!txt) { Native.write(JSON.stringify(state)); return false; }
+    if (typeof Native === "undefined" || !Native.available) { hydrated = true; return false; }
+    const res = await Native.read();
+    let restored = false;
+
     try {
-      const incoming = migrate(JSON.parse(txt));
-      if ((incoming.workouts || []).length > (state.workouts || []).length) {
-        state = incoming; save(true); return true;
+      if (res.ok) {
+        let incoming = null;
+        try { incoming = migrate(JSON.parse(res.text)); }
+        catch (e) { console.warn("native restore parse failed", e); }
+        if (incoming) {
+          mirrorRichness = richness(incoming);    // what the device actually holds
+          if (richness(incoming) > richness(state)) {
+            state = incoming; save(true); restored = true;
+          }
+        }
+      } else if (res.missing) {
+        mirrorRichness = 0;                        // positively absent; nothing to protect
+      } else {
+        // The read FAILED for an unknown reason. The file may be perfectly good, so
+        // do not touch it: a transient timeout must never cost the user their data.
+        console.warn("mirror unreadable — leaving it untouched:", res.error);
+        mirrorProtected = true;
       }
-    } catch (e) { console.warn("native restore parse failed", e); }
-    Native.write(JSON.stringify(state));
+    } finally {
+      // ALWAYS, and in a finally: hydration gating every mirror write means a
+      // return that skips this freezes the device mirror for the whole session.
+      hydrated = true;
+    }
+
+    if (restored) return true;                     // the mirror already holds this
+    // memory is at least as rich as the mirror, so refreshing the mirror is safe
+    if (allowMirror(state)) Native.write(JSON.stringify(state));
     return false;
+  }
+
+  /* The snapshot written immediately before an update is installed. It is the
+     copy that survives even if the install wipes the WebView store, and it is
+     only ever read when both localStorage AND the live mirror came up empty —
+     so recovering from it can never overwrite newer data. */
+  async function snapshotPreUpdate() {
+    if (typeof Native === "undefined" || !Native.available) return false;
+    const blob = JSON.stringify({ savedAt: new Date().toISOString(), why: "pre-update", state });
+    const ok = await Native.writeSnapshot(blob);
+    if (ok) console.info("pre-update snapshot saved (" + richness(state) + " records)");
+    return ok;
+  }
+
+  async function recoverFromSnapshot() {
+    if (typeof Native === "undefined" || !Native.available) return false;
+    const res = await Native.readSnapshot();
+    if (!res.ok) return false;
+    try {
+      const blob = JSON.parse(res.text);
+      const snap = migrate(blob && blob.state ? blob.state : blob);
+      if (richness(snap) > richness(state)) { state = snap; save(true); return true; }
+    } catch (e) { console.warn("snapshot parse failed", e); }
+    return false;
+  }
+
+  /* Full recovery chain, richest source wins: live mirror first, then the
+     pre-update snapshot, and only while memory is still empty. */
+  async function recover() {
+    if (await bootstrapNative()) return "device mirror";
+    if (richness(state) === 0 && await recoverFromSnapshot()) return "pre-update snapshot";
+    return null;
   }
 
   return {
@@ -192,7 +292,7 @@ const Store = (() => {
     save, upsertWorkout, deleteWorkout, workoutById, addBodyLog, deleteBodyLog,
     addCustom, updateCustom, deleteCustom, setOverride, unlock,
     exportJSON, importJSON, exportCSV, reset, loadBackup, hasBackup, uid, migrate,
-    bootstrapNative,
+    bootstrapNative, recover, snapshotPreUpdate, recoverFromSnapshot, richness,
   };
 })();
 if (typeof module !== "undefined") module.exports = Store;

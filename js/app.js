@@ -870,6 +870,12 @@
       const prog = $("#up-prog"), bar = $("#up-bar"), pct = $("#up-pct");
       prog.hidden = false; $("#up-go").disabled = true;
       try {
+        // Snapshot the history BEFORE the installer runs. Installing must never
+        // be able to cost the user their data, and this is the copy that survives
+        // even if the update wipes the WebView store. Never let a snapshot
+        // failure block the update - it is a safety net, not a prerequisite.
+        try { await Store.snapshotPreUpdate(); }
+        catch (e) { console.warn("pre-update snapshot failed:", e && e.message); }
         await Updater.install(r, (p) => { bar.style.width = p + "%"; pct.textContent = p + "%"; });
         closeModal();
         toast("Downloaded and verified — follow the installer prompt", "good", 5000);
@@ -1122,8 +1128,9 @@
       if (done) return;
       done = true;
       try {
-        if (await Store.bootstrapNative()) {
-          toast("Recovered your data from device storage", "good", 4000);
+        const src = await Store.recover();
+        if (src) {
+          toast("Recovered your data from the " + src, "good", 4500);
           render();
         }
       } catch (e) { console.warn("device restore skipped:", e && e.message); }
