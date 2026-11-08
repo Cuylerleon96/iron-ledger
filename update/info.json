@@ -1,12 +1,12 @@
 {
-  "versionCode": 3,
-  "versionName": "1.0.2",
+  "versionCode": 4,
+  "versionName": "1.0.3",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "365286778b3e38fe64147669fb84872e324ba5a88148802f7de9dcaa81c3ecc0",
-  "sizeBytes": 3230588,
+  "sha256": "82c4e8c14257373d2637aa6dc024d2e21720ecd6e8f84e44f5b5fc2f67923c0f",
+  "sizeBytes": 3230849,
   "published": "2026-11-08",
   "notes": [
-    "History now lists each exercise's sets (they were pushed off-screen on phones)",
-    "Exercise-page chips are readable again (they were black text on a dark fill)"
+    "Update checks read the release feed directly \u2014 fresh immediately instead of waiting on a CDN cache",
+    "Includes 1.0.2: History lists each exercise's sets, and exercise chips are readable"
   ]
 }
