@@ -1,12 +1,13 @@
 {
-  "versionCode": 33,
-  "versionName": "1.0.32",
+  "versionCode": 34,
+  "versionName": "1.0.33",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "196bbc2d6d40199d3199894cf73c0c1be20488b61ff2e2e6e4f620c16c08eefb",
-  "sizeBytes": 3269128,
+  "sha256": "e11db64c6ff431f87cc9fd8e127ed185bd466afe61183768d89534d676fd08fd",
+  "sizeBytes": 3270943,
   "published": "2026-11-08",
   "notes": [
-    "Fixes a bug I shipped and did not catch: the new row factors were UNREACHABLE. A factor and a bodyweight gate are two separate decisions, and the row variants were not in the gate list, so the numbers were set and never used. Every new factor now has to prove its gate is open in the test, not just that the number was assigned",
-    "Values: incline/upright row 0.37, feet-elevated row 0.79, inverted row 0.60, knee push-up 0.49 (two-study consensus), push-ups 0.64, incline 0.55, decline 0.74, incline crunches 0.85"
+    "Rows are now calibrated to the four MEASURED suspension-row anchors rather than picked. Three candidate models were tested against them: cosine of body angle (RMSE 0.024), linear in angle from vertical (RMSE 0.011, best), and a lever-about-the-feet model which was REJECTED because it predicts a constant load. Per-anchor residuals are in the source beside the numbers. Upright 0.38, reference 0.57, horizontal 0.81",
+    "Two families were borrowing geometry that was not theirs. A hanging leg raise is HIP flexion, not trunk flexion, so it no longer takes the crunch 0.40: both legs are 0.322 of bodyweight with a mean cosine of 0.64 over the sweep, giving 0.21 straight-leg and 0.15 bent-knee. Nordic and glute-ham were both 0.70 and are now split at 0.68 and 0.59 from upper-body mass at the knee lever",
+    "Two rules were UNREACHABLE and silently did nothing: the razor curl factor was never gated on, and an Australian pull-up was being shadowed by the pull-up pattern and scored as a full hanging pull-up at 1.00. Both fixed. Plank stays 0.00 on purpose: a hold moves nothing, so any non-zero factor would manufacture tonnage and a 1RM out of a static pose. Nothing in your export moved - none of your exercises touch these families"
   ]
 }

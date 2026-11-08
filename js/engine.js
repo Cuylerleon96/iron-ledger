@@ -118,6 +118,11 @@ const Engine = (() => {
      ~0.95, pull-up/chin-up ~1.0), rounded; anything unmatched takes a mid-range
      0.65. They are approximations and are labelled as such. */
   const BW_FACTOR = [
+    /* "Australian pull-up" is a low-bar bodyweight row, not a hanging pull-up:
+       it must resolve to the row reference (0.57), not the pull-up's 1.00. The row
+       rule below lists it too, but this rule sits first so the pull-up pattern
+       cannot shadow it. Gated by BW_NAME ("australian"). */
+    [/australian/i, 0.57],
     [/pull.?up|chin.?up|muscle.?up|lat pull.?up/i, 1.00],
     [/\bdip\b|dips/i, 0.95],
     /* Push-up variants from published force-plate measurement, NOT derived.
@@ -141,23 +146,62 @@ const Engine = (() => {
        three agree, so the consensus value wins. */
     [/knee push.?up|modified push.?up|push.?up.*knee/i, 0.49],
     [/push.?up|press.?up/i, 0.64],
-    /* Rows: MEASURED, but only for the suspension/TRX row — the plain-bar inverted
-       row has no independent published %BW figure, and the 40-75% numbers on
-       fitness sites are estimates, not measurements, so they are not used here.
-       Melrose & Dawes (J Athl Enhancement 2014/15) dynamometer values by body
-       angle from vertical: 30 deg 37.44%, 45 deg 52.88%, 60 deg 68.08%,
-       75 deg 79.38%. Giancotti 2021 agrees directionally (force platform).
-       The reference 0.60 sits at roughly 50 deg from vertical. Endpoints are keyed
-       on the direction word, with the angle assumption stated: the more upright
-       the body, the smaller the fraction lifted. */
-    [/incline row|standing row|upright row|high anchor row/i, 0.37],
-    [/decline row|feet.?elevated row|horizontal row|low anchor row/i, 0.79],
-    [/inverted row|bodyweight row|australian pull/i, 0.60],
+    /* Rows — fitted to the four MEASURED suspension-row anchors.
+       Melrose & Dawes (J Athl Enhancement 2014/15) dynamometer values, % of body
+       mass lifted by the arms vs body angle from VERTICAL:
+         theta 30 -> 0.3744, 45 -> 0.5288, 60 -> 0.6808, 75 -> 0.7938.
+       Giancotti 2021 agrees directionally (force platform). The plain-bar inverted
+       row has no independent published %BW figure, but it is the same lever (the
+       body pivoting about the hands); a fixed bar only removes the stabiliser
+       demand, not the load fraction, so the fit transfers.
+       Three candidate relationships were fitted to the four anchors (theta = deg):
+         (a) cosine of angle from horizontal  f = k*sin(theta)      RMSE 0.0238
+         (b) linear in angle from vertical     f = a + b*theta       RMSE 0.0111  <- best
+         (c) lever about the feet, rigid body, vertical arm force:
+             f = COM lever / hand lever = c/L, INDEPENDENT of angle  residual +/-0.20 (fails)
+             (with a horizontal strap instead, f = (c/L)tan(theta))   RMSE 0.0636
+       The measured increments (0.154, 0.152, 0.113 over equal 15 deg steps) are
+       near-linear then lightly saturating, so the linear fit wins and the pure
+       lever model is out (it predicts a constant fraction, which the data deny).
+       Least squares: a = 0.1009, b = 0.009401 per degree. ESTIMATED, calibrated to
+       the MEASURED anchors. Reference angle assumed: 50 deg from vertical (matches
+       the 0.60 this replaces).
+         more-upright / high anchor  30 deg -> 0.1009 + 0.009401*30 = 0.383 -> 0.38
+         reference plain inverted    50 deg -> 0.1009 + 0.009401*50 = 0.571 -> 0.57
+         more-horizontal / low anchor 75 deg -> 0.1009 + 0.009401*75 = 0.806 -> 0.81
+       Endpoints keyed on the direction word; the more upright the body, the less of
+       it the arms lift. */
+    [/incline row|standing row|upright row|high anchor row/i, 0.38],
+    [/decline row|feet.?elevated row|horizontal row|low anchor row/i, 0.81],
+    [/inverted row|bodyweight row|australian pull/i, 0.57],
     [/pistol|single.?leg squat|bulgarian|split squat|lunge|step.?up/i, 0.85],
-    [/nordic|glute.?ham|razor curl/i, 0.70],
+    /* Nordic hamstring curl / glute-ham raise: the hamstrings resist the lean of
+       everything above the KNEE. Upper-body mass = trunk + head + both arms
+       (Dempster/Winter 2009: head 0.081 + trunk 0.497 + 2 arms 0.100 = 0.678 BW;
+       Winter's table, derived from Dempster 1955). That mass acts at its COM,
+       whose horizontal moment arm about the knee is r*sin(theta), theta = trunk
+       lean from vertical. Equivalent load fraction = 0.678*sin(theta):
+         Nordic, trunk reaches horizontal (theta = 90 deg): 0.678*1.000 = 0.68
+         Glute-ham, the hip hinge folds the lever so the trunk tops out about
+           60 deg from vertical (theta = 60 deg):       0.678*0.866 = 0.59
+       Moving the foot plate lengthens/shortens the shank lever below the knee and
+       shifts a given rep between the two. ESTIMATED (unanchored: no %BW force-plate
+       study exists for these; the mass/COM tables are the only published basis). */
+    [/nordic|razor curl/i, 0.68],
+    [/glute.?ham/i, 0.59],
     [/calf raise|heel raise/i, 1.00],
     [/bodyweight squat|air squat|\bsquat\b.*bodyweight/i, 0.65],
     [/sissy squat|reverse hyper|back extension|hyperextension/i, 0.45],
+    /* Isometric holds. The forearm plank's forearms DO carry a share of bodyweight
+       — the body is a two-support lever on the toes and forearms, so that share is
+       (COM distance from toes)/(forearm distance from toes) ~ 0.60-0.68 BW, close
+       to the measured push-up hand load (0.64-0.69, Ebben/Wurm 2011). But a hold
+       MOVES nothing: work = force x displacement = 0. This factor feeds tonnage
+       (load x reps) and an Epley e1RM, both of which presume a rep displaced
+       against gravity, so a non-zero value here would manufacture tonnage and a
+       1RM out of a static pose. Left at 0.00 deliberately: the static forearm
+       share is a real force but not a moved load, and mode "time" never reads this
+       factor anyway. */
     [/plank|hold|isometric|hollow|\bl.?sit\b|dead ?hang|flexed arm hang/i, 0.00],
     /* --- crunch / sit-up on an angled bench, both directions: trunk sweep ---
        phi = the trunk's angle from horizontal, head-up positive. The moving mass
@@ -195,13 +239,31 @@ const Engine = (() => {
        Crunches" is the head-below case above, which is why the two spellings
        land on different rules. */
     [/incline sit.?up|head.?above|head.?elevated/i, 0.23],
+    /* Leg raise / knee raise: HIP flexion — the LEGS swing about the hip, unlike a
+       crunch where the trunk does. Moving mass = both lower limbs. Per-leg segment
+       masses (Winter 2009, from Dempster 1955): thigh 0.100, shank 0.0465,
+       foot 0.0145 -> 0.161 per leg, 0.322 both. Their composite COM sits 0.218 of
+       body HEIGHT from the hip (thigh COM at 0.433*Lt, shank COM at Lt+0.433*Ls,
+       foot COM at Lt+Ls+0.5*Lf), i.e. 0.446 of the hip-to-ankle length.
+       Equivalent load fraction = 0.322 * mean cos(theta_leg) over the sweep, the
+       same mean-moment-arm convention the crunches use:
+         straight-leg (legs hang 90 deg from horizontal, raise to horizontal):
+           mean cos = 2/pi = 0.637 -> 0.322*0.637 = 0.205 -> 0.21
+         bent-knee (thigh to horizontal, shank hangs vertical): the shank and foot
+           hang straight down so only the thigh keeps a moment arm; per-leg moment
+           falls to 0.02556*H vs 0.03514*H straight = 0.727x -> 0.205*0.727 = 0.15
+       ESTIMATED, and UNANCHORED — no force-plate %BW figure exists for leg raises
+       (as with crunches); the geometry above is the sole basis. */
+    [/knee raise|reverse crunch|bent.?knee/i, 0.15],
+    [/hanging leg raise|straight.?leg|leg raise/i, 0.21],
     /* Flat crunch / sit-up — the reference sweep 0 -> +35 deg (mean cos 0.939).
        This 0.40 is the base both angled-bench values are derived from. It also
-       stands for the other trunk-flexion movements (leg raise, knee raise, v-up)
-       that share a flat-ish arc. */
-    [/sit.?up|crunch|leg raise|knee raise|\bv.?up\b/i, 0.40],
+       stands for the other TRUNK-flexion movements (v-up) that share a flat-ish
+       arc. (Leg and knee raises are NOT trunk flexion — see the derived hip-flexion
+       values above.) */
+    [/sit.?up|crunch|\bv.?up\b/i, 0.40],
   ];
-  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|(incline|decline|feet.?elevated|horizontal|standing|upright|high anchor|low anchor|australian|bodyweight) row|\binverted row\b|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
+  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|(incline|decline|feet.?elevated|horizontal|standing|upright|high anchor|low anchor|australian|bodyweight) row|\binverted row\b|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|razor curl|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
   const bwFactor = (name) => {
     const n = String(name || "");
     for (const [re, f] of BW_FACTOR) if (re.test(n)) return f;

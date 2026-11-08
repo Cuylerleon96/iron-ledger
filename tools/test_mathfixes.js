@@ -518,7 +518,7 @@ console.log("\n=== 21. a bodyweight movement must count the body, not just the p
   eq("...at the 40-deg head-below standard", e.E.bwFactor("Incline Crunches"), 0.85);
   eq("a flat crunch keeps the flat-bench value", e.E.bwFactor("Abdominal Crunch"), 0.40);
   eq("...as does a sit-up", e.E.bwFactor("Sit-ups"), 0.40);
-  eq("...and a hanging leg raise", e.E.bwFactor("Hanging Leg Raise"), 0.40);
+  eq("...and a hanging leg raise takes its own hip-flexion value, not the crunch's", e.E.bwFactor("Hanging Leg Raise"), 0.21);
   eq("'Plank' is an isometric hold (no load moved)", e.E.bwFactor("Plank"), 0);
 
   // equipment that supplies its own load must never be counted as bodyweight
@@ -606,16 +606,75 @@ console.log("\n=== 23. push-up variants, from published force-plate measurement 
      UNREACHABLE if isBodyweight() does not let it through. Asserting only the
      factor let exactly that bug through once: the row rules were dead for a
      publish. Every new factor now has to prove its gate is open too. */
-  eq("an upright/incline row is the easier end", e.E.bwFactor("Incline Row"), 0.37);
+  eq("an upright/incline row is the easier end", e.E.bwFactor("Incline Row"), 0.38);
   eq("...and its bodyweight gate is actually open", e.E.isBodyweight("Incline Row"), true);
-  eq("a feet-elevated row is the harder end", e.E.bwFactor("Feet-Elevated Row"), 0.79);
+  eq("a feet-elevated row is the harder end", e.E.bwFactor("Feet-Elevated Row"), 0.81);
   eq("...and its bodyweight gate is actually open", e.E.isBodyweight("Feet-Elevated Row"), true);
-  eq("a plain inverted row keeps its reference", e.E.bwFactor("Inverted Row"), 0.60);
+  eq("a plain inverted row keeps its reference", e.E.bwFactor("Inverted Row"), 0.57);
   eq("...and it is gated on", e.E.isBodyweight("Inverted Row"), true);
   // and every push-up variant must be reachable
   for (const n of ["Push-ups", "Incline Push-ups", "Decline Push-ups", "Knee Push-ups"])
     eq(`'${n}' is a live bodyweight movement`, e.E.isBodyweight(n), true);
   truthy("...and the harder end is the larger fraction", e.E.bwFactor("Feet-Elevated Row") > e.E.bwFactor("Incline Row"));
+}
+
+console.log("\n=== 24. derived load factors: rows, leg raises, nordics, plank ===");
+{
+  /* These are BW_FACTOR (load-fraction) changes. BW_FACTOR feeds entryStats' load,
+     hence the movement's estimated 1RM and tonnage — NOT the set-volume score
+     (muscleGroups reads sets * exerciseWeight, which never sees bwFactor). So the
+     direction of every change is asserted on the load/e1RM, and there is no MRV
+     saturation to trip over: a harder variant simply produces a larger load. Every
+     rule also proves its gate is open (the shipped-twice unreachable-factor bug). */
+  const e = env();
+  const BW = 70;
+
+  // --- rows: fitted to the four MEASURED suspension-row anchors ---
+  // f(theta) = 0.1009 + 0.009401*theta (deg); reference 50 deg -> 0.571
+  eq("upright/high-anchor row (30 deg) is 0.38", e.E.bwFactor("Incline Row"), 0.38);
+  eq("...gated", e.E.isBodyweight("Incline Row"), true);
+  eq("reference plain inverted row (50 deg) is 0.57", e.E.bwFactor("Inverted Row"), 0.57);
+  eq("...gated", e.E.isBodyweight("Inverted Row"), true);
+  eq("horizontal/low-anchor row (75 deg) is 0.81", e.E.bwFactor("Feet-Elevated Row"), 0.81);
+  eq("...gated", e.E.isBodyweight("Feet-Elevated Row"), true);
+  eq("an Australian pull-up is the row, not a full pull-up", e.E.bwFactor("Australian Pull-up"), 0.57);
+  eq("...and it is gated", e.E.isBodyweight("Australian Pull-up"), true);
+  truthy("the row factor rises with body angle", e.E.bwFactor("Incline Row") < e.E.bwFactor("Inverted Row") && e.E.bwFactor("Inverted Row") < e.E.bwFactor("Feet-Elevated Row"));
+
+  const rowE1 = (id, name) => {
+    const st = base({ profile: Object.assign({}, base().profile, { weightKg: BW }),
+      workouts: [{ id: "r", date: iso(1), note: "", entries: [{ id, name, mode: "weight_reps", sets: [{ r: 10, bwKg: BW }] }] }] });
+    return e.E.entryStats(st.workouts[0].entries[0]).est1RM;
+  };
+  const eU = rowE1("r1", "Incline Row"), eR = rowE1("r2", "Inverted Row"), eH = rowE1("r3", "Feet-Elevated Row");
+  console.log(`     row e1RM by angle: upright ${eU.toFixed(1)} < inverted ${eR.toFixed(1)} < horizontal ${eH.toFixed(1)}`);
+  truthy("a harder row yields a strictly larger load end to end", eU < eR && eR < eH);
+
+  // --- leg raise / knee raise: HIP flexion, from the lower-limb mass fraction ---
+  eq("straight-leg raise is 0.21", e.E.bwFactor("Hanging Leg Raise"), 0.21);
+  eq("...gated", e.E.isBodyweight("Hanging Leg Raise"), true);
+  eq("bent-knee raise is 0.15", e.E.bwFactor("Hanging Knee Raise"), 0.15);
+  eq("...gated", e.E.isBodyweight("Hanging Knee Raise"), true);
+  eq("a plain lying leg raise shares the straight-leg value", e.E.bwFactor("Leg Raise"), 0.21);
+  eq("a knee raise shares the bent value", e.E.bwFactor("Knee Raise"), 0.15);
+  truthy("straight-leg out-loads bent-knee (longer lever)",
+    e.E.bwFactor("Hanging Leg Raise") > e.E.bwFactor("Hanging Knee Raise"));
+
+  // --- nordic / glute-ham ---
+  eq("nordic hamstring curl is 0.68", e.E.bwFactor("Nordic Curl"), 0.68);
+  eq("...gated", e.E.isBodyweight("Nordic Curl"), true);
+  eq("glute-ham raise (shorter lever) is 0.59", e.E.bwFactor("Glute-Ham Raise"), 0.59);
+  eq("...gated", e.E.isBodyweight("Glute-Ham Raise"), true);
+  eq("razor curl is now gated (its rule was previously unreachable)", e.E.isBodyweight("Razor Curl"), true);
+  eq("...at the nordic value", e.E.bwFactor("Razor Curl"), 0.68);
+  truthy("the full-lever nordic out-loads the glute-ham",
+    e.E.bwFactor("Nordic Curl") > e.E.bwFactor("Glute-Ham Raise"));
+
+  // --- plank / isometric holds stay 0.00, deliberately ---
+  eq("a plank still moves no load", e.E.bwFactor("Plank"), 0);
+  eq("...but it is still recognised as a bodyweight movement", e.E.isBodyweight("Plank"), true);
+  const plankE1 = e.E.entryStats({ mode: "weight_reps", name: "Plank", sets: [{ r: 10, bwKg: BW }] }).est1RM;
+  eq("so a rep-logged plank invents no tonnage and no 1RM", plankE1, 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
