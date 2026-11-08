@@ -1,13 +1,11 @@
 {
-  "versionCode": 25,
-  "versionName": "1.0.24",
+  "versionCode": 26,
+  "versionName": "1.0.25",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "9202af4e931d9a929921a8a81fe3b59be9ede1f24f5969185442a2229df4768f",
-  "sizeBytes": 3265447,
+  "sha256": "356ace498d6eecae3c66b97d0b54d77061895df5f0e4487603a94c806c4cc855",
+  "sizeBytes": 3265677,
   "published": "2026-11-08",
   "notes": [
-    "Nothing is invented for a new account any more. With no bodyweight entered the app used to fall back to a hardcoded 80 kg AND PRINT IT, telling you your bodyweight was 80 kg and scoring your bench against it. Without a real weight Strength now says so and asks for one, exactly like the other attributes do when they have nothing to go on",
-    "A fresh install no longer seeds a workout into your log. It used to insert a real session on first run, so a new account charts, XP, badges, muscle bars and Discipline all counted training that never happened. Loading that session is still available on purpose in Profile",
-    "The year chart only plots months since your first logged session, instead of eleven empty months and a spike"
+    "The consistency grid now starts at your first logged workout instead of drawing a full year. Training every day since you installed it read as 2 days out of 371; it now reads 2 of the last 2 days, since you started"
   ]
 }

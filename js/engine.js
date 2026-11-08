@@ -1024,7 +1024,13 @@ const Engine = (() => {
   function dayMap(state, days = 371) {
     const out = {};
     const anchor = new Date(); anchor.setHours(12, 0, 0, 0);
-    for (let i = 0; i < days; i++) {
+    /* Start at the first logged workout. The grid used to draw a full year, so a
+       new account showed 369 empty squares and read as deeply inconsistent to
+       someone who had trained every single day since installing it. Days before
+       the account existed are not rest days — they are not days. */
+    const first = (state.workouts || []).map((w) => w.date).filter(Boolean).sort()[0] || null;
+    const span = first ? Math.min(days, Math.max(1, daysBetween(first, dstr(anchor)) + 1)) : days;
+    for (let i = 0; i < span; i++) {
       const d = new Date(anchor); d.setDate(d.getDate() - i);
       out[dstr(d)] = { sets: 0, tonnage: 0, sessions: 0, groups: [] };
     }

@@ -476,5 +476,30 @@ console.log("\n=== 19. first run: nothing may be invented or imposed ===");
   truthy("the UI explains the missing bodyweight", /Strength is a ratio[^"]*Add your bodyweight/.test(appSrc));
 }
 
+console.log("\n=== 20. the consistency grid starts at the first logged workout ===");
+{
+  const e = env();
+  const mk = (offs) => base({ profile: Object.assign({}, base().profile, { weeklyTarget: 4, weightKg: 80 }),
+    workouts: offs.map((o, i) => ({ id: "w" + i, date: iso(o), note: "",
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] })) });
+
+  // trained every day since installing: the grid must show exactly that
+  const daily = e.E.dayMap(mk([2, 1, 0]), 371);
+  eq("3 days of history draws 3 cells, not 371", Object.keys(daily).length, 3);
+  eq("...all three trained", Object.values(daily).filter((d) => d.sessions > 0).length, 3);
+  eq("2 weeks daily draws 14", Object.keys(e.E.dayMap(mk([...Array.from({ length: 14 }, (_, i) => 13 - i)]), 371)).length, 14);
+  // an established user is still capped at the full year
+  eq("a 4-month history is capped at 371 cells", Object.keys(e.E.dayMap(mk([...Array.from({ length: 60 }, (_, i) => i * 2)]), 371)).length, 119);
+  // and an empty account must not crash or claim anything
+  eq("an empty account still returns a full window", Object.keys(e.E.dayMap(mk([]), 371)).length, 371);
+  eq("...with nothing trained", Object.values(e.E.dayMap(mk([]), 371)).filter((d) => d.sessions > 0).length, 0);
+
+  // the card must report the real span, not a fixed year
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the label uses the actual span", /of the last \$\{span\} \$\{pl\(span, "day"\)\}/.test(appSrc));
+  truthy("...and says so when it is short", /since you started/.test(appSrc));
+  eq("the hardcoded 371-day label is gone", /of the last 371 days/.test(appSrc), false);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

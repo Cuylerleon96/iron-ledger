@@ -416,10 +416,12 @@
   /* A year of showing up, one square per day. */
   function dashConsistency(host) {
     const dm = Engine.dayMap(S, 371);
+    const keys = Object.keys(dm);
     const trained = Object.values(dm).filter((d) => d.sessions > 0).length;
+    const span = keys.length;
     const card = el("section", { class: "card" });
     card.innerHTML = `<div class="card-head"><h3>Consistency</h3>
-      <span class="muted">${trained} of the last 371 days</span></div>`;
+      <span class="muted">${trained} of the last ${span} ${pl(span, "day")}${span < 371 ? " — since you started" : ""}</span></div>`;
     const h = el("div", { class: "hm-host" });
     card.append(h);
     host.append(card);

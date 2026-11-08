@@ -139,7 +139,11 @@ console.log("=== consistency calendar ===");
 {
   const e = trained(10, { perWeek: 2 });
   const dm = e.E.dayMap(e.S.state, 371);
-  eq("covers the requested days", Object.keys(dm).length, 371);
+  // the grid spans from the first logged workout to today, capped at 371 — a
+  // fixed 371-cell grid made a new account look like a year of rest days
+  const firstW = e.S.state.workouts.map((w) => w.date).sort()[0];
+  const spanDays = Math.round((new Date(new Date().setHours(12, 0, 0, 0)) - new Date(firstW + "T12:00:00")) / 86400000) + 1;
+  eq("covers from the first logged workout to today", Object.keys(dm).length, spanDays);
   const trainedDays = Object.values(dm).filter((d) => d.sessions > 0).length;
   console.log(`        ${trainedDays} trained days inside the grid`);
   truthy("logged days are marked", trainedDays === 20);
