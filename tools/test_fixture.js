@@ -48,7 +48,10 @@ console.log("\n=== attributes (his Dashboard) ===");
   // CON was 11 when Discipline was frequency-only. It now blends frequency with
   // continuity, and continuity is coverage-led: his 2-day run is a 1-day gap but
   // covers only 1 of the last 4 weeks, so it reads 24 rather than 28.
-  const want = { STR: 35, END: 36, POW: 11, MOB: 0, CON: 24, VIT: 79 };
+  /* END and CON moved when weekly rates stopped being divided by four weeks he
+     was not there for: his first session is 2026-11-07, so he has exactly one
+     week of history, and his actual week is what should be judged. */
+  const want = { STR: 35, END: 44, POW: 11, MOB: 0, CON: 65, VIT: 79 };
   for (const k of Object.keys(want)) eq(k, a[k].score, want[k]);
   // STR was 41 before the estimated-Strength fix; the basis is what changed:
   // a leg press and two machine presses scored on their OWN tables now
@@ -58,7 +61,9 @@ console.log("\n=== attributes (his Dashboard) ===");
 console.log("\n=== muscle groups, raw sets/week (his Muscle balance screen) ===");
 {
   const mg = E.muscleGroups(st, 28);
-  const want = { Chest: 4.3, Back: 0, Shoulders: 1.4, Arms: 2.9, Legs: 3, Calves: 0, Core: 0.5 };
+  // his 17 weighted chest sets happened in his ONE week of history, so 17/wk is
+  // the honest figure; 4.3/wk averaged them over three weeks that predate him
+  const want = { Chest: 17, Back: 0, Shoulders: 5.5, Arms: 11.5, Legs: 12, Calves: 0, Core: 2 };
   for (const g of E.GROUP_ORDER) eq(`${g} sets/wk`, mg[g].setsPerWk, want[g]);
 }
 
@@ -72,10 +77,11 @@ console.log("\n=== summary + weak points ===");
   eq("streak days", sm.streak.days, 2);
   eq("PRs this month", sm.prs, 0);
   const wp = E.weakPoints(st, 28);
-  eq("weak point count", wp.length, 8);
+  eq("weak point count", wp.length, 6);
   eq("no tilde in any advice", wp.some((w) => /~/.test(w.fix || "")), false);
-  eq("cardio/quad advice wording", wp.filter((w) => w.kind === "volume").map((w) => w.fix),
-    ["Add about 4 sets/week of core work.", "Add about 7 sets/week of shoulders work.", "Add about 5 sets/week of legs work."]);
+  // legs now reads MEV->MAV and chest optimal, so only core and shoulders remain
+  eq("advice wording", wp.filter((w) => w.kind === "volume").map((w) => w.fix),
+    ["Add about 2 sets/week of core work.", "Add about 3 sets/week of shoulders work."]);
 }
 
 console.log("\n=== per-exercise effort weights (derived, nothing entered) ===");

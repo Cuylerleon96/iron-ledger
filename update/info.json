@@ -1,12 +1,13 @@
 {
-  "versionCode": 23,
-  "versionName": "1.0.22",
+  "versionCode": 24,
+  "versionName": "1.0.23",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "26be429c7deb8b57b398f88bf28feac93bd64fefca45cdb89d1ff7ac036117b9",
-  "sizeBytes": 3264425,
+  "sha256": "a6436768a4902051d0003188cc5716487f6ad1961be99cda44b435eb19f36a92",
+  "sizeBytes": 3264947,
   "published": "2026-11-08",
   "notes": [
-    "Discipline continuity is now led by coverage, meaning how many of the last four weeks you trained, rather than by the single longest gap. Cramming a months sessions into a fortnight now reads 3 points lower than spreading them out, while missing one hard week costs exactly what it did before",
-    "In short: regular training is rewarded, cramming is not, and one bad week stays a dent rather than a collapse"
+    "A new account is no longer judged against weeks that did not exist yet. Every weekly rate was divided by a full four weeks, so your first few sessions read as a huge shortfall against a month you were not there for. Three sessions in your first three days scored 28 out of 100; it now scores 80, because that is what doing everything right looks like",
+    "The same fix applies to Stamina, to Mobility, and to every muscle groups sets per week, so a first weeks training is measured against that week rather than averaged away across three weeks before you started",
+    "Once you have 28 days of history this changes nothing, and it cannot be gained either: the count starts at your very first logged session"
   ]
 }

@@ -270,6 +270,26 @@ const Engine = (() => {
     return interp(ratio, xs, TIER_SCORE);
   }
 
+  /* How many weeks of that window the user has ACTUALLY existed for.
+     A brand-new account was measured against the full 28 days, so its first two
+     or three sessions read as a huge shortfall against a month it was not there
+     for: Discipline judged 3 sessions in 3 days against 16 expected, Stamina and
+     Mobility divided weekly rates by 4, and every muscle group's sets/week was
+     averaged over four weeks nobody had. Judging someone against time that
+     predates them is wrong in the same way as scoring an old session with today's
+     bodyweight, and it is discouraging for exactly the people most likely to quit.
+
+     Counted from their FIRST logged session, capped at the window. Once a user is
+     28 days in this is 4 and changes nothing, so no established number moves; and
+     it cannot be gamed, because the span only starts at the first session. */
+  function activeWeeks(state, days = 28) {
+    const full = days / 7;
+    const dates = (state.workouts || []).map((w) => w.date).filter(Boolean).sort();
+    if (!dates.length) return full;
+    const spanDays = daysBetween(dates[0], dstr(Date.now())) + 1;
+    return Math.max(1, Math.min(full, spanDays / 7));
+  }
+
   /* ---------- date windowing ---------- */
   /* HALF-OPEN: from <= t < to. Both ends used to be inclusive, so a session
      sitting exactly on a boundary (7, 14, 21, 28 days ago) was counted in TWO
@@ -533,7 +553,7 @@ const Engine = (() => {
         }
       }
     }
-    const weeks = Math.max(1, ws.length ? (28 / 7) : 1);
+    const weeks = activeWeeks(state, 28);
     const minPerWk = cardioMin / weeks;
     const minScore = interp(minPerWk, [0, 30, 75, 150, 300], [6, 30, 52, 75, 95]);
     // each modality scored against its own range; the best one carries, so
@@ -654,7 +674,7 @@ const Engine = (() => {
       }
       if (touched) sessions++;
     }
-    const perWk = min / 4;
+    const perWk = min / activeWeeks(state, 28);
     return { score: clamp(interp(perWk, [0, 15, 40, 80, 150], [4, 30, 55, 78, 95])), minPerWk: perWk, sessions };
   }
 
@@ -675,7 +695,9 @@ const Engine = (() => {
   function consistencyScore(state, ws) {
     const target = num(state.profile.weeklyTarget) || 4;
     const sessions = ws.length;
-    const expected = target * (28 / 7);
+    // only the weeks this user has existed for — see activeWeeks
+    const weeks = activeWeeks(state, 28);
+    const expected = target * weeks;
     const rate = expected > 0 ? sessions / expected : 0;
     /* Softer around the target than it used to be: hitting three quarters of your
        plan is still good training, and the old curve read it as a fail. */
@@ -693,7 +715,9 @@ const Engine = (() => {
     const gapScore = interp(longestGap, [0, 3, 7, 10, 14, 21], [100, 95, 75, 58, 40, 18]);
     const weekOf = (d) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return dstr(x); };
     const covered = new Set(dates.map(weekOf)).size;
-    const coveredScore = interp(Math.min(4, covered) / 4, [0, 0.25, 0.5, 0.75, 1], [0, 25, 52, 78, 100]);
+    // and coverage is out of the weeks that existed, not a fixed four
+    const avail = Math.max(1, Math.ceil(weeks));
+    const coveredScore = interp(Math.min(avail, covered) / avail, [0, 0.25, 0.5, 0.75, 1], [0, 25, 52, 78, 100]);
     /* Coverage-led rather than gap-led. Coverage (how many of the window's four
        weeks had a session) is the CHRONIC signal — it moves slowly and cannot be
        reset by one bad week. The longest-gap term is the acute one. Weighting
@@ -1096,7 +1120,7 @@ const Engine = (() => {
 
   function muscleGroups(state, days = 28) {
     const ws = windowWorkouts(state, days, 0);
-    const weeks = days / 7;
+    const weeks = activeWeeks(state, days);
     const sets = {}, eff = {}, vol = {}, lastTrained = {};
     for (const g of GROUP_ORDER) { sets[g] = 0; eff[g] = 0; vol[g] = 0; lastTrained[g] = null; }
     for (const w of ws) for (const en of w.entries || []) {
@@ -1486,7 +1510,7 @@ const Engine = (() => {
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight,
+    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };

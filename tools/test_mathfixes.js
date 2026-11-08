@@ -188,7 +188,9 @@ console.log("\n=== 9. per-exercise weighting: a set is not a set ===");
   const inc = e.E.muscleGroups(base({ custom, workouts: [wk(iso(1), sets, "x1")] }), 28).Core;
   console.log(`     20 identical sets -> flat crunch score ${flat.score}, incline crunch score ${inc.score}`);
   truthy("the same work scores higher when it is harder work", inc.score > flat.score);
-  eq("but raw sets/wk is untouched (still comparable to MEV/MAV)", [flat.setsPerWk, inc.setsPerWk], [5, 5]);
+  // one session in the log means a one-week history, so 20 sets reads as 20/wk —
+  // previously it was divided by four weeks the user had not existed for
+  eq("raw sets/wk is scaled to the available weeks", [flat.setsPerWk, inc.setsPerWk], [20, 20]);
 }
 
 console.log("\n=== 10. cardio is gauged by time AND distance ===");
@@ -211,7 +213,7 @@ console.log("\n=== 10. cardio is gauged by time AND distance ===");
   truthy("the same distance on a bike is not ranked like a run", Math.abs(sr.score - sb.score) > 0.5);
   eq("modality is identified from the name", [sr.distMod, sb.distMod], ["on foot", "cycling"]);
   near("pace is reported (20 km in 30 min = 40 km/h)", sr.paceKmh, 40, 0.1);
-  eq("distance per week is reported (20 km over a 4-week window)", sr.distKmPerWk, 5);
+  eq("distance per week is reported (20 km, one week of history)", sr.distKmPerWk, 20);
   truthy("without distance the minutes still stand (no invented penalty)", sw.distKmPerWk === 0 && sw.score > 0);
 }
 
@@ -318,11 +320,15 @@ console.log("\n=== 16. Discipline: frequency AND continuity ===");
   eq("the score is frequency-led, continuity-weighted",
     Math.round(0.70 * regular.detail.frequency + 0.30 * regular.detail.continuity), regular.score);
 
-  // regularity must actually change the score at the SAME session count
-  const fortnight = []; for (let d = 13; d >= 0; d -= 1) fortnight.push(d);   // 14 in 2 weeks
-  const cram = con(fortnight);
-  console.log(`     14 sessions every 2nd day -> ${regular.score}; the same 14 crammed into 2 weeks -> ${cram.score}`);
-  truthy("regular beats crammed at the same session count", regular.score > cram.score);
+  /* Regularity must change the score at the SAME session count — but only once the
+     user has a full window to be measured over. Both cases here span 28 days, so
+     neither is being flattered by a short history. (A genuine new user who crams
+     their first fortnight IS scored well, correctly: they trained hard in the only
+     time they have had.) */
+  const frontloaded = []; for (let d = 27; d >= 14; d -= 1) frontloaded.push(d);   // 14 in the first fortnight of a 28-day history
+  const cram = con(frontloaded);
+  console.log(`     14 sessions every 2nd day over 4 weeks -> ${regular.score}; the same 14 crammed into the first fortnight -> ${cram.score}`);
+  truthy("regular beats crammed at the same session count, same span", regular.score > cram.score);
 
   // THE CONSTRAINT: one hard week is a dent, not a collapse
   const missed = []; for (let d = 8; d <= 27; d += 2) missed.push(d);
@@ -393,6 +399,41 @@ console.log("\n=== 17. bodyweight movements: the load is the body ===");
   const ss = e.E.attributes(mixed, 28, 0).STR;
   eq("only tabled lifts enter the ratio average", Object.keys(ss.detail.lifts), ["bench"]);
   truthy("a pull-up does not drag Strength down", ss.score > 60);
+}
+
+console.log("\n=== 18. a new user must not be judged against weeks that predate them ===");
+{
+  const e = env();
+  const mk = (offs, target = 4) => base({ profile: Object.assign({}, base().profile, { weeklyTarget: target }),
+    workouts: offs.map((o, i) => ({ id: "w" + i, date: iso(o), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] })) });
+
+  eq("activeWeeks is 1 for a 2-day history", Math.round(e.E.activeWeeks(mk([1, 0]), 28)), 1);
+  eq("...and the full 4 once the history is 28 days", e.E.activeWeeks(mk([27, 20, 13, 6]), 28), 4);
+
+  // the headline: three sessions in three days is doing everything right
+  const fresh = e.E.attributes(mk([2, 1, 0]), 28, 0).CON;
+  console.log(`     3 sessions on days 1-3 (new user) -> Discipline ${fresh.score} (${fresh.tier}), expected ${fresh.detail.expected}`);
+  truthy("a perfect start scores well, not badly", fresh.score >= 75);
+  eq("...judged against one week of target, not four", fresh.detail.expected, 4);
+  eq("...and their single week counts as full coverage", Math.round(fresh.detail.continuity), 99);
+
+  // established users must be untouched
+  const steady = []; for (let d = 27; d >= 0; d -= 2) steady.push(d);
+  eq("4 weeks in, every 2 days -> 86", e.E.attributes(mk(steady), 28, 0).CON.score, 86);
+  eq("4 weeks in, 3/wk against a 4/wk target -> 80", e.E.attributes(mk([27, 25, 23, 20, 18, 16, 13, 11, 9, 6, 4, 2]), 28, 0).CON.score, 80);
+  // and genuinely low training is still flagged
+  truthy("2 sessions over a whole month is still poor",
+    e.E.attributes(mk([27, 25]), 28, 0).CON.score < 30);
+  eq("an empty log scores 0", e.E.attributes(mk([]), 28, 0).CON.score, 0);
+
+  // weekly rates everywhere, not just Discipline
+  const withCardio = base({ custom: [{ id: "r1", n: "Running", c: "Cardio", g: ["Cardio"], p: [], s: [], e: [], m: "distance_time" }],
+    workouts: [{ id: "c", date: iso(1), note: "", entries: [{ id: "r1", name: "Running", mode: "distance_time", sets: [{ d: 5000, t: 1800 }] }] }] });
+  truthy("stamina's weekly minutes are not divided by 4 for a new user",
+    e.E.staminaScore(withCardio, e.E.windowWorkouts(withCardio, 28, 0)).cardioMinPerWk > 20);
+  const oneSet = base({ workouts: [{ id: "m", date: iso(1), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] }] });
+  eq("a single session reads as its own week, not a quarter of one",
+    e.E.muscleGroups(oneSet, 28).Chest.setsPerWk, 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
