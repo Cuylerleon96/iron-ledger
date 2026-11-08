@@ -544,5 +544,48 @@ console.log("\n=== 21. a bodyweight movement must count the body, not just the p
   eq("with no bodyweight known it leaves the set alone", e.E.backfillBodyweight(none), 0);
 }
 
+console.log("\n=== 22. crunch/sit-up on an angled bench, both directions, from the trunk sweep ===");
+{
+  const e = env();
+  // One rep's work ∝ (sin(phi_top) - sin(phi_rest)), phi = trunk angle from
+  // horizontal. Reference flat crunch: 0 -> +35 deg, work ∝ sin35 = 0.574.
+  // Head-below 40 deg: -40 -> +35, ∝ sin35 - sin(-40) = 1.216 = 2.12x flat
+  //   -> bwFactor 0.40 x 2.12 = 0.85 (shipped), workFactor 2.12.
+  // Head-above 40 deg: +40 -> +75 (same 35 deg sweep as flat, shifted up),
+  //   ∝ sin75 - sin40 = 0.323 = 0.56x flat -> bwFactor 0.40 x 0.56 = 0.23.
+  eq("flat crunch is the 0.40 reference", e.E.bwFactor("Abdominal Crunch"), 0.40);
+  eq("a sit-up shares the flat reference", e.E.bwFactor("Sit-ups"), 0.40);
+  eq("head-below (40 deg, head down) is 2.12x the sweep", e.E.bwFactor("Incline Crunches"), 0.85);
+  eq("...and the decline spelling too", e.E.bwFactor("Decline Crunch"), 0.85);
+  eq("head-above (40 deg, head up) is 0.56x the sweep", e.E.bwFactor("Incline Sit-up"), 0.23);
+  eq("...and the head-above spelling too", e.E.bwFactor("Head-above Crunch"), 0.23);
+  eq("both directions are recognised as bodyweight",
+    [e.E.isBodyweight("Incline Sit-up"), e.E.isBodyweight("Head-above Crunch")], [true, true]);
+
+  // the work factor carries the same integral into the per-rep effort weighting
+  eq("flat crunch work factor is the unit reference", e.E.workFactor("Abdominal Crunch"), 1);
+  eq("head-below work factor is 2.12", e.E.workFactor("Incline Crunches"), 2.12);
+  eq("head-above work factor is 0.56", e.E.workFactor("Incline Sit-up"), 0.56);
+  eq("...and a head-above spelling too", e.E.workFactor("Head-above Crunch"), 0.56);
+
+  // direction of the change, asserted INSIDE the useful Core volume range.
+  // Core MEV/MAV/MRV = 4/12/20, so 4 sets in a one-week history sits below MAV;
+  // past MRV the score is DESIGNED to fall, so a saturated comparison would be
+  // meaningless. Same sets, same everything but the name.
+  const custom = [
+    { id: "hb", n: "Incline Crunches", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: [], m: "weight_reps" },
+    { id: "fl", n: "Abdominal Crunch", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: [], m: "weight_reps" },
+    { id: "ha", n: "Head-above Crunch", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: [], m: "weight_reps" },
+  ];
+  const sets = Array.from({ length: 4 }, () => ({ w: 20, r: 15 }));
+  const core = (id, name) => e.E.muscleGroups(base({ custom, workouts: [wk(iso(1), sets, id, name)] }), 28).Core;
+  const hb = core("hb", "Incline Crunches"), fl = core("fl", "Abdominal Crunch"), ha = core("ha", "Head-above Crunch");
+  console.log(`     4 identical sets -> head-below ${hb.score} (${hb.setsPerWk}/wk), flat ${fl.score}, head-above ${ha.score}`);
+  truthy("the harder (head-below) case out-scores flat for the same work", hb.score > fl.score);
+  truthy("flat out-scores the easier (head-above) case for the same work", fl.score > ha.score);
+  truthy("the harder case is not saturated, so the comparison is inside the range", hb.score < 95);
+  eq("raw sets/wk stays raw for every variant", [hb.setsPerWk, fl.setsPerWk, ha.setsPerWk], [4, 4, 4]);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

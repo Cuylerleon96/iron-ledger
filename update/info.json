@@ -1,12 +1,12 @@
 {
-  "versionCode": 29,
-  "versionName": "1.0.28",
+  "versionCode": 30,
+  "versionName": "1.0.29",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "6892bbebd2e3146d5bec2f1f7faab4840a1f30f01c29263d9d2fc76fbd73ee1e",
-  "sizeBytes": 3267178,
+  "sha256": "b557efb14f7f57e61444716929562ffe6c21bad6a374a35928eea57ffd1af8d5",
+  "sizeBytes": 3268086,
   "published": "2026-11-08",
   "notes": [
-    "Muscle balance now shows BOTH numbers: the effort-weighted figure first, with the raw set count labelled beside it. Your incline crunch was scoring barely above a flat crunch while being more than twice the work, because a 15 percent range cap could not express a 2.1x effect",
-    "The geometry now drives the effort weight too: Incline Crunches goes 0.89 to 1.89, so Core reads 3.8 effort sets per week against 2 raw \u2014 and the status bands and weak-point list now agree, instead of one flagging Core and the other ignoring it"
+    "The crunch geometry is now derived both ways, not just for your bench. Head BELOW the hips 40 degrees (your setup) stays 0.85 and 2.12x. Head ABOVE the hips 40 degrees is the mirror case: the trunk rests at +40 and curls 35 degrees to +75, the same range of motion shifted up the arc, so the whole difference is the shorter moment arm. Work is sin(75) minus sin(40) = 0.5634x flat, giving 0.23 and a work factor of 0.56 \u2014 easier, exactly as the geometry says",
+    "Derivation is written out in the source beside each coefficient: torque m g r cos phi, work proportional to sin(top) minus sin(rest), mean cosine times range of motion. Nothing in your export moved \u2014 your only crunch is the head-below one, which is untouched, and you have no head-above movement, so the reconciliation is byte-identical. Push-ups, inverted rows, nordic curls and hanging leg raises are deliberately NOT derived; they wait on published measured values"
   ]
 }

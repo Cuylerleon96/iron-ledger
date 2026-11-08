@@ -128,17 +128,46 @@ const Engine = (() => {
     [/bodyweight squat|air squat|\bsquat\b.*bodyweight/i, 0.65],
     [/sissy squat|reverse hyper|back extension|hyperextension/i, 0.45],
     [/plank|hold|isometric|hollow|\bl.?sit\b|dead ?hang|flexed arm hang/i, 0.00],
-    /* the owner's standard incline crunch: bench at 40 deg with the HEAD BELOW THE
-       HIPS, which is the decline geometry whatever the bench is called. Derived,
-       not guessed. The trunk's centre of mass sits r from the hip axis, so the
-       resisting torque is m*g*r*cos(phi), phi being the trunk's angle from
-       horizontal. Flat, the crunch sweeps 0 -> 35 deg (mean cos 0.94, the arm the
-       0.40 was set against). Head-below at 40 deg it sweeps -40 -> +35 deg: mean
-       cos 0.93, so the peak load is the SAME — but 75 deg of travel against 35,
-       which is 2.12x the work per rep. 0.40 x 2.12 = 0.85. (The plate rides the
-       same longer arc so this is very slightly conservative on the added weight;
-       the body is 89% of the load here, so it captures the effect.) */
+    /* --- crunch / sit-up on an angled bench, both directions: trunk sweep ---
+       phi = the trunk's angle from horizontal, head-up positive. The moving mass
+       is the trunk, whose centre sits a distance r from the hip axis, so the
+       resisting torque at the hip is m*g*r*cos(phi) and one rep's work is
+       integral m*g*r*cos(phi) dphi = m*g*r*(sin(phi_top) - sin(phi_rest)).
+       That one expression carries BOTH effects this family turns on: the mean
+       moment arm (mean cos = (sin top - sin rest)/sweep) and the range of motion
+       (the sweep itself). Every value below is 0.40 (the flat-crunch reference)
+       scaled by (sin top - sin rest) relative to the flat sweep — i.e. exactly
+       (mean-cos ratio) x (range-of-motion ratio). Nothing here is a guessed number.
+
+       Reference — flat crunch / sit-up: rest 0 deg, top +35 deg. The assumed top
+       of the curl is 35 deg above horizontal: the shoulders finish ~35 deg up,
+       where a floor crunch tops out. Work_ref ∝ sin35 = 0.574; sweep 35 deg;
+       mean cos 0.939.
+
+       Head-below (bench at 40 deg with the HEAD BELOW THE HIPS — the owner's
+       standard, whatever the bench is called): rest -40 deg, top +35 deg. It
+       sweeps 75 deg, and the work ∝ sin35 - sin(-40) = 1.216 = 2.12x the flat
+       sweep. The peak load is unchanged (mean cos 0.929 vs 0.939) — all of the
+       extra cost is the longer arc. Hence 0.40 x 2.12 = 0.85, and the same 2.12
+       is carried as a work factor (below) because the PER-REP WORK rose, not just
+       the load. (The plate rides the same longer arc so this is very slightly
+       conservative on the added weight; the body is ~89% of the load, so it
+       captures the effect.) */
     [/incline crunch|decline crunch|decline sit.?up/i, 0.85],
+    /* Head-above (bench at 40 deg with the HEAD ABOVE THE HIPS): the torso rests
+       at +40 deg and curls the same 35 deg a flat crunch does, to +75 deg — the
+       SAME range as flat, but the whole arc sits where cos(phi) is small, so the
+       moment arm is short. Work ∝ sin75 - sin40 = 0.323 = 0.56x the flat sweep
+       (mean cos 0.529 vs 0.939; range unchanged). 0.40 x 0.56 = 0.23: easier,
+       exactly as the geometry says. Keyed on the head-up geometry ("incline
+       sit-up" / "head-above" / "head-elevated"); note the owner's "Incline
+       Crunches" is the head-below case above, which is why the two spellings
+       land on different rules. */
+    [/incline sit.?up|head.?above|head.?elevated/i, 0.23],
+    /* Flat crunch / sit-up — the reference sweep 0 -> +35 deg (mean cos 0.939).
+       This 0.40 is the base both angled-bench values are derived from. It also
+       stands for the other trunk-flexion movements (leg raise, knee raise, v-up)
+       that share a flat-ish arc. */
     [/sit.?up|crunch|leg raise|knee raise|\bv.?up\b/i, 0.40],
   ];
   const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdips?\b|inverted row|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
@@ -1158,14 +1187,18 @@ const Engine = (() => {
   }
 
   /* Work per rep relative to the movement's own flat/standard variant, derived
-     from the geometry that set the incline-crunch standard: a 40-degree bench with
-     the head below the hips sweeps 75 degrees against a flat crunch's 35, so the
-     same set is 2.12x the work. The effort weight has to be able to SAY that —
-     the +/-15% range cap could not, which is why an incline crunch scored barely
-     above a flat one while being more than twice the work. Applied after the
-     clamp, because the clamp is for attribute-derived nudges, not geometry. */
+     from the SAME trunk-sweep integral as the bodyweight factors above: at trunk
+     angle phi from horizontal, one rep's work ∝ (sin(phi_top) - sin(phi_rest)).
+     A head-below 40-degree bench sweeps -40 -> +35 deg (75 deg) against a flat
+     crunch's 0 -> +35 deg (35 deg), so the same set is 2.12x the work; a
+     head-above 40-degree bench sweeps +40 -> +75 deg, i.e. 0.56x the flat sweep.
+     The effort weight has to be able to SAY that — the +/-15% range cap could
+     not, which is why an incline crunch scored barely above a flat one while
+     being more than twice the work. Applied after the clamp, because the clamp
+     is for attribute-derived nudges, not geometry. */
   const WORK_FACTOR = [
     [/incline crunch|decline crunch|decline sit.?up/i, 2.12],
+    [/incline sit.?up|head.?above|head.?elevated/i, 0.56],
   ];
   const workFactor = (name) => {
     const n = String(name || "");
