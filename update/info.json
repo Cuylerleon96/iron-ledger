@@ -9,6 +9,6 @@
     "The app now checks for updates by itself when you open it - no button needed",
     "It also re-checks when you come back to the app, so leaving it open for weeks can't miss a release",
     "A new version shows a small gold dot on the Profile tab, so it never has to interrupt you with a popup",
-    "Profile shows what the automatic check found, and when the app was last built against your version"
+    "Profile always shows what that check found, including which build you are on"
   ]
 }
