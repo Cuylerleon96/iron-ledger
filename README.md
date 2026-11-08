@@ -46,8 +46,8 @@ minimum-effective-volume line so under-trained groups are obvious.
 concrete next move: lagging muscle groups, untrained groups, push/pull imbalance,
 quad/hamstring gap, plateaued lifts, and any attribute scoring below 30.
 
-**Gamification** — XP from tonnage, sets and sessions; levels with titles; 30
-badges; daily and weekly streaks; per-exercise PR tracking.
+**Gamification** — XP from tonnage, sets and sessions; levels with titles; 38
+badges; a weekly session target; per-exercise PR tracking.
 
 ---
 
@@ -94,7 +94,7 @@ low-rep (≤3) set count.
 
 **Mobility** — minutes per week of logged stretching/mobility work.
 
-**Discipline** — sessions in 28 days against your weekly target, plus streak length.
+**Discipline** — sessions in 28 days against your weekly target, plus how consistently you meet it.
 
 **Vitality** — weight trend toward your goal, body fat, and BMI. If only BMI is
 available the score is capped at 85, because BMI says nothing about composition.
