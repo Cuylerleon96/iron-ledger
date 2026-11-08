@@ -24,6 +24,13 @@ const Store = (() => {
     // single source of truth for body composition. A second dated copy of them is
     // exactly the "two homes for one measurement" bug this codebase already fought.
     profilelog: [],
+    // The dated food-intake log. Each entry SNAPSHOTS the food name and macros
+    // AT LOG TIME ({date, meal?, src, name, grams, macros:{kcal,protein,fat,
+    // carb,fibre}}): the bundled database changes between releases, and a past
+    // day's totals must not silently rewrite when it does — the same rule the
+    // app already applies to exercise history after a custom exercise is
+    // deleted. An absent nutrient stays ABSENT (never a 0).
+    intakelog: [],
     overrides: {},     // exId -> {mode?, weight?, g?} — only fields the engine
                        // actually reads. 'n' was declared here but exName never
                        // consulted it (renames of user-created exercises live on
@@ -90,6 +97,10 @@ const Store = (() => {
     // has something at or before it to read. Idempotent on a second load.
     out.profilelog = (Array.isArray(out.profilelog) ? out.profilelog : [])
       .filter((r) => r && r.date).sort(byDate);
+    // The intake log is date-ordered at the same single point every load passes
+    // through, exactly like the other dated arrays.
+    out.intakelog = (Array.isArray(out.intakelog) ? out.intakelog : [])
+      .filter((e) => e && e.date).sort(byDate);
     // Read the birth date from the INCOMING state, not the defaulted copy: a
     // legacy state with no createdAt must fall back to its first workout, even
     // though DEFAULT() stamps a fresh createdAt onto every migrated state.
@@ -116,6 +127,7 @@ const Store = (() => {
   const richness = (s) => s
     ? (s.workouts || []).length + (s.bodylog || []).length + (s.custom || []).length
       + Object.keys(s.achievements || {}).length + Object.keys(s.overrides || {}).length
+      + (s.intakelog || []).length
     : 0;
 
   let mirrorRichness = 0;     // richness of what we last put on the device
@@ -223,6 +235,78 @@ const Store = (() => {
     syncProfileFromLog();
     save(true);
     allowShrink = false;
+  }
+
+  /* ---------- the food-intake log ----------
+     A dated log of what was eaten, so today's totals can be read back against
+     the Nutrition tab's targets. Each entry carries a SNAPSHOT of the food's
+     name and macros taken at log time — never a reference re-derived later, so
+     a database change cannot silently rewrite a past day (the same rule the app
+     already applies to exercise history after a custom exercise is deleted).
+     An absent nutrient stays ABSENT in the snapshot and is excluded from
+     dayTotals, never counted as 0: a missing number is not a zero.
+     The date is the app's LOCAL calendar day (dstrToday) — never toISOString,
+     which is UTC and rolls an evening entry onto tomorrow. */
+  const NUTRIENTS = ["kcal", "protein", "fat", "carb", "fibre"];
+  const round2 = (x) => Math.round(x * 100) / 100;
+  const iid = () => "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  function logIntake(entry) {
+    if (!entry) return null;
+    const snap = entry.macros || {};
+    const macros = {};
+    for (const k of Object.keys(snap)) {
+      const v = Number(snap[k]);
+      if (isFinite(v)) macros[k] = v;        // absent stays absent; a real 0 stays 0
+    }
+    const g = Number(entry.grams);
+    const rec = {
+      id: entry.id || iid(),
+      date: entry.date || dstrToday(),
+      src: entry.src != null ? entry.src : null,
+      name: entry.name != null ? String(entry.name) : "",
+      grams: isFinite(g) ? g : null,
+      macros,
+    };
+    if (entry.meal != null && entry.meal !== "") rec.meal = String(entry.meal);
+    if (!Array.isArray(state.intakelog)) state.intakelog = [];
+    state.intakelog.push(rec);
+    state.intakelog.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    save(true);
+    return rec;
+  }
+
+  function removeIntake(id) {
+    if (!Array.isArray(state.intakelog)) return false;
+    const next = state.intakelog.filter((e) => e.id !== id);
+    if (next.length === state.intakelog.length) return false;
+    allowShrink = true;
+    state.intakelog = next;
+    save(true);
+    allowShrink = false;
+    return true;
+  }
+
+  function intakesOn(date) {
+    const d = date || dstrToday();
+    return (state.intakelog || []).filter((e) => e && e.date === d);
+  }
+
+  /* Sum a day's snapshots. A nutrient present in NO entry that day is ABSENT
+     from the result (not 0); a nutrient the source states as a real 0 is summed
+     as 0. */
+  function dayTotals(date) {
+    const totals = {};
+    for (const e of intakesOn(date)) {
+      const m = (e && e.macros) || {};
+      for (const k of NUTRIENTS) {
+        if (m[k] == null) continue;               // absent nutrient: excluded
+        const v = Number(m[k]);
+        if (!isFinite(v)) continue;
+        totals[k] = round2((totals[k] || 0) + v);
+      }
+    }
+    return totals;
   }
 
   /* Snapshot the profile ONLY when one of the tracked fields actually changed,
@@ -337,6 +421,11 @@ const Store = (() => {
       // snapshot the user already has locally.
       const pldates = new Set((state.profilelog || []).map((r) => r.date));
       (incoming.profilelog || []).forEach((r) => { if (r && r.date && !pldates.has(r.date)) state.profilelog.push(r); });
+      // Intake entries union by id — the same "only add what is not already
+      // here" rule the other dated arrays use, so an import never overwrites a
+      // logged entry the user already has locally.
+      const iids = new Set((state.intakelog || []).map((e) => e.id));
+      (incoming.intakelog || []).forEach((e) => { if (e && e.id && !iids.has(e.id)) state.intakelog.push(e); });
       state.achievements = Object.assign({}, incoming.achievements, state.achievements);
       // The profile and per-exercise overrides were being dropped, so importing a
       // backup onto a fresh install left the user with sessions but no name,
@@ -358,6 +447,7 @@ const Store = (() => {
       state.workouts.sort((a, b) => a.date.localeCompare(b.date));
       state.bodylog.sort((a, b) => a.date.localeCompare(b.date));
       state.profilelog.sort((a, b) => a.date.localeCompare(b.date));
+      state.intakelog.sort((a, b) => String(a.date).localeCompare(String(b.date)));
     }
     save(true);
     return state;
@@ -501,6 +591,7 @@ const Store = (() => {
   return {
     get state() { return state; },
     save, upsertWorkout, deleteWorkout, workoutById, addBodyLog, deleteBodyLog,
+    logIntake, removeIntake, intakesOn, dayTotals,
     addCustom, updateCustom, deleteCustom, setOverride, unlock,
     exportJSON, importJSON, exportCSV, reset, loadBackup, hasBackup, uid, migrate,
     bootstrapNative, recover, snapshotPreUpdate, recoverFromSnapshot, richness,

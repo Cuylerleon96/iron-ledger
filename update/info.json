@@ -1,11 +1,11 @@
 {
-  "versionCode": 53,
-  "versionName": "1.0.52",
+  "versionCode": 54,
+  "versionName": "1.0.53",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "9998d854f211906aa75387714c23b6ce6458220b482034ba64abb3ee0a6b70a4",
-  "sizeBytes": 3847770,
+  "sha256": "d4c14a84726911f09db4a68996aac6d42d1011d9479f0f45162febc4adbc560b",
+  "sizeBytes": 3853163,
   "published": "2026-11-08",
   "notes": [
-    "Past months now keep the height, age and goals you had at the time, so changing your profile no longer rewrites your old stats."
+    "You can now log foods in the Nutrition tab: search the offline database, pick a portion, and see today's totals against your targets."
   ]
 }

@@ -1625,13 +1625,204 @@
   }
 
   /* ================= nutrition ================= */
-  /* The tab is a thin shell around the pure Nutrition view-model: everything the
-     user reads (targets and their reasons, the maintenance line, the conflict
-     note, the honest limits) is built in js/nutrition.js, so it is testable
-     without a browser and the tab cannot drift from the engine. The ONLY control
-     here is the pace (phase) picker — it persists the choice and re-renders.
-     Logging the food itself is the next step and is deliberately absent: there is
-     no food-log control until there is a database wired up to serve it. */
+  /* The targets and reasons are a thin shell around the pure Nutrition
+     view-model (js/nutrition.js), so they are testable without a browser. The
+     food LOGGING below is the bounded quick-add: search the offline database,
+     choose a portion (grams, or one of the food's household measures), see the
+     macros for THAT portion before committing, then add it to today. No scanner,
+     no barcode, no meals, no recipes — those are later batches, and nothing
+     unbuilt is rendered as a dead control. */
+  let _nutriView = null;                 // the current view-model, for the Today card
+  let foodUI = { q: "", results: null, picked: null, measure: "", qty: "1", grams: "" };
+
+  /* ---- lazy database load ----
+     js/fooddata.js is 3.75 MB and is deliberately NOT in index.html: parsing it
+     at boot would slow EVERY launch for a feature most do not open. It is
+     injected on first use here, cached for the session, with a brief loading
+     state. Nothing else in the app depends on it. */
+  let _foodDb = null, _foodDbReq = null;
+  function loadFoodDb() {
+    if (_foodDb) return Promise.resolve(_foodDb);
+    if (_foodDbReq) return _foodDbReq;
+    _foodDbReq = new Promise((resolve) => {
+      if (typeof FOOD_DB !== "undefined") { _foodDb = FOOD_DB; resolve(_foodDb); return; }
+      const s = document.createElement("script");
+      s.src = "js/fooddata.js";
+      s.async = true;
+      s.onload = () => { _foodDb = (typeof FOOD_DB !== "undefined") ? FOOD_DB : null; resolve(_foodDb); };
+      s.onerror = () => { _foodDbReq = null; resolve(null); };
+      document.head.appendChild(s);
+    });
+    return _foodDbReq;
+  }
+
+  const setFoodStatus = (msg) => { const s = $("#food-status"); if (s) s.textContent = msg || ""; };
+
+  function macroLine(macros) {
+    macros = macros || {};
+    const parts = [];
+    Nutrition.NUTRIENTS.forEach((k) => {
+      if (typeof macros[k] !== "number") return;        // absent nutrient: omitted
+      const unit = k === "kcal" ? "kcal" : "g";
+      const label = k === "kcal" ? "" : " " + (k === "carb" ? "carbs" : k);
+      parts.push(fmtW(macros[k]) + " " + unit + label);
+    });
+    return parts.length ? parts.join(" · ") : "no nutrient data";
+  }
+
+  function renderFoodResults() {
+    const host = $("#food-results");
+    if (!host) return;
+    const r = foodUI.results;
+    if (r == null) { host.innerHTML = ""; return; }
+    if (!r.length) { host.innerHTML = '<p class="muted small">No foods matched that search.</p>'; return; }
+    host.innerHTML = '<div class="food-results">' + r.map((f, i) =>
+      '<button class="food-row" data-idx="' + i + '"><span class="food-row-name">' + esc(f.name) + "</span>" +
+      '<span class="muted small">' + (f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal/100 g" : "") + "</span></button>").join("") + "</div>";
+  }
+
+  function pickedGrams() {
+    const f = foodUI.picked;
+    if (!f) return null;
+    if (foodUI.measure === "") return Nutrition.portionGrams(f, { grams: foodUI.grams });
+    const m = (f.measures || [])[Number(foodUI.measure)];
+    if (!m) return null;
+    // Uses the food's OWN measure table; an unknown label returns null (grams are
+    // never invented) — the preview then asks for grams instead.
+    return Nutrition.portionGrams(f, { measure: m.label, qty: foodUI.qty });
+  }
+
+  function renderFoodPreview() {
+    const host = $("#food-preview");
+    if (!host) return;
+    const g = pickedGrams();
+    if (g == null) { host.innerHTML = '<p class="muted small">Enter a portion in grams to see its macros.</p>'; return; }
+    const macros = Food.gramsToMacros(foodUI.picked, g);
+    host.innerHTML = '<p class="food-preview-line">' + fmtW(g) + " g — " + esc(macroLine(macros)) + "</p>";
+  }
+
+  function renderFoodPick() {
+    const host = $("#food-pick");
+    if (!host) return;
+    const f = foodUI.picked;
+    if (!f) { host.innerHTML = ""; return; }
+    const measures = Array.isArray(f.measures) ? f.measures : [];
+    const opts = ['<option value=""' + (foodUI.measure === "" ? " selected" : "") + ">Grams</option>"]
+      .concat(measures.map((m, i) => '<option value="' + i + '"' + (foodUI.measure === String(i) ? " selected" : "") + ">" + esc(m.label) + "</option>")).join("");
+    const portionInput = (foodUI.measure === "")
+      ? '<input class="inp" id="food-grams" type="number" min="0" step="1" inputmode="numeric" placeholder="grams" value="' + esc(foodUI.grams) + '" style="max-width:110px">'
+      : '<input class="inp" id="food-qty" type="number" min="0" step="1" inputmode="numeric" placeholder="qty" value="' + esc(foodUI.qty) + '" style="max-width:90px">';
+    host.innerHTML =
+      '<div class="food-picked"><div class="card-head"><h3>' + esc(f.name) + '</h3><span class="muted">' +
+        (f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal / 100 g" : "") + "</span></div>" +
+      '<div class="row"><label class="n-pace">Portion<select class="inp" id="food-measure">' + opts + "</select></label>" +
+        portionInput +
+        '<button class="btn primary" id="food-add">Add to today</button>' +
+        '<button class="btn ghost tiny" id="food-x" title="Cancel">✕</button></div>' +
+      '<div id="food-preview"></div></div>';
+    $("#food-measure", host).addEventListener("change", (e) => { foodUI.measure = e.target.value; renderFoodPick(); });
+    const gEl = $("#food-grams", host); if (gEl) gEl.addEventListener("input", () => { foodUI.grams = gEl.value; renderFoodPreview(); });
+    const qEl = $("#food-qty", host); if (qEl) qEl.addEventListener("input", () => { foodUI.qty = qEl.value; renderFoodPreview(); });
+    $("#food-x", host).addEventListener("click", () => { foodUI.picked = null; renderFoodPick(); });
+    $("#food-add", host).addEventListener("click", addPickedFood);
+    renderFoodPreview();
+  }
+
+  function searchFoods() {
+    const q = (foodUI.q || "").trim();
+    foodUI.picked = null;
+    if (!q) { foodUI.results = null; setFoodStatus(""); renderFoodResults(); renderFoodPick(); return; }
+    setFoodStatus("Loading foods…");                    // brief loading state
+    foodUI.results = null; renderFoodResults();
+    loadFoodDb().then((db) => {
+      if (!db) { setFoodStatus("Could not load the food database."); foodUI.results = []; }
+      else { foodUI.results = Food.search(db, q, 25); setFoodStatus(""); }
+      renderFoodResults(); renderFoodPick();
+    });
+  }
+
+  function addPickedFood() {
+    const f = foodUI.picked;
+    if (!f) return;
+    const g = pickedGrams();
+    if (g == null) { toast("Enter a portion in grams.", "warn"); return; }
+    const entry = Nutrition.intakeEntry(f, g, {});      // snapshots name + macros
+    if (!entry) { toast("That portion can't be logged.", "warn"); return; }
+    Store.logIntake(entry);                             // Store stamps LOCAL today
+    toast("Added " + esc(entry.name) + " · " + fmtW(g) + " g");
+    foodUI.picked = null; foodUI.measure = ""; foodUI.qty = "1"; foodUI.grams = "";
+    renderFoodPick(); renderToday();
+  }
+
+  function renderToday() {
+    const list = $("#food-list"), tot = $("#today-totals"), cnt = $("#today-count");
+    if (!list || !tot) return;
+    const date = today();
+    const items = Store.intakesOn(date);
+    if (cnt) cnt.textContent = items.length + (items.length === 1 ? " item" : " items");
+    list.innerHTML = items.length
+      ? items.map((e) =>
+          '<div class="pr-row"><span>' + esc(e.name) + "</span><span>" + fmtW(e.grams) + " g</span>" +
+          '<span class="muted">' + esc(macroLine(e.macros)) + "</span>" +
+          '<button class="btn ghost tiny food-del" data-id="' + esc(e.id) + '" title="Remove">✕</button></div>').join("")
+      : '<p class="muted small">Nothing logged yet today.</p>';
+
+    const totals = Store.dayTotals(date);
+    const targets = _nutriView && _nutriView.targets;
+    let html;
+    if (targets && targets.length) {
+      const rows = Nutrition.intakeSummary(targets, totals);
+      html = '<div class="n-targets">' + rows.map((r) =>
+        '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(r.label) + "</span>" +
+        '<span class="n-t-val">' + fmt(r.logged) + '<span class="n-t-unit"> / ' + r.target + " " + esc(r.unit) + "</span></span></div>" +
+        '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("") + "</div>" +
+        '<p class="muted small">' + esc(Nutrition.intakeHeadline(rows, items.length)) + "</p>";
+    } else {
+      html = '<p class="muted small">Totals today: ' + esc(macroLine(totals)) + "</p>" +
+        '<p class="muted small">' + esc(Nutrition.intakeHeadline([], items.length)) + "</p>";
+    }
+    tot.innerHTML = html;
+  }
+
+  function todayCard() {
+    const c = el("section", { class: "card", id: "today" });
+    c.innerHTML =
+      '<div class="card-head"><h3>Today</h3><span class="muted"><span id="today-count"></span> · ' + esc(today()) + "</span></div>" +
+      '<div class="food-list" id="food-list"></div><div id="today-totals"></div>';
+    $("#food-list", c).addEventListener("click", (e) => {
+      const b = e.target.closest(".food-del");
+      if (!b) return;
+      Store.removeIntake(b.dataset.id);
+      renderToday();
+    });
+    renderToday();
+    return c;
+  }
+
+  function intakeCard() {
+    const c = el("section", { class: "card", id: "intake" });
+    c.innerHTML =
+      '<div class="card-head"><h3>Log food</h3><span class="muted" id="food-status"></span></div>' +
+      '<p class="muted small">Search the offline food database and add a portion to today. Nothing is uploaded.</p>' +
+      '<div class="row"><input class="inp" id="food-q" placeholder="Search foods (e.g. banana)" value="' + esc(foodUI.q) + '">' +
+        '<button class="btn" id="food-search">Search</button></div>' +
+      '<div id="food-results"></div><div id="food-pick"></div>';
+    const input = $("#food-q", c);
+    const go = () => { foodUI.q = input.value; searchFoods(); };
+    $("#food-search", c).addEventListener("click", go);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    $("#food-results", c).addEventListener("click", (e) => {
+      const b = e.target.closest(".food-row");
+      if (!b || !foodUI.results) return;
+      foodUI.picked = foodUI.results[Number(b.dataset.idx)] || null;
+      foodUI.measure = ""; foodUI.qty = "1"; foodUI.grams = "";
+      renderFoodPick();
+    });
+    renderFoodResults();
+    renderFoodPick();
+    return c;
+  }
+
   function renderNutrition(host) {
     const training = Nutrition.trainingFor(S.workouts, today(), (id) => Engine.exMode(S, id));
     const v = Nutrition.view(S.profile, {
@@ -1639,6 +1830,7 @@
       year: new Date().getFullYear(),
       training,
     });
+    _nutriView = v;
     const c = el("section", { class: "card", id: "nutrition" });
     c.innerHTML = v.html;
     host.append(c);
@@ -1652,6 +1844,11 @@
       Store.save(true);
       render();
     });
+
+    // Food logging works whether or not targets are shown (targets need a birth
+    // year, but a person can log a meal either way).
+    host.append(todayCard());
+    host.append(intakeCard());
   }
 
   /* ================= profile ================= */

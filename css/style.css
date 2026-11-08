@@ -761,3 +761,21 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .n-maint { margin-top: .55rem; }
 .n-maint p { margin: .16rem 0; line-height: 1.5; }
 .n-limits { margin-top: .55rem; line-height: 1.5; }
+
+/* ---- Nutrition: food logging (quick add) ---- */
+.food-results { display: grid; gap: .25rem; margin: .5rem 0; max-height: 15rem; overflow-y: auto; }
+.food-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
+  text-align: left; width: 100%; cursor: pointer; font-family: var(--px); font-size: .66rem;
+  color: var(--cream); background: rgba(0, 0, 0, .28); border: 2px solid var(--ink);
+  border-radius: 5px; padding: .3rem .5rem;
+}
+.food-row:hover, .food-row:focus { background: rgba(28, 60, 120, .5); border-color: var(--cream); }
+.food-row-name { flex: 1; min-width: 0; }
+.food-picked {
+  border: 2px solid var(--cream); border-radius: 6px; box-shadow: 0 0 0 1px var(--ink);
+  background: rgba(28, 60, 120, .38); padding: .4rem .55rem; margin: .4rem 0;
+}
+.food-picked .card-head { margin-bottom: .45rem; }
+.food-preview-line { font-size: .7rem; color: var(--gold-l); text-shadow: var(--outline-sm); margin: .2rem 0 .1rem; }
+.food-list { margin: .3rem 0; }

@@ -4,6 +4,10 @@
    bundle js/fooddata.js (const FOOD_DB). */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const root = path.resolve(__dirname, '..');
+// Pin the zone BEFORE the first Date use so the local-date assertions are
+// deterministic: 23:30 EST is already the next day in UTC, which is exactly the
+// bug the app's local-date helper avoids.
+process.env.TZ = process.env.TZ || 'America/New_York';
 
 const ctx = { console, module: { exports: {} }, JSON, Math, Object, Array, Number,
   String, Boolean, isFinite, parseFloat, parseInt, Date, RegExp, Map, Set };
@@ -134,6 +138,114 @@ ok('every food has code/name/per100/measures/src',
   DB.foods.every(f => Number.isInteger(f.code) && typeof f.name === 'string' &&
     f.per100 && Array.isArray(f.measures) && (f.src === 'fndds' || f.src === 'sr')));
 ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.test(DB.license));
+
+/* ---------- (h) THE INTAKE LOG (js/store.js) ----------
+   Loads the REAL store.js + food.js + nutrition.js in one vm scope against a
+   small localStorage, so the intake helpers run exactly as the app runs them.
+   A FakeDate pins "now" to 23:30 LOCAL (04:30Z the NEXT day) so the local-date
+   rule is genuinely exercised — an evening entry must land on today, not
+   tomorrow. */
+{
+  const FIXED = Date.parse('2026-11-09T04:30:00Z');       // 2026-11-08 23:30 EST
+  const RealDate = Date;
+  class FakeDate extends RealDate {
+    constructor(...a) { if (a.length === 0) super(FIXED); else super(...a); }
+    static now() { return FIXED; }
+  }
+  const ls = {};
+  const c3 = { console, module: { exports: {} }, JSON, Math, Object, Array, Number, String,
+    Boolean, RegExp, Error, Promise, isFinite, parseFloat, parseInt, Map, Set,
+    setTimeout, clearTimeout, Date: FakeDate,
+    localStorage: { getItem: (k) => (k in ls ? ls[k] : null), setItem: (k, v) => { ls[k] = String(v); }, removeItem: (k) => { delete ls[k]; } } };
+  c3.globalThis = c3; vm.createContext(c3);
+  const src3 = ['js/food.js', 'js/nutrition.js', 'js/store.js']
+    .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n;\n');
+  vm.runInContext(src3 + '\n;globalThis.__I={Food, Nutrition, Store};', c3, { filename: 'intake-bundle.js' });
+  const INut = c3.__I.Nutrition, IS = c3.__I.Store;
+
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const localToday = (() => { const d = new FakeDate();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  const EMPTY = JSON.stringify({ version: 1, createdAt: '2026-01-01T00:00:00.000Z',
+    profile: {}, workouts: [], bodylog: [], custom: [], achievements: {}, overrides: {}, targets: {}, settings: {} });
+
+  console.log('\n--- (h) intake log (snapshot, local date, totals) ---');
+  eq('the app\'s local-date helper gives the LOCAL day', localToday, '2026-11-08');
+  eq('...while UTC would have rolled to tomorrow (the bug avoided)',
+    new RealDate(FIXED).toISOString().slice(0, 10), '2026-11-09');
+
+  /* 1) local-date default + round-trip */
+  IS.importJSON(EMPTY, 'replace');
+  const recA = IS.logIntake(INut.intakeEntry(clone(srBanana), 100));
+  eq('logIntake stamps the LOCAL day (never toISOString)', recA.date, localToday);
+  eq('intakesOn(local today) finds it', IS.intakesOn(localToday).length, 1);
+  eq('intakesOn(UTC tomorrow) does not', IS.intakesOn('2026-11-09').length, 0);
+  eq('the snapshot carries the food name', recA.name, srBanana.name);
+  eq('100 g banana snapshots 89 kcal', recA.macros.kcal, 89);
+  IS.importJSON(IS.exportJSON(), 'replace');
+  eq('the intake log round-trips through export/import', IS.intakesOn(localToday).length, 1);
+  eq('...with the snapshot intact', IS.intakesOn(localToday)[0].macros.kcal, 89);
+
+  /* 2) macros are SNAPSHOTTED: change the food afterwards, the entry must not move */
+  const mutable = clone(srBanana);
+  const recB = IS.logIntake(INut.intakeEntry(mutable, 100));
+  mutable.per100.kcal = 999;
+  mutable.name = 'Mutated, raw';
+  eq('changing the food afterwards does NOT move the logged macros', recB.macros.kcal, 89);
+  eq('...nor the logged name', recB.name, srBanana.name);
+
+  /* 3) dayTotals sums and EXCLUDES absent nutrients (never counts them as 0) */
+  IS.importJSON(EMPTY, 'replace');
+  IS.logIntake(INut.intakeEntry(clone(srBanana), 100));   // has fibre 2.6, kcal 89
+  IS.logIntake(INut.intakeEntry(clone(meat), 150));       // NO fibre key, kcal 298.5, carb 0
+  const sum = IS.dayTotals(localToday);
+  eq('dayTotals sums kcal across entries', sum.kcal, 387.5);
+  eq('dayTotals sums fibre where present', sum.fibre, 2.6);
+  eq('dayTotals carries a summed carb (banana 22.84 + meat 0)', sum.carb, 22.84);
+  IS.importJSON(EMPTY, 'replace');
+  IS.logIntake(INut.intakeEntry(clone(meat), 150));
+  const meatOnly = IS.dayTotals(localToday);
+  ok('a nutrient absent from EVERY entry stays ABSENT from the total', !('fibre' in meatOnly), meatOnly);
+  ok('a nutrient the source states as a real 0 is kept as 0 (not dropped)', 'carb' in meatOnly && meatOnly.carb === 0, meatOnly);
+  eq('...and the nutrients that ARE there still sum', meatOnly.kcal, 298.5);
+
+  /* 4) household measure via the REAL table; an unknown measure is refused */
+  const ban = clone(srBanana);
+  eq('a household measure converts via the real table (cup, mashed = 225 g)',
+    INut.portionGrams(ban, { measure: 'cup, mashed' }), 225);
+  eq('an unknown measure returns null — grams are never invented',
+    INut.portionGrams(ban, { measure: 'furlong' }), null);
+  eq('intakeEntry refuses a null/unknown portion', INut.intakeEntry(ban, null), null);
+  eq('direct grams are honoured', INut.portionGrams(ban, { grams: 150 }), 150);
+  const viaMeasure = IS.logIntake(INut.intakeEntry(ban, INut.portionGrams(ban, { measure: 'cup, mashed' })));
+  eq('logging via a measure snapshots the converted grams (225)', viaMeasure.grams, 225);
+  eq('...and the macros for THOSE grams (89 * 225/100)', viaMeasure.macros.kcal, 200.25);
+
+  /* 5) removing an entry updates the totals */
+  IS.importJSON(EMPTY, 'replace');
+  const r1 = IS.logIntake(INut.intakeEntry(clone(srBanana), 100));   // 89 kcal
+  IS.logIntake(INut.intakeEntry(clone(meat), 150));                  // 298.5 kcal
+  eq('two entries sum to 387.5 kcal', IS.dayTotals(localToday).kcal, 387.5);
+  ok('removeIntake returns true', IS.removeIntake(r1.id) === true);
+  eq('removing an entry drops it from the day', IS.intakesOn(localToday).length, 1);
+  eq('...and the total falls to the remaining entry', IS.dayTotals(localToday).kcal, 298.5);
+  ok('removeIntake on a gone id returns false', IS.removeIntake(r1.id) === false);
+
+  /* 6) TONE: no shaming on either side of the target (the owner's hard rule) */
+  const T = [{ key: 'kcal', label: 'Calories', value: 2000, unit: 'kcal' }];
+  const under = INut.intakeSummary(T, { kcal: 900 })[0];
+  const over = INut.intakeSummary(T, { kcal: 2600 })[0];
+  const BANNED = /\b(over|exceeded?|exceed|cheat|cheated|too much|failed|failure|limit|bad)\b/i;
+  ok('below-target wording has no shaming word', !BANNED.test(under.text), under.text);
+  ok('above-target wording has no shaming word', !BANNED.test(over.text), over.text);
+  ok('above-target headline avoids warning words', !BANNED.test(INut.intakeHeadline([over], 3)), INut.intakeHeadline([over], 3));
+  ok('below-target reading offers what is left ("to go")', /to go/.test(under.text), under.text);
+  eq('an over day is stated with the target, neutrally', over.text, '2600 kcal — your target is 2000 kcal');
+
+  /* 7) the intake log counts as history for the mirror/backup gate */
+  ok('richness counts intake entries (so a food-log-only state still backs up)',
+    IS.richness({ intakelog: [{ id: 'x' }] }) >= 1);
+}
 
 console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

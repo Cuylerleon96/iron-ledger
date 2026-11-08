@@ -242,6 +242,78 @@ const Nutrition = (() => {
     });
   }
 
-  return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE };
+  /* ---------- food logging: building a SNAPSHOT entry ----------
+     The consumer keeps the macro ORDER the database uses. A nutrient absent from
+     the food is absent from the snapshot (never a 0) — dayTotals excludes it. */
+  const NUTRIENTS = ["kcal", "protein", "fat", "carb", "fibre"];
+  const round2 = (x) => Math.round(x * 100) / 100;
+
+  /* Turn a chosen food + a gram weight into a log entry. The name and macros are
+     COPIED here, at log time: the bundled database changes between releases and a
+     past day must not silently rewrite. Returns null when there is no real
+     portion (no food, no name, or a non-finite/non-positive gram weight) — grams
+     are never invented, here or anywhere. */
+  function intakeEntry(food, grams, opts) {
+    opts = opts || {};
+    if (!food || !food.name || typeof Food === "undefined") return null;
+    const g = Number(grams);
+    if (!isFinite(g) || g <= 0) return null;
+    const macros = Food.gramsToMacros(food, g);        // absent stays absent
+    const entry = {
+      src: food.code != null ? food.code : (food.id != null ? food.id : null),
+      name: String(food.name),
+      grams: round2(g),
+      macros,
+    };
+    if (opts.date) entry.date = opts.date;             // else Store stamps LOCAL today
+    if (opts.meal) entry.meal = String(opts.meal);
+    return entry;
+  }
+
+  /* The grams behind a portion CHOICE: either a household measure (converted via
+     the food's OWN measure table) or grams typed directly. An unknown measure
+     returns null through Food.portionToGrams — it is NEVER silently read as
+     grams (the caller must then ask for grams). */
+  function portionGrams(food, choice) {
+    if (typeof Food === "undefined") return null;
+    choice = choice || {};
+    if (choice.measure != null && choice.measure !== "") {
+      const q = (choice.qty == null || choice.qty === "") ? 1 : choice.qty;
+      return Food.portionToGrams(food, choice.measure, q);
+    }
+    const g = Number(choice.grams);
+    return (isFinite(g) && g > 0) ? round2(g) : null;
+  }
+
+  /* Today's totals read against the tab's targets. TONE (a hard rule): a total
+     BELOW target is never framed as failure and a total ABOVE is never a
+     warning — no red, no "over", no "exceeded", no "cheat". Being over on one
+     day is ordinary. No good/bad-food framing, no exercise-earned-food language. */
+  function intakeSummary(targets, totals) {
+    totals = totals || {};
+    return (targets || []).map((t) => {
+      const logged = (typeof totals[t.key] === "number") ? totals[t.key] : 0;
+      const target = t.value;
+      const remaining = round2(target - logged);
+      const text = (logged < target)
+        ? logged + " of " + target + " " + t.unit + " — " + remaining + " to go"
+        : logged + " " + t.unit + " — your target is " + target + " " + t.unit;
+      return { key: t.key, label: t.label, unit: t.unit, logged, target, remaining, text };
+    });
+  }
+
+  /* One encouraging headline for the Today card. Neutral on both sides of the
+     target: "to go" when below, "a normal day" when at or above. */
+  function intakeHeadline(rows, count) {
+    if (!count) return "Nothing logged yet today — add your first food below.";
+    const kcal = (rows || []).find((r) => r.key === "kcal");
+    if (!kcal) return "Logged today: " + count + (count === 1 ? " item." : " items.");
+    return (kcal.logged < kcal.target)
+      ? "Nice. " + kcal.remaining + " kcal to go if you want to land on target today."
+      : "That's a normal day — a target is a guide, not a rule.";
+  }
+
+  return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE,
+    NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline };
 })();
 if (typeof module !== "undefined") module.exports = Nutrition;
