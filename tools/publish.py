@@ -27,6 +27,7 @@ OWNER = "Cuylerleon96"
 REPO = "iron-ledger"
 BRANCH = "main"
 ASSET_NAME = "iron-ledger.apk"
+FEED_ASSET_NAME = "info.json"   # the feed is also shipped as a release asset
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 VERSION_FILE = ROOT / "android/version.properties"
@@ -232,10 +233,14 @@ def main():
             "prerelease": False,
         })
 
-    # replace any existing asset with the same name
+    # Replace every asset this publish is about to (re)upload. info.json matters
+    # as much as the APK: uploading an asset name that already exists fails with
+    # 422 already_exists, and because the failure lands AFTER the release body was
+    # patched, a re-cut would silently keep the OLD feed live while appearing to
+    # have succeeded.
     for asset in rel.get("assets", []):
-        if asset["name"] == ASSET_NAME:
-            print("  removing previous asset")
+        if asset["name"] in (ASSET_NAME, FEED_ASSET_NAME):
+            print(f"  removing previous asset {asset['name']}")
             api("DELETE", f"/repos/{OWNER}/{REPO}/releases/assets/{asset['id']}")
 
     print("uploading APK asset…")
@@ -249,7 +254,7 @@ def main():
     # that is not keyed on the query string — long enough for a freshly published
     # release to still read as "up to date".
     print("uploading feed asset…")
-    api("POST", upload + "?name=info.json",
+    api("POST", upload + f"?name={FEED_ASSET_NAME}",
         raw=(json.dumps(feed, indent=2) + "\n").encode(), content_type="application/json")
 
     # the feed goes live only once the asset it points at really exists

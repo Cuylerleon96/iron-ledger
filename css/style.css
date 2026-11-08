@@ -345,6 +345,17 @@ input[type="date"] { color-scheme: light; }
 .btn.big { width: 100%; padding: .7rem; font-size: .74rem; }
 .btn.primary.big { font-size: .8rem; }
 
+/* ---------------- update badge ---------------- */
+/* A gold dot on the Profile tab: visible enough to be noticed, quiet enough not
+   to be a modal on every launch. */
+.tabs button.has-update { position: relative; }
+.tabs button.has-update::after {
+  content: ""; position: absolute; top: 3px; right: 4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #f8c020; border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px #f8c020;
+}
+
 /* ---------------- next-session target ---------------- */
 /* One quiet line, deliberately NOT a panel: it should inform the next set
    without competing with the set rows for attention. */

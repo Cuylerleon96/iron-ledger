@@ -909,15 +909,31 @@
     return "couldn't check — " + (r.reason || "unknown error");
   }
 
+  /* Remember the last result: an automatic check runs at launch, before the
+     Profile panel exists, so without this the panel would come up blank and the
+     work of the check would be thrown away. */
+  let lastUpdateResult = null;
+  let lastCheckAt = 0;
+
+  /* A quiet dot on the Profile tab. An automatic check on every launch must be
+     able to say something without throwing a modal at the user each time. */
+  function setUpdateBadge(on) {
+    const b = document.querySelector('#tabs button[data-tab="profile"]');
+    if (b) b.classList.toggle("has-update", !!on);
+  }
+
   async function updateCheck(manual) {
-    if (typeof Updater === "undefined") return;
+    if (typeof Updater === "undefined") return null;
     const status = $("#up-status");
     if (status) status.textContent = "checking…";
+    lastCheckAt = Date.now();
     let r;
     try { r = await Updater.check(); }
-    catch (e) { r = { state: "error", reason: String((e && e.message) || e) }; }
+    catch (e) { r = { state: "unknown", reason: String((e && e.message) || e) }; }
+    lastUpdateResult = r;
 
     if (status) status.textContent = updateStatusText(r);
+    setUpdateBadge(r.state === "available");
     // auto-checks stay quiet unless there is something new; only ever prompt
     // once per version so a dismissed update does not nag on every launch
     if (r.state === "available" && (manual || Updater.offered() !== r.latest)) {
@@ -931,6 +947,18 @@
     } else if (manual && r.state === "unsupported") {
       toast("This is the browser build — nothing to install.", "warn", 4000);
     }
+    return r;
+  }
+
+  /* Automatic check on launch AND whenever the app returns to the foreground: a
+     tracker gets left open for days, so "when it's opened" has to include
+     resuming, not only a cold start. Rate-limited so flipping between apps does
+     not hammer the network. */
+  const AUTO_RECHECK_MS = 5 * 60 * 1000;
+  function autoUpdateCheck() {
+    if (typeof Updater === "undefined" || !Updater.isAndroid()) return;
+    if (Date.now() - lastCheckAt < AUTO_RECHECK_MS) return;
+    updateCheck(false);
   }
 
   /* ================= profile ================= */
@@ -969,9 +997,14 @@
     const upd = el("section", { class: "card" });
     upd.innerHTML = `
       <div class="card-head"><h3>App updates</h3><span class="muted" id="up-status"></span></div>
-      <p class="muted small">Checks a public release feed over the network. Nothing about your training is ever uploaded.</p>
+      <p class="muted small">Checked automatically whenever the app opens. Nothing about your training is ever uploaded.</p>
       <div class="row"><button class="btn" id="up-check">Check for updates</button><span class="muted small" id="up-version"></span></div>`;
     host.append(upd);
+    // show the result of the automatic check that already ran at launch
+    if (lastUpdateResult) {
+      const st = $("#up-status", upd);
+      if (st) st.textContent = updateStatusText(lastUpdateResult);
+    }
     $("#up-check", upd).addEventListener("click", () => updateCheck(true));
     if (typeof Updater !== "undefined") Updater.installed().then((i) => {
       const v = $("#up-version", upd);
@@ -1074,7 +1107,7 @@
     render();                       // paint FIRST — nothing below is allowed to gate it
     recoverFromDeviceStorage();     // fire and forget
     // update check last, delayed, and Android-only: it must never delay the UI
-    setTimeout(() => { if (typeof Updater !== "undefined" && Updater.isAndroid()) updateCheck(false); }, 4000);
+    setTimeout(autoUpdateCheck, 1500);
   }
 
   /* Android: localStorage is the working copy, the on-device mirror is the
@@ -1099,6 +1132,12 @@
     setTimeout(attempt, 1200);      // deviceready may already have fired
   }
   document.addEventListener("DOMContentLoaded", boot);
+
+  /* Coming back to the app is "opening" it too — a phone keeps it resident for
+     days, so a cold-start-only check could miss several releases. */
+  document.addEventListener("visibilitychange", () => {
+    if (!document.visibilityState || document.visibilityState === "visible") autoUpdateCheck();
+  });
 
   /* Android hardware back / edge-swipe: close the top surface, else let the
      OS exit. Must return a real boolean — the native callback compares it. */
