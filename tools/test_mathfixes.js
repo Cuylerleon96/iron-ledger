@@ -1259,5 +1259,160 @@ console.log("\n=== 40. deleting an exercise with no logged sets writes nothing o
   eq("and the custom list is empty", e.S.state.custom.length, 0);
 }
 
+console.log("\n=== 41. the two achievements re-cut to stop contradicting the app's advice ===");
+{
+  /* "Volume King" (20+ RAW sets in a session) paid for exactly the junk volume
+     the muscle-balance card flags and the XP rebalance stopped paying full rate
+     for. It is now "Big Session": a high EFFORT-WEIGHTED session spread over 3+
+     PRIMARY muscle groups that is NOT sitting in an over-MRV week.
+     "Perfect Week"/"Unbreakable" were consecutive-DAY streaks, which push daily
+     training; they now count WEEKS THAT MET THE WEEKLY TARGET — the same thing
+     the XP consistency scaler measures. */
+  const e = env();
+  const acc = (id, st) => e.E.achievements(st).find((a) => a.id === id);
+  const en = (id, g, name, ew, count) => ({ id, name, mode: "weight_reps", g, ew, sets: Array.from({ length: count }, () => ({ w: 80, r: 8 })) });
+  const sess = (date, entries) => ({ id: "w" + date, date, entries });
+  const bal = () => [en("c1", ["Chest"], "Chest Press", 1, 8), en("b1", ["Back"], "Row", 1, 8), en("l1", ["Legs"], "Squat", 1, 8)];
+
+  // one movement, 20 sets -> NOT big (only one PRIMARY group)
+  const solo = base({ workouts: [sess("2026-06-01", [en("c1", ["Chest"], "Chest Press", 1, 20)])] });
+  eq("20 sets on ONE movement is not a balanced session", e.E.achievementContext(solo).bigSession, 0);
+  eq("...so the old junk-volume badge does NOT fire", acc("bigset", solo).met, false);
+
+  // a hard, well-spread session within limits -> Big Session
+  const big = base({ workouts: [sess("2026-06-01", bal())] });
+  const bctx = e.E.achievementContext(big);
+  console.log(`     balanced 24-set session -> effort-weighted ${bctx.bigSession} (min ${e.E.BIG_SESSION_MIN}, ${e.E.BIG_SESSION_GROUPS}+ groups)`);
+  truthy("a hard, well-spread session IS a Big Session", bctx.bigSession >= e.E.BIG_SESSION_MIN);
+  eq("...and the badge fires", acc("bigset", big).met, true);
+
+  // the SAME balanced session, but its week is already over MRV -> NOT
+  const over = base({ workouts: [
+    sess("2026-06-01", bal()),
+    sess("2026-06-02", [en("c1", ["Chest"], "Chest Press", 1, 12)]),
+    sess("2026-06-03", [en("c1", ["Chest"], "Chest Press", 1, 12)]),
+  ] });
+  const weekChest = 8 + 12 + 12;
+  console.log(`     same session, ${weekChest} chest sets that week (MRV ${e.E.LANDMARKS.Chest.mrv}) -> bigSession ${e.E.achievementContext(over).bigSession}`);
+  truthy("the week is past Chest's MRV", weekChest > e.E.LANDMARKS.Chest.mrv);
+  eq("a hard session sitting in an over-MRV week does NOT earn it", e.E.achievementContext(over).bigSession, 0);
+  eq("...and the badge stays locked", acc("bigset", over).met, false);
+
+  // s7 / s30: sessions per week vs the target, never consecutive days
+  const t3 = { ...base().profile, weeklyTarget: 3 };
+  const metWeek = base({ profile: t3, workouts: ["2026-06-01", "2026-06-02", "2026-06-03"].map((d) => wk(d, [{ w: 100, r: 8 }])) });
+  truthy("a week meeting the weekly target earns Perfect Week", acc("s7", metWeek).met);
+  const oneSession = base({ profile: t3, workouts: [wk("2026-06-01", [{ w: 100, r: 8 }])] });
+  eq("a single session does not", acc("s7", oneSession).met, false);
+  const spread = base({ profile: t3, workouts: ["2026-06-01", "2026-06-03", "2026-06-05"].map((d) => wk(d, [{ w: 100, r: 8 }])) });
+  eq("consecutive days count for no more than spread days",
+     e.E.achievementContext(metWeek).weeksAtTarget, e.E.achievementContext(spread).weeksAtTarget);
+  truthy("the streak conditions no longer read streakDays",
+     !/streakDays/.test(e.E.ACHIEVEMENTS.find((a) => a.id === "s7").test.toString()));
+
+  const dayPlus = (d, n) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+  const weeksAt = (n) => { const ws = []; for (let i = 0; i < n; i++) { const m = dayPlus("2026-01-05", i * 7); ws.push(wk(m, [{ w: 100, r: 8 }]), wk(dayPlus(m, 2), [{ w: 100, r: 8 }])); } return base({ profile: { ...base().profile, weeklyTarget: 2 }, workouts: ws }); };
+  eq("12 weeks meeting the target earns Unbreakable", acc("s30", weeksAt(12)).met, true);
+  eq("11 weeks does not", acc("s30", weeksAt(11)).met, false);
+}
+
+console.log("\n=== 42. more healthy achievements, no shaming, ids preserved ===");
+{
+  const e = env();
+  const A = e.E.ACHIEVEMENTS;
+  const ids = A.map((a) => a.id);
+
+  const OLD = ["first", "w10", "w50", "w100", "t10k", "t100k", "t1m", "pr1", "pr10", "pr50",
+    "s3", "s7", "s30", "wk4", "wk12", "wk52", "bench1", "squat15", "dead2", "ohp1",
+    "cardio10", "cardio50", "cardio100", "bigset", "balanced", "variety", "weighin", "goal", "mob60", "nightowl"];
+  eq("every original id is still present (a saved state keeps working)", OLD.filter((id) => !ids.includes(id)), []);
+  const NEW = ["squat1", "row1", "cardio25", "everygroup", "firstweigh", "measure1", "deload1", "mob180"];
+  eq("the new healthy badges are all present", NEW.filter((id) => !ids.includes(id)), []);
+  eq("every badge declares a tier", A.filter((a) => a.tier !== "major" && a.tier !== "minor").map((a) => a.id), []);
+  truthy("the junk-volume name is gone", !A.some((a) => a.name === "Volume King"));
+  truthy("the no-rest name is gone", !A.some((a) => a.name === "No Days Off"));
+
+  /* HARD LIMIT: nothing may celebrate undereating, a skipped meal, a low-calorie
+     day, calories burned, exercise as repayment for food, or training through
+     pain, illness or a missed deload. */
+  const FORBIDDEN = /calorie|kcal|cheat|undereat|starv|fasted|skip(ped)? meal|guilt|shame|punish|injur|illness|\bsick\b|no days off/i;
+  eq("no badge shames food, calories, rest, or training through pain",
+     A.filter((a) => FORBIDDEN.test(a.name + " " + a.desc)).map((a) => a.id), []);
+  eq("nothing at all is earned by an empty log",
+     A.filter((a) => { try { return a.test(e.E.achievementContext(base({}))); } catch (err) { return false; } }).map((a) => a.id), []);
+
+  // each new condition actually fires
+  const bl = base({ bodylog: [{ date: "2026-06-01", weightKg: 80, waistCm: 82 }] });
+  const bctx = e.E.achievementContext(bl);
+  eq("a first check-in counts as a weigh-in", bctx.weighins, 1);
+  eq("a tape measurement is counted", bctx.measures, 1);
+  truthy("Baseline (first check-in) is earned", e.E.achievements(bl).find((a) => a.id === "firstweigh").met);
+  truthy("Tape Measure is earned", e.E.achievements(bl).find((a) => a.id === "measure1").met);
+  eq("...but On the Record (10 check-ins) is not", e.E.achievements(bl).find((a) => a.id === "weighin").met, false);
+
+  const heavy = Array.from({ length: 30 }, () => ({ w: 60, r: 10 }));
+  const light = Array.from({ length: 12 }, () => ({ w: 60, r: 10 }));
+  const deloaded = base({ workouts: [wk(iso(21), heavy), wk(iso(14), heavy), wk(iso(7), heavy), wk(iso(0), light)] });
+  const steady = base({ workouts: [wk(iso(21), heavy), wk(iso(14), heavy), wk(iso(7), heavy), wk(iso(0), heavy)] });
+  eq("a lighter week after a real block is counted as a deload", e.E.achievementContext(deloaded).deloads, 1);
+  truthy("Recovery Week is earned for taking it", e.E.achievements(deloaded).find((a) => a.id === "deload1").met);
+  eq("a steady block does NOT earn it", e.E.achievements(steady).find((a) => a.id === "deload1").met, false);
+
+  // relative strength: row 1x and squat 1x bodyweight (bodyweight is 80 kg)
+  const rel = base({ workouts: [
+    wk("2026-06-01", [{ w: 70, r: 8 }], 1698, "Barbell Row (Overhand)"),
+    wk("2026-06-02", [{ w: 80, r: 8 }], 1801, "Barbell Full Squat"),
+  ] });
+  const rctx = e.E.achievementContext(rel);
+  console.log(`     row ${rctx.ratio.row.toFixed(2)}x, squat ${rctx.ratio.squat.toFixed(2)}x bodyweight`);
+  truthy("Row Club fires at 1x bodyweight", e.E.achievements(rel).find((a) => a.id === "row1").met);
+  truthy("Bodyweight Squat fires at 1x bodyweight", e.E.achievements(rel).find((a) => a.id === "squat1").met);
+  eq("...but Squat Club (1.5x) does not", e.E.achievements(rel).find((a) => a.id === "squat15").met, false);
+
+  // balance across groups: all 7 in the window
+  const full = base({ workouts: [
+    wk("2026-06-01", [{ w: 60, r: 8 }], 1698, "Barbell Row (Overhand)"),
+    wk("2026-06-02", [{ w: 80, r: 8 }], 1801, "Barbell Full Squat"),
+  ] });
+  eq("a session log with only two groups does not earn Head to Toe",
+     e.E.achievements(full).find((a) => a.id === "everygroup").met, false);
+}
+
+console.log("\n=== 43. what earns a full celebration, and what does not ===");
+{
+  const e = env();
+  const M = e.E.MILESTONE;
+  const ev = e.E.milestoneEvents;
+  eq("a routine save (same level, no PR, no badge) triggers nothing", ev({ level: 4, title: "Lifter" }, { level: 4, title: "Lifter" }, [], []), []);
+  eq("a LEVEL UP triggers one event", ev({ level: 4, title: "Lifter" }, { level: 5, title: "Lifter" }, [], []).map((x) => x.kind), [M.LEVEL]);
+  eq("a RANK promotion is its own event on top of the level", ev({ level: 2, title: "Rookie" }, { level: 3, title: "Trainee" }, [], []).map((x) => x.kind), [M.LEVEL, M.RANK]);
+  eq("a PR triggers a celebration", ev({ level: 5, title: "Lifter" }, { level: 5, title: "Lifter" }, [{ id: 73, name: "Bench Press", hit: ["e1RM"] }], []).map((x) => x.kind), [M.PR]);
+  eq("a MINOR badge stays a toast", ev({ level: 5, title: "Lifter" }, { level: 5, title: "Lifter" }, [], ["nightowl"]), []);
+  eq("a MAJOR badge celebrates", ev({ level: 5, title: "Lifter" }, { level: 5, title: "Lifter" }, [], ["squat15"]).map((x) => x.kind), [M.BADGE]);
+  const all = ev({ level: 2, title: "Rookie" }, { level: 3, title: "Trainee" }, [{ id: 73, name: "Bench Press", hit: ["e1RM"] }], ["squat15", "nightowl"]);
+  eq("everything earned in one save is ONE celebration", all.map((x) => x.kind), [M.LEVEL, M.RANK, M.PR, M.BADGE]);
+  truthy("...and the PR names the lift", all.find((x) => x.kind === M.PR).items[0].name === "Bench Press");
+  truthy("...and the minor badge is left out of it", !all.some((x) => x.kind === M.BADGE && x.badges.some((b) => b.id === "nightowl")));
+
+  // a first-ever session is a baseline, not a PR
+  const e2 = env();
+  const first = base({ workouts: [wk(iso(0), [{ w: 100, r: 8 }])] });
+  eq("a first-ever session is a baseline, not a PR", e2.E.sessionPRs(first, iso(0)).length, 0);
+
+  // ---- wiring: the celebration exists, is modal, and can never block loading
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const cssSrc = fs.readFileSync(path.join(B, "css", "style.css"), "utf8");
+  truthy("the celebration reuses the modal shell", /openModal\(box, "celebrate"\)/.test(appSrc));
+  truthy("both celebration controls do something", /#celeb-ok/.test(appSrc) && /#celeb-badges/.test(appSrc));
+  truthy("'See your badges' goes to the badges card", /setView\("dash"\)/.test(appSrc) && /id: "badges"/.test(appSrc));
+  const bootSrc = appSrc.slice(appSrc.indexOf("function boot()"), appSrc.indexOf("function recoverFromDeviceStorage"));
+  truthy("the celebration never runs at boot (cannot delay the UI)", !/celebrate\(/.test(bootSrc));
+  truthy("saveDraft celebrates only when there is a milestone", /if \(ev\.length\) celebrate\(ev\)/.test(appSrc));
+  truthy("an edit is not treated as a fresh milestone", /const isNew = !draft\.id/.test(appSrc));
+  truthy("the old plain unlock modal is gone", !/function showBadges/.test(appSrc));
+  truthy("the celebration has its own style in the app's language", /\.modal-box\.celebrate/.test(cssSrc));
+  truthy("...and it respects reduced-motion", /prefers-reduced-motion/.test(cssSrc));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

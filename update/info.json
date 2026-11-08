@@ -1,13 +1,15 @@
 {
-  "versionCode": 46,
-  "versionName": "1.0.45",
+  "versionCode": 47,
+  "versionName": "1.0.46",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "e374e90ca350e7550ea203dabf22a1e5f8f4662162709373863f11e7bcccc601",
-  "sizeBytes": 3299591,
+  "sha256": "7c102d7c31219a0b4cd1e7d16e8f3330a185fd26d3ba9670957130cebc0332b7",
+  "sizeBytes": 3303781,
   "published": "2026-11-08",
   "notes": [
-    "Deleting a custom exercise now keeps its logged sets counting toward the muscle they actually trained, instead of silently re-attributing them to Core.",
-    "The dashboard shows your all-time distance logged, and each recovery chip's tooltip names the sets per week behind it.",
-    "Removed numbers the app computed but never showed \u2014 all-time reps, total and average rest, work-time, your exercise count, min-per-km pace, and two unused comparison values."
+    "Big Session replaces Volume King: the badge now rewards a hard, well-spread session kept within your weekly volume limits, not 20+ raw sets of junk volume.",
+    "Perfect Week and Unbreakable now reward hitting your weekly session target, not training consecutive days.",
+    "Eight new badges: your first weigh-in, logging a tape measurement, a bodyweight squat and a bodyweight row, 25 km of cardio, training every muscle group, 180 minutes of mobility, and taking a recovery week.",
+    "Renamed the weekend badge to Weekend Warrior - 'No Days Off' pushed rest as failure.",
+    "Big moments now get a full-screen GBA-style badge-get: a level up, a new title, a personal record, or a major badge. Small badges stay as the usual toast."
   ]
 }

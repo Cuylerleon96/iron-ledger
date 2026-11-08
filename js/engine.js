@@ -1878,50 +1878,145 @@ const Engine = (() => {
     return TITLES[i] + (lvl > 50 ? " ★" + (lvl - 50) : "");
   };
 
-  /* ---------- achievements ---------- */
+  /* ---------- achievements ----------
+
+     The standing product rule: NO shaming at all — easy, helpful, encouraging
+     wording, and encouragement that is TRUE. Nothing here celebrates
+     undereating, a skipped meal, a low-calorie day, calories burned, exercise
+     as repayment for food, or training through pain, illness or a missed
+     deload. Every badge is relative to the user's own numbers or their own
+     target, so none of them punishes a beginner.
+
+     Two badges were re-cut so they stop contradicting the app's own advice:
+
+       - "Volume King" paid for 20+ RAW sets in one session — exactly the junk
+         volume the muscle-balance card flags and the XP rebalance stopped
+         paying full rate for. It is now "Big Session": a high EFFORT-WEIGHTED
+         session (the same stimulus-equivalent units the muscle card uses),
+         spread over several muscle groups, that does NOT sit in an over-MRV
+         week. Effort-weighted volume, not raw set count.
+       - "Perfect Week" and "Unbreakable" were CONSECUTIVE-DAY streaks, which
+         push daily training — the overtraining pattern the deload guidance
+         warns about. They now measure what the XP consistency scaler already
+         measures: SESSIONS PER WEEK AGAINST THE WEEKLY TARGET. No consecutive
+         days are rewarded anywhere.
+
+     `tier` decides the celebration: a "major" unlock earns the full-screen
+     moment, a "minor" one stays as the ordinary toast. */
+  const BIG_SESSION_MIN = 18;    // effort-weighted sets in one session
+  const BIG_SESSION_GROUPS = 3;  // ...spread over at least this many groups
+
   const ACHIEVEMENTS = [
-    { id: "first",     name: "First Blood",      desc: "Log your first workout",            test: (c) => c.sessions >= 1 },
-    { id: "w10",       name: "Getting Serious",  desc: "10 workouts logged",                test: (c) => c.sessions >= 10 },
-    { id: "w50",       name: "Habit Formed",     desc: "50 workouts logged",                test: (c) => c.sessions >= 50 },
-    { id: "w100",      name: "Centurion",        desc: "100 workouts logged",               test: (c) => c.sessions >= 100 },
-    { id: "t10k",      name: "10 Tonnes",        desc: "10,000 kg total tonnage",           test: (c) => c.tonnage >= 10000 },
-    { id: "t100k",     name: "100 Tonnes",       desc: "100,000 kg total tonnage",          test: (c) => c.tonnage >= 100000 },
-    { id: "t1m",       name: "Kilotonne",        desc: "1,000,000 kg total tonnage",        test: (c) => c.tonnage >= 1e6 },
-    { id: "pr1",       name: "New Best",         desc: "Set your first PR",                 test: (c) => c.prs >= 1 },
-    { id: "pr10",      name: "PR Hunter",        desc: "Set 10 PRs",                        test: (c) => c.prs >= 10 },
-    { id: "pr50",      name: "Record Breaker",   desc: "Set 50 PRs",                        test: (c) => c.prs >= 50 },
-    { id: "s3",        name: "Three in a Row",   desc: "3-day training streak",             test: (c) => c.streakDays >= 3 },
-    { id: "s7",        name: "Perfect Week",     desc: "7-day training streak",             test: (c) => c.streakDays >= 7 },
-    { id: "s30",       name: "Unbreakable",      desc: "30-day training streak",            test: (c) => c.streakDays >= 30 },
-    { id: "wk4",       name: "One Month Strong", desc: "4 consecutive training weeks",      test: (c) => c.streakWeeks >= 4 },
-    { id: "wk12",      name: "A Full Season",    desc: "12 consecutive training weeks",     test: (c) => c.streakWeeks >= 12 },
-    { id: "wk52",      name: "One Year Iron",    desc: "52 consecutive training weeks",     test: (c) => c.streakWeeks >= 52 },
-    { id: "bench1",    name: "Bodyweight Bench", desc: "Bench press 1× bodyweight",         test: (c) => c.ratio.bench >= 1 },
-    { id: "squat15",   name: "Squat Club",       desc: "Squat 1.5× bodyweight",             test: (c) => c.ratio.squat >= 1.5 },
-    { id: "dead2",     name: "Double Bodyweight",desc: "Deadlift 2× bodyweight",            test: (c) => c.ratio.dead >= 2 },
-    { id: "ohp1",      name: "Overhead Boss",    desc: "Press 0.75× bodyweight",            test: (c) => c.ratio.ohp >= 0.75 },
-    { id: "cardio10",  name: "Road Work",        desc: "10 km of logged cardio",            test: (c) => c.cardioKm >= 10 },
-    { id: "cardio50",  name: "Long Haul",        desc: "50 km of logged cardio",            test: (c) => c.cardioKm >= 50 },
-    { id: "cardio100", name: "Endurance Athlete",desc: "100 km of logged cardio",           test: (c) => c.cardioKm >= 100 },
-    { id: "bigset",    name: "Volume King",      desc: "20+ sets in one session",           test: (c) => c.maxSetsSession >= 20 },
-    { id: "balanced",  name: "Balanced",         desc: "Every muscle group scoring 60+",    test: (c) => c.balanced },
-    { id: "variety",   name: "Well-Rounded",     desc: "Train 6+ muscle groups in a week",  test: (c) => c.groupsWeek >= 6 },
-    { id: "weighin",   name: "On the Record",    desc: "Log 10 bodyweight check-ins",       test: (c) => c.weighins >= 10 },
-    { id: "goal",      name: "Goal Reached",     desc: "Hit your target bodyweight",        test: (c) => c.goalHit },
-    { id: "mob60",     name: "Bend Don't Break", desc: "60 min of mobility work",           test: (c) => c.mobilityMin >= 60 },
-    { id: "nightowl",  name: "No Days Off",      desc: "Train on a weekend",                test: (c) => c.weekend },
+    { id: "first",     name: "First Blood",      desc: "Log your first workout",            tier: "major", test: (c) => c.sessions >= 1 },
+    { id: "w10",       name: "Getting Serious",  desc: "10 workouts logged",                tier: "minor", test: (c) => c.sessions >= 10 },
+    { id: "w50",       name: "Habit Formed",     desc: "50 workouts logged",                tier: "minor", test: (c) => c.sessions >= 50 },
+    { id: "w100",      name: "Centurion",        desc: "100 workouts logged",               tier: "major", test: (c) => c.sessions >= 100 },
+    { id: "t10k",      name: "10 Tonnes",        desc: "10,000 kg total tonnage",           tier: "minor", test: (c) => c.tonnage >= 10000 },
+    { id: "t100k",     name: "100 Tonnes",       desc: "100,000 kg total tonnage",          tier: "minor", test: (c) => c.tonnage >= 100000 },
+    { id: "t1m",       name: "Kilotonne",        desc: "1,000,000 kg total tonnage",        tier: "major", test: (c) => c.tonnage >= 1e6 },
+    { id: "pr1",       name: "New Best",         desc: "Set your first PR",                 tier: "major", test: (c) => c.prs >= 1 },
+    { id: "pr10",      name: "PR Hunter",        desc: "Set 10 PRs",                        tier: "minor", test: (c) => c.prs >= 10 },
+    { id: "pr50",      name: "Record Breaker",   desc: "Set 50 PRs",                        tier: "major", test: (c) => c.prs >= 50 },
+    { id: "s3",        name: "Three in a Row",   desc: "3-day training streak",             tier: "minor", test: (c) => c.streakDays >= 3 },
+    /* was a 7-day streak -> SESSIONS PER WEEK vs the weekly target */
+    { id: "s7",        name: "Perfect Week",     desc: "Meet your weekly session target",   tier: "minor", test: (c) => c.weeksAtTarget >= 1 },
+    /* was a 30-day streak -> 12 weeks meeting the weekly target */
+    { id: "s30",       name: "Unbreakable",      desc: "Meet your weekly target 12 weeks",  tier: "major", test: (c) => c.weeksAtTarget >= 12 },
+    { id: "wk4",       name: "One Month Strong", desc: "4 consecutive training weeks",      tier: "minor", test: (c) => c.streakWeeks >= 4 },
+    { id: "wk12",      name: "A Full Season",    desc: "12 consecutive training weeks",     tier: "major", test: (c) => c.streakWeeks >= 12 },
+    { id: "wk52",      name: "One Year Iron",    desc: "52 consecutive training weeks",     tier: "major", test: (c) => c.streakWeeks >= 52 },
+    { id: "bench1",    name: "Bodyweight Bench", desc: "Bench press 1× bodyweight",         tier: "major", test: (c) => c.ratio.bench >= 1 },
+    { id: "squat1",    name: "Bodyweight Squat", desc: "Squat 1× bodyweight",               tier: "major", test: (c) => c.ratio.squat >= 1 },
+    { id: "squat15",   name: "Squat Club",       desc: "Squat 1.5× bodyweight",             tier: "major", test: (c) => c.ratio.squat >= 1.5 },
+    { id: "dead2",     name: "Double Bodyweight",desc: "Deadlift 2× bodyweight",            tier: "major", test: (c) => c.ratio.dead >= 2 },
+    { id: "ohp1",      name: "Overhead Boss",    desc: "Press 0.75× bodyweight",            tier: "major", test: (c) => c.ratio.ohp >= 0.75 },
+    { id: "row1",      name: "Row Club",         desc: "Row 1× bodyweight",                 tier: "major", test: (c) => c.ratio.row >= 1 },
+    { id: "cardio10",  name: "Road Work",        desc: "10 km of logged cardio",            tier: "minor", test: (c) => c.cardioKm >= 10 },
+    { id: "cardio25",  name: "Steady Miles",     desc: "25 km of logged cardio",            tier: "minor", test: (c) => c.cardioKm >= 25 },
+    { id: "cardio50",  name: "Long Haul",        desc: "50 km of logged cardio",            tier: "minor", test: (c) => c.cardioKm >= 50 },
+    { id: "cardio100", name: "Endurance Athlete",desc: "100 km of logged cardio",           tier: "major", test: (c) => c.cardioKm >= 100 },
+    /* was 20+ RAW sets (junk volume) -> a hard, well-spread, in-limits session */
+    { id: "bigset",    name: "Big Session",      desc: "A hard session across several muscle groups, kept within your volume limits", tier: "major", test: (c) => c.bigSession >= BIG_SESSION_MIN },
+    { id: "balanced",  name: "Balanced",         desc: "Every muscle group scoring 60+",    tier: "major", test: (c) => c.balanced },
+    { id: "variety",   name: "Well-Rounded",     desc: "Train 6+ muscle groups in a week",  tier: "minor", test: (c) => c.groupsWeek >= 6 },
+    { id: "everygroup",name: "Head to Toe",      desc: "Train all 7 muscle groups in 4 weeks", tier: "major", test: (c) => c.groupsWeek >= 7 },
+    { id: "weighin",   name: "On the Record",    desc: "Log 10 bodyweight check-ins",       tier: "minor", test: (c) => c.weighins >= 10 },
+    { id: "firstweigh",name: "Baseline",         desc: "Log your first bodyweight check-in",tier: "minor", test: (c) => c.weighins >= 1 },
+    { id: "measure1",  name: "Tape Measure",     desc: "Log a body measurement (waist, chest or arm)", tier: "minor", test: (c) => c.measures >= 1 },
+    { id: "deload1",   name: "Recovery Week",    desc: "Take a lighter week after building up", tier: "major", test: (c) => c.deloads >= 1 },
+    { id: "goal",      name: "Goal Reached",     desc: "Hit your target bodyweight",        tier: "major", test: (c) => c.goalHit },
+    { id: "mob60",     name: "Bend Don't Break", desc: "60 min of mobility work",           tier: "minor", test: (c) => c.mobilityMin >= 60 },
+    { id: "mob180",    name: "Supple",           desc: "180 min of mobility work",          tier: "minor", test: (c) => c.mobilityMin >= 180 },
+    /* was "No Days Off" — that name shames rest and pushes daily training, the
+       exact pattern the deload guidance warns against. Same condition, honest
+       name. */
+    { id: "nightowl",  name: "Weekend Warrior",  desc: "Train on a weekend",                tier: "minor", test: (c) => c.weekend },
   ];
+
+  /* Effort-weighted sets in one session: the same stimulus-equivalent unit the
+     muscle card weighs by the exercise's own effort factor. NOT a raw set count
+     — a session of easy junk does not read the same as a session of hard work. */
+  function effortSetsSession(state, w) {
+    let t = 0;
+    for (const en of w.entries || []) {
+      const s = entryStats(en);
+      if (!s.sets) continue;
+      t += s.effSets * entryWeight(state, en);
+    }
+    return t;
+  }
+
+  /* The best "big session": the highest effort-weighted volume among sessions
+     that train several muscle groups and are NOT part of an over-MRV week. A
+     session of 20 sets on one movement — or any session in a week that already
+     exceeds a group's MRV — scores 0 here, so the badge refuses to pay for the
+     overreaching the muscle-balance card warns against. "Several groups" counts
+     PRIMARY groups, so one exercise repeated twenty times cannot pass itself off
+     as a balanced session. */
+  function bigSession(state, ws) {
+    const weekCache = {};
+    let best = 0;
+    for (const w of ws) {
+      const eff = effortSetsSession(state, w);
+      if (eff <= best) continue;
+      const groups = new Set();
+      for (const en of w.entries || []) {
+        const gs = entryGroups(state, en);
+        if (gs.length && GROUP_ORDER.includes(gs[0])) groups.add(gs[0]);
+      }
+      if (groups.size < BIG_SESSION_GROUPS) continue;
+      const wk = weekKeyOf(w.date);
+      const weekSets = weekCache[wk] || (weekCache[wk] = weekGroupSets(state, wk));
+      if (overMrvSplit(state, w, weekSets).over > 0) continue;
+      best = eff;
+    }
+    return Math.round(best * 10) / 10;
+  }
+
+  /* A week that is a deliberate step DOWN from a real training block: still
+     trained, but at roughly half the sets of the three weeks before. This is
+     recovery honesty — taking the deload the app's own guidance recommends — so
+     it is celebrated rather than hidden. */
+  function deloadWeeks(state) {
+    const v = volumeWeeks(state, 12);
+    let n = 0;
+    for (let i = 0; i < v.length; i++) {
+      const prior = v.slice(Math.max(0, i - 3), i).filter((x) => x.sessions > 0);
+      if (prior.length < 3) continue;
+      const mean = prior.reduce((a, x) => a + x.sets, 0) / prior.length;
+      if (mean >= 20 && v[i].sessions > 0 && v[i].sets > 0 && v[i].sets <= mean * 0.6) n++;
+    }
+    return n;
+  }
 
   function achievementContext(state) {
     const ws = state.workouts || [];
-    let tonnage = 0, maxSetsSession = 0, cardioKm = 0, mobilityMin = 0, weekend = false;
+    let tonnage = 0, cardioKm = 0, mobilityMin = 0, weekend = false;
     for (const w of ws) {
-      let ss = 0;
       for (const en of w.entries || []) {
-        const s = entryStats(en); ss += s.sets; tonnage += s.tonnage; cardioKm += s.dist / 1000;
+        const s = entryStats(en); tonnage += s.tonnage; cardioKm += s.dist / 1000;
         if (/stretch|mobility|yoga|foam/i.test(exInfo(state, en.id).n)) mobilityMin += s.time / 60;
       }
-      maxSetsSession = Math.max(maxSetsSession, ss);
       const dow = new Date(w.date + "T12:00:00").getDay();
       if (dow === 0 || dow === 6) weekend = true;
     }
@@ -1935,13 +2030,51 @@ const Engine = (() => {
     const trainedG = GROUP_ORDER.filter((g) => mg[g].setsPerWk > 0);
     const st = streaks(state);
     const goal = num(state.profile.goalWeightKg), cur = bodyweight(state);
+    /* Sessions per week against the weekly target — the SAME measure the XP
+       consistency scaler uses, so the badges and the XP cannot disagree. This
+       replaced the old consecutive-DAY streak conditions on s7/s30. */
+    const target = num(state.profile.weeklyTarget) || 4;
+    const byWeek = {};
+    for (const w of ws) { const k = weekKeyOf(w.date); byWeek[k] = (byWeek[k] || 0) + 1; }
+    const weeksAtTarget = Object.values(byWeek).filter((n) => n >= target).length;
     return {
-      sessions: ws.length, tonnage, maxSetsSession, cardioKm, mobilityMin, weekend,
+      sessions: ws.length, tonnage, cardioKm, mobilityMin, weekend,
       ratio, prs: prCount(state, 3650), streakDays: st.days, streakWeeks: st.weeks,
       balanced: trainedG.length >= 5 && trainedG.every((g) => mg[g].score >= 60),
       groupsWeek: trainedG.length, weighins: (state.bodylog || []).length,
+      weeksAtTarget,
+      measures: (state.bodylog || []).filter((b) => MEASURES.some((m) => num(b[m.key]) > 0)).length,
+      deloads: deloadWeeks(state),
+      bigSession: bigSession(state, ws),
       goalHit: goal > 0 && cur > 0 && Math.abs(cur - goal) <= Math.max(0.7, goal * 0.01),
     };
+  }
+
+  /* The PRs set in one session, for the celebration: one per exercise, whatever
+     moved. Built from the same prTable the count uses, so the names and the
+     count can never disagree. */
+  function sessionPRs(state, date) {
+    const out = [];
+    for (const r of prTable(state)) for (const p of r.prs) if (p.date === date && p.hit.length) { out.push({ id: r.id, name: r.name, hit: p.hit }); break; }
+    return out;
+  }
+
+  /* ---------- what deserves a celebration ---------- */
+  /* A full-screen moment is reserved for genuine milestones: a LEVEL UP, a RANK
+     promotion, a PR, or a "major" achievement unlock. A routine save produces an
+     empty list and stays an ordinary toast, and a "minor" badge is deliberately
+     NOT a milestone — so logging a set never makes the user dismiss a party. */
+  const MILESTONE = { LEVEL: "level", RANK: "rank", PR: "pr", BADGE: "badge" };
+  function milestoneEvents(before, after, prs, badgeIds) {
+    const ev = [];
+    const bl = (before && before.level) || 0, al = (after && after.level) || 0;
+    const bt = (before && before.title) || "", at = (after && after.title) || "";
+    if (al > bl) ev.push({ kind: MILESTONE.LEVEL, level: al, title: at });
+    if (al > bl && at && at !== bt) ev.push({ kind: MILESTONE.RANK, from: bt, to: at, level: al });
+    if (prs && prs.length) ev.push({ kind: MILESTONE.PR, items: prs });
+    const major = (badgeIds || []).map((id) => ACHIEVEMENTS.find((a) => a.id === id)).filter((a) => a && a.tier === "major");
+    if (major.length) ev.push({ kind: MILESTONE.BADGE, badges: major.map((a) => ({ id: a.id, name: a.name, desc: a.desc })) });
+    return ev;
   }
 
   function achievements(state) {
@@ -1990,6 +2123,7 @@ const Engine = (() => {
     exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
+    sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,

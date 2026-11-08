@@ -513,7 +513,7 @@
     host.append(wp);
 
     /* gamification */
-    const gam = el("section", { class: "card" });
+    const gam = el("section", { class: "card", id: "badges" });
     gam.innerHTML = `<div class="card-head"><h3>Progress &amp; badges</h3><span class="muted">${s.prsAll} PRs all-time</span></div>`;
     const badges = el("div", { class: "badges" });
     Engine.achievements(S).forEach((a) => {
@@ -1040,8 +1040,12 @@
       .map((en) => ({ ...en, sets: en.sets.filter((s) => Object.values(s).some((v) => v !== undefined && v !== null && v !== "")) }))
       .filter((en) => en.sets.length);
     if (!entries.length) { toast("Add at least one set", "warn"); return; }
+    const isNew = !draft.id;                          // an edit is not a fresh milestone
+    const before = Engine.summary(Store.state);       // level/title BEFORE this save
     const w = Store.upsertWorkout({ id: draft.id || undefined, date: draft.date, note: draft.note, entries });
+    const after = Engine.summary(Store.state);
     const sx = Engine.sessionXp(Store.state, w);
+    const prs = isNew ? Engine.sessionPRs(Store.state, w.date) : [];
     const newB = Engine.newAchievements(Store.state);
     Store.unlock(newB);
     draft = newDraft();
@@ -1050,16 +1054,70 @@
     const line = el("span");
     line.append(xpChip(w, sx), el("span", {}, suffix));
     toast(line, "good", 4200);
-    if (newB.length) showBadges(newB);
+    const ev = isNew ? Engine.milestoneEvents(
+      { level: before.level.level, title: before.title },
+      { level: after.level.level, title: after.title },
+      prs, newB) : [];
+    if (ev.length) celebrate(ev);
     render();
   }
 
-  function showBadges(ids) {
-    const names = ids.map((id) => Engine.ACHIEVEMENTS.find((a) => a.id === id)).filter(Boolean);
-    const box = el("div", { class: "unlock-box" });
-    box.innerHTML = `<h3>★ Achievement unlocked</h3>` + names.map((a) => `<p><b>${esc(a.name)}</b> — ${esc(a.desc)}</p>`).join("");
-    box.append(el("button", { class: "btn primary", onclick: closeModal }, "Nice"));
-    openModal(box, "narrow");
+  /* ================= celebration ================= */
+  /* A full-screen badge-get moment in the app's own Gen-3 language, for the
+     events that are genuinely milestones: a LEVEL UP, a RANK promotion, a PR,
+     and a MAJOR achievement unlock. Minor badges and ordinary saves stay as the
+     existing toast — a party for every set would be noise, and the brief says so.
+     It reuses the modal (so it inherits the focus trap, Escape and hardware-back
+     handling), and it is only ever opened from a save/check-in handler AFTER the
+     render — never on load — so it can never block the app from loading. */
+  const CELEB_HEAD = { level: "LEVEL UP!", rank: "RANK UP!", pr: "NEW PERSONAL BEST!", badge: "BADGE GET!" };
+  const CELEB_RANK = { level: 0, rank: 1, pr: 2, badge: 3 };   // the highest-priority event leads
+  function celebrate(events) {
+    try {
+      if (!events || !events.length) return;
+      const lead = events.slice().sort((a, b) => (CELEB_RANK[b.kind] || 0) - (CELEB_RANK[a.kind] || 0))[0];
+      const blocks = [];
+      for (const e of events) {
+        if (e.kind === "rank") blocks.push(`<p class="celeb-line"><b>${esc(e.from || "—")} → ${esc(e.to)}</b> <span class="muted">at level ${e.level}</span></p>`);
+        else if (e.kind === "level") blocks.push(`<p class="celeb-line"><b>Level ${e.level}</b> <span class="muted">${esc(e.title || "")}</span></p>`);
+        else if (e.kind === "pr") blocks.push(`<p class="celeb-line"><b>${esc(e.items.map((p) => p.name).join(", "))}</b> <span class="muted">— a new best</span></p>`);
+        else if (e.kind === "badge") blocks.push(e.badges.map((b) => `<p class="celeb-line"><b>${esc(b.name)}</b> <span class="muted">— ${esc(b.desc)}</span></p>`).join(""));
+      }
+      const box = el("div", { class: "celebrate" });
+      box.innerHTML =
+        `<div class="celeb-star" aria-hidden="true">★</div>
+         <div class="celeb-head">${esc(CELEB_HEAD[lead.kind] || "NICE WORK!")}</div>
+         <div class="celeb-body">${blocks.join("")}</div>
+         <div class="celeb-foot">
+           <button class="btn ghost" id="celeb-badges">See your badges</button>
+           <button class="btn primary" id="celeb-ok">Nice!</button>
+         </div>`;
+      openModal(box, "celebrate");
+      const ok = $("#celeb-ok", box); if (ok) ok.addEventListener("click", closeModal);
+      const vb = $("#celeb-badges", box); if (vb) vb.addEventListener("click", () => {
+        closeModal();
+        setView("dash");
+        const b = $("#badges");
+        if (b && b.scrollIntoView) b.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    } catch (e) {
+      // A celebration must never break a save. Fall back to the toast only.
+      console.warn("celebration skipped:", e && e.message);
+    }
+  }
+
+  /* Award any newly-earned badges after a data change and celebrate the genuine
+     ones. Shared by the check-in log and the profile save so every path that can
+     unlock a badge treats it the same way. */
+  function awardBadges(before, prs) {
+    const after = Engine.summary(Store.state);
+    const newB = Engine.newAchievements(Store.state);
+    Store.unlock(newB);
+    if (newB.length) toast(`${newB.length} badge${newB.length > 1 ? "s" : ""} unlocked!`, "good", 4200);
+    const ev = Engine.milestoneEvents(
+      { level: before.level.level, title: before.title },
+      { level: after.level.level, title: after.title }, prs || [], newB);
+    if (ev.length) celebrate(ev);
   }
 
   /* ================= import dialog ================= */
@@ -1633,6 +1691,7 @@
 
     $("#p-save", c).addEventListener("click", () => {
       const g = (id) => $(id).value;
+      const before = Engine.summary(S);      // level/title before this save, for the celebration
       p.name = g("#p-name"); p.sex = g("#p-sex");
       p.heightCm = parseFloat(g("#p-h")) || null;
       // Weight and body fat are not stored on the profile directly — they are
@@ -1663,6 +1722,7 @@
         toast(wKg ? "Saved — recorded a check-in for today" : "Profile saved", "good");
       }
       render();
+      if (wKg) awardBadges(before);       // a logged check-in can earn a badge
     });
     $("#b-add", bw).addEventListener("click", () => {
       const date = $("#b-date", bw).value;
@@ -1678,8 +1738,10 @@
       const any = Engine.num(entry.weightKg) > 0 || Engine.num(entry.bodyFatPct) > 0
         || Engine.MEASURES.some((m) => Engine.num(entry[m.key]) > 0);
       if (!any) { toast("Enter a weight or a measurement", "warn"); return; }
+      const before = Engine.summary(S);
       Store.addBodyLog(entry);
       toast("Check-in logged", "good"); render();
+      awardBadges(before);
     });
     $$(".bdel", bw).forEach((b) => b.addEventListener("click", () => { Store.deleteBodyLog(b.dataset.d); render(); }));
     $("#d-exp", data).addEventListener("click", () => download("iron-ledger-" + today() + ".json", Store.exportJSON(), "application/json"));
@@ -1844,6 +1906,7 @@
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
+    celebrate, awardBadges,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

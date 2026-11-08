@@ -540,9 +540,37 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 }
 .import-box textarea:focus { box-shadow: 0 0 0 2px var(--gold); }
 .detail-modal { display: grid; gap: .5rem; }
-.unlock-box { display: grid; gap: .35rem; text-align: center; }
-.unlock-box h3 { color: var(--gold); }
-.unlock-box p { font-size: .68rem; }
+
+/* ---------------- celebration (the badge-get moment) ---------------- */
+/* A full-screen Gen-3 "badge get" panel: gold frame, a chunky star, the event
+   named in the pixel font. It reuses the modal shell, so it inherits the focus
+   trap, Escape and the hardware-back handling — and it is only ever opened from
+   a save/check-in handler, never on load. */
+.modal-box.celebrate {
+  max-width: 420px; text-align: center;
+  border-color: var(--gold-l);
+  background: linear-gradient(180deg, #2a5a9a 0%, var(--blue-2) 14%, var(--blue-1) 100%);
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--gold), 0 8px 0 rgba(0, 0, 0, .5),
+              inset 0 0 0 2px rgba(255, 255, 255, .22);
+  animation: celeb-in .28s steps(5);
+}
+.celebrate { display: grid; gap: .5rem; justify-items: center; }
+.celeb-star {
+  font-size: 2.6rem; line-height: 1; color: var(--gold);
+  text-shadow: 0 0 0 var(--ink), 0 0 10px rgba(248, 208, 48, .8), var(--outline);
+  animation: celeb-pop .5s steps(6) both, celeb-glow 1.6s ease-in-out infinite alternate;
+}
+.celeb-head { font-family: var(--pxd); font-size: .82rem; color: var(--gold-l); text-shadow: var(--outline); letter-spacing: .04em; }
+.celeb-body { display: grid; gap: .3rem; width: 100%; }
+.celeb-line { margin: 0; font-family: 'Pixelify Sans', var(--px); font-size: .86rem; line-height: 1.5; color: #eaf4ff; }
+.celeb-line b { color: var(--gold-l); }
+.celeb-foot { display: flex; gap: .5rem; justify-content: center; margin-top: .3rem; flex-wrap: wrap; }
+@keyframes celeb-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes celeb-pop { from { transform: scale(.4) rotate(-18deg); } to { transform: none; } }
+@keyframes celeb-glow { from { filter: brightness(1); } to { filter: brightness(1.35); } }
+@media (prefers-reduced-motion: reduce) {
+  .modal-box.celebrate, .celeb-star { animation: none; }
+}
 .form-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .form-grid .grid-note { grid-column: 1 / -1; margin: 0; }
 .form-grid label, .mini-lab { display: flex; flex-direction: column; gap: .22rem; font-size: .6rem; color: #d8e8f0; }
@@ -573,7 +601,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 /* Press Start 2P and Silkscreen are caps-only. That is right for short labels
    and the GBA look, but exhausting to read in sentences, so anything that is
    a full sentence gets Pixelify Sans — still pixel, but with proper case. */
-.detail p, .weak p, .fix, .import-box p, .unlock-box p, .empty-chart,
+.detail p, .weak p, .fix, .import-box p, .empty-chart,
 .muted.small, .cmp, .toast, .entry-foot, .hist-s, .sub,
 .badge-txt small, .pick-meta, .lib-meta {
   font-family: 'Pixelify Sans', var(--px);
@@ -581,7 +609,7 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 }
 .detail p, .weak p { font-size: .84rem; line-height: 1.55; }
 .cmp, .entry-foot, .toast { font-size: .78rem; }
-.muted.small, .sub, .import-box p, .unlock-box p { font-size: .76rem; }
+.muted.small, .sub, .import-box p { font-size: .76rem; }
 .hist-s, .pick-meta, .lib-meta, .badge-txt small { font-size: .7rem; }
 .fix { font-size: .82rem; }
 
