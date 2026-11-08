@@ -390,17 +390,36 @@
     renderHUD();
   }
 
+  /* ---------- sessions this week (the ONLY progress figure displayed) ---------- */
+  /* The HUD and the dashboard chip show how many sessions are logged in this
+     Monday-start week against the profile's weekly session target. It is a
+     weekly count, never consecutive days: a rest day is not a broken run, and
+     neither wording ever scolds — progress is stated, never called late or
+     missed. The engine's day-run numbers (Engine.streaks) are deliberately left
+     alone: saved state and the engine's own badges still read them, they are
+     simply no longer shown. */
+  function weekProgress(state) {
+    const target = Math.max(1, parseInt(state.profile.weeklyTarget, 10) || 4);
+    const wk = Engine.weekKeyOf(Engine.dstr(new Date()));
+    const done = (state.workouts || []).filter((w) => Engine.weekKeyOf(w.date) === wk).length;
+    return { done, target, met: done >= target };
+  }
+  const weekHudText = (w) => `${w.done} / ${w.target} this week` + (w.met ? " · target met" : "");
+  const weekChipText = (w) => (w.met ? `Target met · ${w.done} of ${w.target} this week`
+                                     : `${w.done} of ${w.target} sessions this week`);
+
   function renderHUD() {
     const s = Engine.summary(S);
     $("#hud-level").innerHTML = `<b>Lv ${s.level.level}</b> <span class="muted">${esc(s.title)}</span>`;
     $("#hud-xpbar").style.width = s.level.pct + "%";
-    $("#hud-streak").innerHTML = s.streak.days > 0 ? `🔥 <b>${s.streak.days}d</b>` : `<span class="muted">no streak</span>`;
+    $("#hud-week").innerHTML = weekHudText(weekProgress(S));
     $("#btn-units").textContent = U.label().toUpperCase();
   }
 
   /* ================= dashboard ================= */
   function renderDash(host) {
     const s = Engine.summary(S);
+    const wk = weekProgress(S);
     const attrs = Engine.attributes(S, 28);
     const mg = Engine.muscleGroups(S, 28);
     const weak = Engine.weakPoints(S, 28);
@@ -422,7 +441,7 @@
             <span class="chip">${term("tonnage", `${fmt(s.tonnage / 1000, 1)} t lifted`)}</span>
             ${s.distKm > 0 ? `<span class="chip" title="Total distance logged across every session, all-time">${fmt(s.distKm, 1)} km logged</span>` : ""}
             ${s.density ? `<span class="chip" title="Share of all logged session time spent working rather than resting — all-time">${term("density", `${s.density}% work time (all-time)`)}</span>` : ""}
-            <span class="chip">${s.streak.days}d streak</span>
+            <span class="chip">${weekChipText(wk)}</span>
             <span class="chip">${term("pr", `${s.prs} ${pl(s.prs, "PR")} this month`)}</span>
           </div>
         </div>
@@ -1913,7 +1932,7 @@
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
-    celebrate, awardBadges, saveDraft,
+    celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

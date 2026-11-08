@@ -580,5 +580,108 @@ console.log("=== glossary follows the display: a renamed term's entry is renamed
   eq("no clinical muscle-status word survives in the engine source", CLINICAL.filter((w) => engine.includes(w)), []);
 }
 
+console.log("=== the HUD and the dashboard chip show sessions THIS WEEK, not a consecutive-day streak ===");
+{
+  /* The HUD (#hud-week) and the hero chip used to show a consecutive-day run —
+     "🔥 Nd" / "no streak" and "Nd streak". A day count implicitly pushes daily
+     training and reads as failure after a rest day, so both now show sessions
+     logged this week against the profile's weekly target. This loads the REAL
+     app.js behind a DOM stub and renders it, so it pins what the user actually
+     sees, not a copy of the wording. */
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
+
+  // (1) the old display is gone from the source AND the markup
+  eq("no '#hud-streak' hook survives in the UI", /hud-streak/.test(app + html), false);
+  truthy("the HUD slot is #hud-week", /id="hud-week"/.test(html));
+  eq("app.js no longer displays a consecutive-day value",
+     /streak\.days|d streak|no streak|🔥/.test(app), false);
+
+  // (2) render the real app at 0 / 2 / 4 / 5 sessions this week
+  const mkNode = (sel, created) => ({
+    sel, _html: "", className: "", dataset: {}, style: {}, children: [],
+    set innerHTML(v) { this._html = String(v); created.push(String(v)); }, get innerHTML() { return this._html; },
+    addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+    append(c) { this.children.push(c); }, prepend() {}, remove() {}, click() {}, focus() {},
+    contains: () => false, querySelector: () => mkNode("q", created), querySelectorAll: () => [],
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+  });
+  const uiEnv = (workouts, target) => {
+    const store = {}, nodes = {}, created = [];
+    const get = (sel) => (nodes[sel] = nodes[sel] || mkNode(sel, created));
+    const s = {
+      console: { log() {}, warn() {}, error() {}, info() {} },
+      Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
+      isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+      setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+      document: { addEventListener() {}, removeEventListener() {}, querySelector: get, querySelectorAll: () => [],
+        getElementById: get, createElement: () => mkNode("e", created), createElementNS: () => mkNode("ns", created), body: mkNode("body", created),
+        visibilityState: "visible", activeElement: null },
+      navigator: { clipboard: { writeText: async () => {} } },
+      localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+      Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+    };
+    s.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+    s.window = s; s.globalThis = s;
+    vm.createContext(s);
+    vm.runInContext(`localStorage.setItem("fitness-app-v1", JSON.stringify({
+      version:1, createdAt:"2026-01-01T00:00:00.000Z",
+      profile:{name:"C",sex:"M",heightCm:180,weightKg:82,weeklyTarget:${target},units:"kg"},
+      workouts:${JSON.stringify(workouts)}, bodylog:[], overrides:{}, custom:[], achievements:{}, settings:{seeded:true}
+    }));`, s);
+    const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/chart.js", "js/app.js"]
+      .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+    vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store};", s, { filename: "ui.js" });
+    return { A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, nodes, created };
+  };
+
+  // dates inside the CURRENT Monday-start week, whatever today is
+  const E0 = env({}).E;
+  const inWeek = (i) => { const t = new Date(E0.weekKeyOf(E0.dstr(new Date())) + "T12:00:00"); t.setDate(t.getDate() + i); return E0.dstr(t); };
+  const many = (n) => Array.from({ length: n }, (_, i) => ({ id: "w" + i, date: inWeek(i), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 60, r: 8 }] }] }));
+
+  const SHAME = ["behind", "late", "missed", "failed", "fail", "off-track", "off track"];
+  const NO_DAYCOUNT = /\b\d+\s*d\b|streak|streak|🔥|days in a row/i;
+
+  [0, 2, 4, 5].forEach((n) => {
+    const u = uiEnv(many(n), 4);
+    u.A.render();
+    const w = u.A.weekProgress(u.S.state);
+    const hud = u.nodes["#hud-week"].innerHTML;
+    const chipTxt = u.A.weekChipText(w);
+    console.log(`        ${n} sessions this week -> HUD "${hud}" · chip "${chipTxt}"`);
+
+    eq(`HUD at ${n} sessions this week vs a target of 4`, hud, u.A.weekHudText(w));
+    truthy(`HUD at ${n} shows sessions against the weekly target`, /^\d+ \/ 4 this week/.test(hud));
+    eq(`HUD at ${n} carries no consecutive-day number or streak word`, NO_DAYCOUNT.test(hud), false);
+    eq(`HUD at ${n} uses no shaming word`, SHAME.filter((x) => hud.toLowerCase().includes(x)), []);
+
+    truthy(`the dashboard chip at ${n} renders sessions-vs-target`,
+      u.created.some((h) => h.includes(`<span class="chip">${chipTxt}</span>`)));
+    truthy(`the chip at ${n} reads "N of 4 ... this week"`, /^\d+ of 4 sessions this week$/.test(chipTxt) || /^Target met · \d+ of 4 this week$/.test(chipTxt));
+    eq(`the chip at ${n} carries no consecutive-day number or streak word`, NO_DAYCOUNT.test(chipTxt), false);
+    eq(`the chip at ${n} uses no shaming word`, SHAME.filter((x) => chipTxt.toLowerCase().includes(x)), []);
+
+    // met/exceeded says so warmly, and never warns
+    if (n >= 4) eq(`at ${n} sessions the target reads as met`, w.met && /target met/i.test(hud) && /Target met/.test(chipTxt), true);
+    else eq(`at ${n} sessions an in-progress week is not called a failure`, w.met, false);
+  });
+
+  // (3) the target is the profile's, not a hard-coded 4
+  const u5 = uiEnv(many(2), 5);
+  eq("a custom weeklyTarget of 5 is what the HUD uses", u5.A.weekHudText(u5.A.weekProgress(u5.S.state)), "2 / 5 this week");
+
+  // (4) the engine is untouched: the day-run numbers still exist for saved state
+  const ee = env({});
+  truthy("Engine.streaks is still exported and still computes day runs",
+    typeof ee.E.streaks === "function" && typeof ee.E.summary(ee.S.state).streak.days === "number");
+
+  // (5) the glossary is reconciled: no entry for a term the UI no longer shows
+  const G = require(path.join(B, "js", "glossary.js"));
+  eq("the glossary has no 'streak' entry (the UI no longer shows the word)",
+     G.TERMS.filter((t) => /streak/i.test(t.term) || (t.aliases || []).some((a) => /streak/i.test(a))).map((t) => t.id), []);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
