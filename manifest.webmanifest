@@ -1,0 +1,14 @@
+{
+  "name": "Iron Ledger — Workout Tracker",
+  "short_name": "Iron Ledger",
+  "description": "Local-first gamified workout tracker with game-style stat charts.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c13",
+  "theme_color": "#0b1018",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

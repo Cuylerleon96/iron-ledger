@@ -1,0 +1,9 @@
+/* Self-hosted pixel fonts — SIL Open Font License 1.1. Embedded so the
+   packaged app renders with no network.
+   Press Start 2P + Silkscreen = caps-only display/UI (the GBA look).
+   Pixelify Sans = true lowercase, used for prose so it stays readable. */
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:block;src:url('../fonts/PressStart2P-400.woff2') format('woff2');}
+@font-face{font-family:'Silkscreen';font-style:normal;font-weight:400;font-display:block;src:url('../fonts/Silkscreen-400.woff2') format('woff2');}
+@font-face{font-family:'Silkscreen';font-style:normal;font-weight:700;font-display:block;src:url('../fonts/Silkscreen-700.woff2') format('woff2');}
+@font-face{font-family:'Pixelify Sans';font-style:normal;font-weight:400;font-display:block;src:url('../fonts/PixelifySans-400.woff2') format('woff2');}
+@font-face{font-family:'Pixelify Sans';font-style:normal;font-weight:600;font-display:block;src:url('../fonts/PixelifySans-600.woff2') format('woff2');}

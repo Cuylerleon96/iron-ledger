@@ -1,0 +1,12 @@
+{
+  "appId": "com.cuyler.ironledger",
+  "appName": "Iron Ledger",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0d3b38"
+  }
+}
