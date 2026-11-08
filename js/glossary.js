@@ -53,9 +53,9 @@ const Glossary = (() => {
       real: "Each logged set is multiplied by the movement's effort weight (its `g`/effort factor, shown as \"Effort weight\" on the exercise screen, 1.00 = baseline) to give an effort set. Raw sets are the unweighted count. Totals are effort sets per week against the muscle group's MEV / MAV / MRV landmarks.",
     },
     {
-      id: "set-type", term: "Set type", aliases: ["Set type", "Warm-up", "Drop set", "Failure set"],
-      plain: "What kind of set it was. A warm-up is a ramp, not working work: it is logged and shown, but it is not counted as a working set and adds no tonnage. A drop set or a set taken to failure is harder than a straight set, so it counts for more effort.",
-      real: "One field per set (`ty`), one value: warm-up, drop or failure (unset = a straight working set). A warm-up is filtered out of entryStats' working sets and so adds no volume, no tonnage, no reps and no effort. A drop set and a failure set each contribute more than one effort set (×1.25 and ×1.2) to the muscle-group stimulus — the same path the per-exercise effort weight already uses. Raw working-set counts are unchanged.",
+      id: "set-type", term: "Set type", aliases: ["Set type", "Drop set", "Failure set"],
+      plain: "What kind of set it was. A drop set or a set taken to failure is harder than a straight working set, so it counts for more effort.",
+      real: "One field per set (`ty`), one value: drop or failure (unset = a straight working set). A drop set and a failure set each contribute more than one effort set (×1.25 and ×1.2) to the muscle-group stimulus — the same path the per-exercise effort weight already uses. Raw working-set counts are unchanged.",
     },
     {
       id: "rpe", term: "RPE", aliases: ["RPE", "effort (RPE)"],

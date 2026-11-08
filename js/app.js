@@ -225,19 +225,18 @@
 
   /* ================= quick-set parser ================= */
   /* Understands the notes-app shorthand: 100x10, 100 x 10 @8, 60s, 1:30, 5km 24:00
-     and, in front of any of those, a set type: "warmup 60x10", "drop 100x8",
-     "failure 100x5" (short forms w/d/f need a separator: "w: 60x10").
+     and, in front of any of those, a set type: "drop 100x8",
+     "failure 100x5" (short forms d/f need a separator: "d: 100x8").
      An unrecognised prefix is left untouched, so a plain set parses exactly as
      before. The canonical words are the same ones the notes exporter writes. */
   function takeSetType(t) {
     const words = [
-      [/^(?:warm-?up|wu)\b[\s:.,\-–—]*/, "warmup"],
       [/^(?:drop(?:set)?)\b[\s:.,\-–—]*/, "drop"],
       [/^(?:fail(?:ure)?)\b[\s:.,\-–—]*/, "failure"],
     ];
     for (const [re, v] of words) if (re.test(t)) return { value: v, rest: t.replace(re, "") };
-    const short = t.match(/^([wdf])(?:\s*[:.]\s*|\s+)/);
-    if (short) return { value: { w: "warmup", d: "drop", f: "failure" }[short[1]], rest: t.slice(short[0].length) };
+    const short = t.match(/^([df])(?:\s*[:.]\s*|\s+)/);
+    if (short) return { value: { d: "drop", f: "failure" }[short[1]], rest: t.slice(short[0].length) };
     return { value: undefined, rest: t };
   }
 
@@ -844,7 +843,7 @@
       ${cmpBanner}
       ${targetLine}
       <div class="sets" id="sets-${idx}"></div>
-      <div class="muted small settype-hint">${term("set-type", "Set type")} — a warm-up is not a working set; a drop or failure set counts for more effort.</div>
+      <div class="muted small settype-hint">${term("set-type", "Set type")} — a drop or failure set counts for more effort than a straight set.</div>
       <div class="entry-rest">
         <label>Rest between sets <input class="inp num rest-default" type="number" inputmode="numeric" min="0" step="5" placeholder="secs" value="${en.restDefault ?? ""}" style="width:72px"> sec</label>
         <span class="muted small">Applies to every set — blank sets fall back to it.</span>
@@ -855,7 +854,6 @@
       </div>
       <div class="entry-foot">
         <span>${st.sets} ${pl(st.sets, "set")}</span>
-        ${st.warmups ? `<span>+${st.warmups} warm-up</span>` : ""}
         ${st.tonnage ? `<span>${fmt(U.w(st.tonnage) / 1, 0)} ${U.label()} tonnage</span>` : ""}
         ${st.est1RM ? `<span>${term("e1rm", "best e1RM")} <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
         ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
@@ -922,13 +920,12 @@
        placeholder is not a label, and a bare "reps"/"secs" box told a screen
        reader nothing about WHICH set it belonged to. */
     const sl = `Set ${si + 1}`;
-    /* Set type. It is a real control, not a tag: choosing Warm-up takes the set
-       out of the working-set volume and tonnage, and Drop / Failure feed the
-       effort path harder. The words come from the engine's own table. */
-    const tyOpts = [["", "Set"], ["warmup", "Warm-up"], ["drop", "Drop"], ["failure", "Failure"]];
-    const tySel = `<select class="mini setty" aria-label="${sl} type" title="Set type — a warm-up is not counted as a working set; a drop or failure set counts for more effort.">${tyOpts.map(([v, l]) => `<option value="${v}" ${(s.ty || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
-    if (s.ty === "warmup") row.classList.add("is-warmup");
-    else if (s.ty === "drop" || s.ty === "failure") row.classList.add("is-hard");
+    /* Set type. It is a real control, not a tag: choosing Drop or Failure feeds
+       the effort path harder than a straight set. The words come from the
+       engine's own table. */
+    const tyOpts = [["", "Set"], ["drop", "Drop"], ["failure", "Failure"]];
+    const tySel = `<select class="mini setty" aria-label="${sl} type" title="Set type — a drop or failure set counts for more effort than a straight set.">${tyOpts.map(([v, l]) => `<option value="${v}" ${(s.ty || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+    if (s.ty === "drop" || s.ty === "failure") row.classList.add("is-hard");
     const f = (k, ph, w = 56, aria = "") => {
       let v = s[k];
       if (k === "w" && v !== undefined && v !== null && v !== "") v = fmtW(U.w(Engine.num(v)));
@@ -978,7 +975,6 @@
     $(".setty", row).addEventListener("change", (e) => {
       const v = e.target.value;
       if (v) s.ty = v; else delete s.ty;
-      row.classList.toggle("is-warmup", v === "warmup");
       row.classList.toggle("is-hard", v === "drop" || v === "failure");
       updateEntryFoot(idx);
     });
@@ -997,7 +993,6 @@
     const foot = $$(".card.entry")[idx] && $(".entry-foot", $$(".card.entry")[idx]);
     if (!foot) return;
     foot.innerHTML = `<span>${st.sets} ${pl(st.sets, "set")}</span>
-      ${st.warmups ? `<span>+${st.warmups} warm-up</span>` : ""}
       ${st.tonnage ? `<span>${fmt(U.w(st.tonnage))} ${U.label()} tonnage</span>` : ""}
       ${st.est1RM ? `<span>best e1RM <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
       ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
@@ -1264,9 +1259,9 @@
   }
 
   function setText(s, mode) {
-    // the set type is shown, not hidden: a warm-up or a drop set has to be
+    // the set type is shown, not hidden: a drop set or a failure set has to be
     // readable in history, or the fact was only ever collected to sit unread.
-    const ty = s.ty === "warmup" ? "W/U " : s.ty === "drop" ? "DROP " : s.ty === "failure" ? "FAIL " : "";
+    const ty = s.ty === "drop" ? "DROP " : s.ty === "failure" ? "FAIL " : "";
     const rpe = s.rpe ? `@${s.rpe}` : "";
     if (mode === "weight_reps") return `${ty}${fmtW(U.w(Engine.num(s.w)))}×${s.r ?? "?"}${rpe}`;
     if (mode === "reps") return `${ty}${s.r ?? "?"} reps${rpe}`;

@@ -305,27 +305,22 @@ const Engine = (() => {
 
   /* ---------- set types ---------- */
   /* What KIND of set this was — one fact, one field (`s.ty`). It is not a
-     decorative tag: it changes what the set is worth, in exactly two ways.
-       - a warm-up is NOT a working set: it adds no volume, no tonnage and no
-         effort. It is still logged and shown, just counted separately so the
-         numbers the app reports stay honest about what is a working set.
-       - a drop set and a failure set are harder than a straight set, so they feed
-         the effort path (muscleGroups' effSets) at more than one working set, the
-         same path the per-exercise effort weight already uses.
+     decorative tag: a drop set and a failure set are harder than a straight set,
+     so they feed the effort path (muscleGroups' effSets) at more than one working
+     set, the same path the per-exercise effort weight already uses.
      The multipliers are deliberate heuristics, NOT measurements: the smallest
      numbers that make the difference visible, kept here in one place so there is
-     one thing to tune. A set carries ONE type — the values are mutually exclusive. */
+     one thing to tune. A set carries ONE type — the values are mutually exclusive;
+     an unset or unrecognised value is a straight working set. */
   const SET_TYPES = {
-    normal:  { label: "Set",      effort: 1,    working: true  },
-    warmup:  { label: "Warm-up",  effort: 0,    working: false },
-    drop:    { label: "Drop set", effort: 1.25, working: true  },
-    failure: { label: "Failure",  effort: 1.2,  working: true  },
+    normal:  { label: "Set",      effort: 1    },
+    drop:    { label: "Drop set", effort: 1.25 },
+    failure: { label: "Failure",  effort: 1.2  },
   };
   const setType = (s) => (s && SET_TYPES[s.ty]) ? s.ty : "normal";
   const setTypeLabel = (s) => SET_TYPES[setType(s)].label;
-  const isWarmupSet = (s) => !!(s && s.ty === "warmup");
   /* How much a set counts as a working set for the effort path: 1 for a straight
-     set, more for a drop or failure set, 0 for a warm-up. */
+     set, more for a drop or failure set. */
   const setEffort = (s) => SET_TYPES[setType(s)].effort;
   
   /* Sets logged before bodyweight-aware scoring shipped — or imported from an
@@ -366,12 +361,7 @@ const Engine = (() => {
       if (mode === "weight_distance") return num(s.d) > 0;
       return false;
     });
-    /* A warm-up is logged and shown but is NOT a working set: it contributes no
-       volume, no tonnage, no reps and no effort. Everything below runs on the
-       working sets only; the warm-ups are counted so the UI can say so out loud
-       instead of quietly folding a ramp into the totals. */
-    const sets = valid.filter((s) => !isWarmupSet(s));
-    const warmups = valid.length - sets.length;
+    const sets = valid;
     let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, bestReps = 0, tonnage = 0, rpeSum = 0, rpeN = 0;
     let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0, effSets = 0;
     for (const s of sets) {
@@ -412,7 +402,7 @@ const Engine = (() => {
       workSec += num(s.r) * REP_SECONDS + num(s.t);
     }
     return {
-      sets: sets.length, warmups, effSets, volume, reps, time, dist, tonnage,
+      sets: sets.length, effSets, volume, reps, time, dist, tonnage,
       est1RM: mode === "weight_reps" ? best : 0,
       // Epley is only trustworthy to ~12 reps, so est1RM is capped there and a
       // 12-rep and a 20-rep set at the same load estimate the same. Exposed so
@@ -1221,7 +1211,7 @@ const Engine = (() => {
         /* The set type rides in front of the set, and only when it is set: a
            straight set stays byte-for-byte what he wrote. parseSet reads the same
            word back, so the notes round-trip is lossless. */
-        const tyTok = s.ty === "warmup" ? "warmup " : s.ty === "drop" ? "drop " : s.ty === "failure" ? "failure " : "";
+        const tyTok = s.ty === "drop" ? "drop " : s.ty === "failure" ? "failure " : "";
         let body;
         if (mode === "time") body = `${r2(num(s.t) || num(s.r))}s`;
         else if (mode === "weight_time") body = `${r2(s.w)}x${r2(s.t)}s`;
@@ -1957,7 +1947,7 @@ const Engine = (() => {
   return {
     DAY, ATTRIBUTES, GROUP_ORDER, LANDMARKS, STANDARDS, TIERS, ACHIEVEMENTS,
     clamp, num, interp, tierOf, est1RM, setVolume, entryStats, liftKey, isCoreLift,
-    SET_TYPES, setType, setTypeLabel, isWarmupSet, setEffort,
+    SET_TYPES, setType, setTypeLabel, setEffort,
     exInfo, exName, exMode, exGroups, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,

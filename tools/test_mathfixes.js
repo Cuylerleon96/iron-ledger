@@ -906,20 +906,15 @@ console.log("\n=== 31. the seed affordance is reachable (item 5b) ===");
 
 console.log("\n=== 32. set types change what a set counts for ===");
 {
-  /* The type is a fact with consequences, not a decorative tag: a warm-up stops
-     being a working set, and a drop / failure set feeds the effort path harder. */
+  /* The type is a fact with consequences, not a decorative tag: a drop / failure
+     set feeds the effort path harder than a straight set. A warm-up is NOT a
+     selectable type — the user rejected it, so it must not appear in the table,
+     the parser or the UI (test_quickadd proves the parser/UI side). */
   const e = env();
   const straight = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 100, r: 10 }, { w: 100, r: 10 }] });
   eq("two straight sets are two working sets", straight.sets, 2);
   eq("...two effort sets", straight.effSets, 2);
   eq("...and 2,000 kg of tonnage", straight.tonnage, 2000);
-
-  const withWarm = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 60, r: 10, ty: "warmup" }, { w: 100, r: 10 }] });
-  eq("a warm-up is NOT a working set", withWarm.sets, 1);
-  eq("...it is reported separately", withWarm.warmups, 1);
-  eq("...it adds no tonnage", withWarm.tonnage, 1000);
-  eq("...no volume", withWarm.volume, 1000);
-  eq("...and no effort", withWarm.effSets, 1);
 
   const drop = e.E.entryStats({ mode: "weight_reps", sets: [{ w: 100, r: 10 }, { w: 100, r: 10, ty: "drop" }] });
   eq("a drop set is still a working set", drop.sets, 2);
@@ -932,11 +927,14 @@ console.log("\n=== 32. set types change what a set counts for ===");
   const harder = e.E.muscleGroups(base({ workouts: [wk(iso(1), [{ w: 40, r: 10 }, { w: 40, r: 10, ty: "drop" }])] }), 28).Chest;
   eq("the raw working-set count is unchanged", harder.setsPerWk, plain.setsPerWk);
   truthy("the effort the score reads goes up", harder.effPerWk > plain.effPerWk);
-  const onlyWarm = e.E.muscleGroups(base({ workouts: [wk(iso(1), [{ w: 40, r: 10, ty: "warmup" }])] }), 28).Chest;
-  eq("a warm-up-only session is not training", onlyWarm.setsPerWk, 0);
 
+  // warm-up is gone: not a selectable type, and a stray "warmup" value is just a
+  // straight working set rather than a special case the engine still honours
   const e2 = env();
-  eq("the type table is exposed in one place", Object.keys(e2.E.SET_TYPES), ["normal", "warmup", "drop", "failure"]);
+  eq("the type table is exposed in one place", Object.keys(e2.E.SET_TYPES), ["normal", "drop", "failure"]);
+  eq("warm-up is not a selectable type", Object.keys(e2.E.SET_TYPES).includes("warmup"), false);
+  eq("a stray 'warmup' ty reads as a straight set", e2.E.setType({ ty: "warmup" }), "normal");
+  eq("...and is counted, not excluded", e2.E.entryStats({ mode: "weight_reps", sets: [{ w: 60, r: 10, ty: "warmup" }] }).sets, 1);
 }
 
 console.log("\n=== 33. body measurements: same log, trended back ===");

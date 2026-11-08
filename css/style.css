@@ -470,12 +470,9 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
    because the fields added up to more than the card is wide on a phone */
 .set-row .x { flex: 0 0 auto; padding: .26rem .4rem; }
 .set-row .set-n, .set-row .times, .set-row .unit, .set-row .e1 { flex: 0 0 auto; }
-/* The set-type control: compact, but a real control worth reaching. A warm-up row
-   reads quieter and a drop/failure row reads louder, so the shading matches the
-   fact that the set counts for less (not a working set) or more. */
+/* The set-type control: compact, but a real control worth reaching. A drop/failure
+   row reads louder, so the shading matches the fact that the set counts for more. */
 .set-row .setty { flex: 0 0 auto; padding: .24rem .2rem; font-size: .62rem; max-width: 6.6rem; }
-.set-row.is-warmup { opacity: .82; }
-.set-row.is-warmup .set-n { color: #b8d0d8; }
 .set-row.is-hard { border-color: var(--gold); }
 .set-row.is-hard .set-n { color: var(--gold-l); }
 .entry-rest {
