@@ -274,9 +274,18 @@ const Engine = (() => {
      it inflated a machine movement. Anything naming its own load source is not a
      bodyweight movement, however bodyweight-like its pattern looks. */
   const SUPPLIES_LOAD = /machine|smith|cable|lever|assisted|band|sled|weighted vest/i;
+  /* A name is bodyweight when EITHER list recognises it. The gate and the factor
+     table were two independent lists, so a movement could carry a factor (0.85
+     for every lunge, 1.00 for a calf raise) and still be REFUSED by the gate —
+     the factor was dead code, and worse, entryStats then filtered its unweighted
+     sets out of the totals entirely. The gate is now DERIVED from the factor
+     table: anything with a factor is admitted, so the two can never disagree
+     again. Equipment that supplies its own load is still excluded. */
+  const hasBwFactor = (name) => BW_FACTOR.some(([re]) => re.test(String(name || "")));
   const isBodyweight = (name) => {
     const n = String(name || "");
-    return BW_NAME.test(n) && !SUPPLIES_LOAD.test(n);
+    if (SUPPLIES_LOAD.test(n)) return false;
+    return BW_NAME.test(n) || hasBwFactor(n);
   };
 
   /* Epley: 1RM = w·(1 + r/30). Accurate to ~12 reps; flagged as an estimate. */
@@ -1720,6 +1729,7 @@ const Engine = (() => {
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
+    BW_FACTOR, BW_NAME, SUPPLIES_LOAD, hasBwFactor,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };

@@ -35,6 +35,16 @@
   let draft = null;          // workout being logged
   let libIndex = null;
 
+  /* One place decides how a tracking-mode override is persisted, so the Log
+     screen and the exercise detail modal cannot drift apart. The Log control
+     used to persist only when String(id).length > 2, which silently skipped
+     every library id from 9 to 99 — including Bench Press, id 73 — while the
+     modal persisted unconditionally. */
+  function setTrackMode(id, mode) {
+    if (id === undefined || id === null) return;
+    Store.setOverride(id, { mode });
+  }
+
   /* ================= toasts ================= */
   function toast(msg, kind = "", ms = 2600) {
     const t = el("div", { class: "toast " + kind }, msg);
@@ -326,7 +336,7 @@
         `<span class="attr-name">${g}</span>
          <span class="attr-tier status-${m.status.replace(/[^a-z]/gi, "")}">${m.status}</span>
          <span class="attr-score">${m.effPerWk}/wk</span>
-         <span class="muted mraw">${m.setsPerWk} raw</span>`));
+         <span class="muted mraw">${m.setsPerWk} raw sets</span>`));
     });
     mb.append(mlist);
     const barHost = el("div", { class: "bar-host" });
@@ -334,11 +344,11 @@
     host.append(mb);
     Chart.radar(mbHost, {
       title: "muscles", fill: "#ffd166",
-      axes: Engine.GROUP_ORDER.map((g) => ({ label: g, value: mg[g].score, tier: mg[g].setsPerWk + "/wk", valText: "", color: "#f8d030" })),
+      axes: Engine.GROUP_ORDER.map((g) => ({ label: g, value: mg[g].score, tier: mg[g].effPerWk + "/wk", valText: "", color: "#f8d030" })),
     });
     Chart.bars(barHost, {
       unit: "",
-      items: Engine.GROUP_ORDER.map((g) => ({ label: g, value: mg[g].setsPerWk, status: mg[g].status, marker: mg[g].landmarks.mev })),
+      items: Engine.GROUP_ORDER.map((g) => ({ label: g, value: mg[g].effPerWk, status: mg[g].status, marker: mg[g].landmarks.mev })),
     });
 
     /* weak points */
@@ -664,7 +674,7 @@
 
     $(".mode-sel", card).addEventListener("change", (e) => {
       en.mode = e.target.value;
-      if (en.id && String(en.id).length > 2) Store.setOverride(en.id, { mode: en.mode });
+      setTrackMode(en.id, en.mode);
       render();
     });
     $(".rm", card).addEventListener("click", () => { draft.entries.splice(idx, 1); render(); });
@@ -1045,7 +1055,6 @@
           <select class="mini" id="dt-mode">${["weight_reps", "reps", "time", "weight_time", "distance_time", "weight_distance"]
             .map((m) => `<option value="${m}" ${m === Engine.exMode(S, id) ? "selected" : ""}>${m.replace("_", " × ")}</option>`).join("")}</select>
         </label>
-        <button class="btn ghost tiny" id="dt-hide">${S.overrides[id] ? "Unhide" : "Hide from lists"}</button>
       </div>
       <div class="row">
         <label class="mini-lab">Target (${Engine.exMode(S, id) === "weight_reps" ? U.label() + " e1RM" : "best"})
@@ -1059,7 +1068,7 @@
       <div class="row end"><button class="btn ghost" id="dt-x">Close</button><button class="btn primary" id="dt-log">Log this now</button></div>`;
     openModal(box, "wide");
     $("#dt-x").addEventListener("click", closeModal);
-    $("\#dt-mode").addEventListener("change", (e) => { Store.setOverride(id, { mode: e.target.value }); toast("Tracking mode updated"); render(); });
+    $("\#dt-mode").addEventListener("change", (e) => { setTrackMode(id, e.target.value); toast("Tracking mode updated"); render(); });
     const wt = $("#dt-wt", box);
     if (wt) wt.addEventListener("change", () => {
       const v = parseFloat(wt.value);
@@ -1468,6 +1477,6 @@
   };
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
-  window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast,
+  window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

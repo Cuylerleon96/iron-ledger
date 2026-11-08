@@ -1,12 +1,14 @@
 {
-  "versionCode": 35,
-  "versionName": "1.0.34",
+  "versionCode": 36,
+  "versionName": "1.0.35",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "82dd03df7b28b30ad7536a7748346d5a5c165d52ff8d342596713e38748a92c5",
-  "sizeBytes": 3275827,
+  "sha256": "26d238372f543e8b7d46e517bc9e67b11d23309e1c9849bab7df6a506f80ca55",
+  "sizeBytes": 3276255,
   "published": "2026-11-08",
   "notes": [
-    "There is now a first-run walkthrough: six pages covering what the app is and that it is local-only, how to log a set in shorthand, what the six attributes mean, what the muscle-balance figure and weak-point advice mean, where your data lives and how backups work, and the self-update path. Skippable from every page, and it never blocks the app loading",
-    "It runs EXACTLY ONCE. There is a versioned flag and no other re-show path, so it will come back only if a future version deliberately bumps it. Critically, there is NO migration that fills the flag in for existing users - a missing flag means show - which is precisely why you will see it once on this update, and a brand-new install also sees it once"
+    "Muscle-balance card: the bars and the radar now use the same effort-weighted scale as the status and score, with the raw set count still shown and labelled raw",
+    "Bodyweight load factors: the gate now admits every movement that has a factor, so lunges, split squats, step-ups, calf raises, inverted rows and v-ups are counted instead of being silently dropped",
+    "Track-as: the Log screen's mode override now saves for short exercise ids too - it used to skip ids 9 to 99, including Bench Press id 73",
+    "Removed the dead 'Hide from lists' button from the exercise detail modal - it had no listener and did nothing"
   ]
 }

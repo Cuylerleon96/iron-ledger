@@ -33,7 +33,51 @@ function env() {
   };
   s.globalThis = s; vm.createContext(s);
   vm.runInContext(SRC + "\n;globalThis.__X={Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
-  return { E: s.__X.Engine, S: s.__X.Store };
+  return { E: s.__X.Engine, S: s.__X.Store, LIB: s.__X.EXERCISE_LIB };
+}
+
+/* Loads the REAL app.js behind a stub DOM with a capturing Chart, so the tests
+   can exercise the actual render path (what the card passes to the chart) and
+   the actual persistence path rather than a copy of the logic. */
+function appEnv(seed) {
+  const store = {};
+  const calls = { radar: [], bars: [], line: [], multi: [], heatmap: [] };
+  const stubEl = () => ({
+    addEventListener() {}, removeEventListener() {}, append() {}, prepend() {},
+    setAttribute() {}, removeAttribute() {}, remove() {}, click() {}, focus() {},
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    style: {}, dataset: {}, children: [], innerHTML: "", textContent: "", value: "",
+    querySelector: () => stubEl(), querySelectorAll: () => [], closest: () => stubEl(),
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+  });
+  const s = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
+    isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+    setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+    document: {
+      addEventListener() {}, removeEventListener() {},
+      querySelector: () => stubEl(), querySelectorAll: () => [], getElementById: () => stubEl(),
+      createElement: () => stubEl(), createElementNS: () => stubEl(), body: stubEl(), visibilityState: "visible",
+    },
+    navigator: { clipboard: { writeText: async () => {} } },
+    localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+    Blob: function () {}, URL: { createObjectURL: () => "blob:x" },
+    module: { exports: {} },
+  };
+  s.Chart = {
+    radar: (h, o) => calls.radar.push(o), bars: (h, o) => calls.bars.push(o),
+    line: (h, o) => calls.line.push(o), multi: (h, o) => calls.multi.push(o),
+    heatmap: (h, o) => calls.heatmap.push(o),
+  };
+  s.window = s; s.globalThis = s;
+  vm.createContext(s);
+  const state = base(seed || {});
+  vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(state))});`, s);
+  const src = ["js/data.js", "js/engine.js", "js/store.js", "js/app.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+  vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
+  return { A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, LIB: s.__X.EXERCISE_LIB, calls };
 }
 const iso = (off) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - off); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const base = (over = {}) => Object.assign({
@@ -675,6 +719,103 @@ console.log("\n=== 24. derived load factors: rows, leg raises, nordics, plank ==
   eq("...but it is still recognised as a bodyweight movement", e.E.isBodyweight("Plank"), true);
   const plankE1 = e.E.entryStats({ mode: "weight_reps", name: "Plank", sets: [{ r: 10, bwKg: BW }] }).est1RM;
   eq("so a rep-logged plank invents no tonnage and no 1RM", plankE1, 0);
+}
+
+console.log("\n=== 25. muscle-balance card: bars, radar and status share ONE scale ===");
+{
+  /* The card drew its BARS and its radar axis label from mg[g].setsPerWk (the raw
+     set count) while the status word and the score beside them came from the
+     effort-weighted effPerWk. So it contradicted itself: for Core it drew a bar
+     at 2 and printed a status derived from 3.8. Bars, radar label and the
+     MEV/MAV/MRV markers must all ride the effort-weighted scale the status uses;
+     the raw count stays visible but labelled raw. */
+  const h = appEnv({ workouts: [{ id: "w1", date: iso(2), note: "", entries: [
+    { id: 171, name: "Incline Crunches", mode: "weight_reps", sets: [{ w: 10, r: 10 }, { w: 10, r: 10 }, { w: 10, r: 10 }] },
+    { id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 80, r: 5 }, { w: 80, r: 5 }] },
+  ] }] });
+  const mg = h.E.muscleGroups(h.S.state, 28);
+  h.A.render();
+  const bars = h.calls.bars[h.calls.bars.length - 1];           // the muscle bars
+  const radar = h.calls.radar.filter((o) => o.title === "muscles")[0];
+  truthy("the muscle-balance card rendered a bar chart", !!bars);
+  truthy("...and its radar", !!radar);
+  eq("the bars are drawn on the effort-weighted scale the status uses",
+    bars.items.map((i) => i.value), h.E.GROUP_ORDER.map((g) => mg[g].effPerWk));
+  truthy("...and at least one group's effort value differs from its raw count, so the two scales are genuinely not the same",
+    h.E.GROUP_ORDER.some((g) => mg[g].effPerWk !== mg[g].setsPerWk));
+  eq("the radar axis label is the same effort-weighted value",
+    radar.axes.map((a) => a.tier), h.E.GROUP_ORDER.map((g) => mg[g].effPerWk + "/wk"));
+  eq("the MEV markers sit on that same numeric scale",
+    bars.items.map((i) => i.marker), h.E.GROUP_ORDER.map((g) => mg[g].landmarks.mev));
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the raw count is still shown, and labelled raw",
+    /m\.setsPerWk\} raw sets<\/span>/.test(src) && /effort sets \/ raw sets/.test(src));
+}
+
+console.log("\n=== 26. every load factor in BW_FACTOR is reachable through the gate ===");
+{
+  /* The bug that shipped TWICE: a factor assigned in BW_FACTOR and refused by
+     the separate BW_NAME gate. The factor was dead code, and entryStats then
+     dropped the movement's unweighted sets from the totals. The gate is now
+     derived from the factor table, and this test proves it for EVERY entry by
+     deriving a witness name from each pattern's own source, so a new or renamed
+     rule is checked automatically rather than by hand. */
+  const e = env();
+  const F = e.E.BW_FACTOR;
+  truthy("the factor table is exposed for this check", Array.isArray(F) && F.length > 10);
+  const witness = (re) => re.source.split("|").map((a) => a
+    .replace(/\\b/g, "").replace(/\.\?/g, "z").replace(/\.\*/g, "z").replace(/\\s\*/g, " ")
+    .replace(/[^a-zA-Z0-9 ]/g, "")).find((a) => a.trim());
+  let dead = 0;
+  F.forEach(([re, f], i) => {
+    const w = witness(re);
+    const ok = !!w && re.test(w) && !e.E.SUPPLIES_LOAD.test(w) && e.E.isBodyweight(w) === true;
+    if (!ok) { dead++; console.log(`      FAIL factor [${i}] ${re} f=${f} witness=${JSON.stringify(w)} admitted=${w ? e.E.isBodyweight(w) : "-"}`); }
+  });
+  eq("every factor pattern admits the name it matches", dead, 0);
+
+  // and the REAL library: no movement carrying a factor may be refused by the gate
+  const refused = [];
+  for (const x of e.LIB) if (e.E.hasBwFactor(x.n) && !e.E.SUPPLIES_LOAD.test(x.n) && !e.E.isBodyweight(x.n)) refused.push(x.n);
+  eq("no library movement with a factor is refused by the gate", refused, []);
+
+  // the families the audit named are now actually admitted
+  for (const n of ["Barbell Lunges Standing", "Bulgarian Squat with Dumbbells", "Step-ups", "Standing Calf Raises", "Inverted Rows", "V-Up"])
+    eq(`'${n}' is admitted`, e.E.isBodyweight(n), true);
+  // equipment that supplies its own load is still refused, factor or not
+  for (const n of ["Calf Raise using Hack Squat Machine", "Smith Machine Split Squat", "Seated Dip Machine"])
+    eq(`'${n}' still supplies its own load`, e.E.isBodyweight(n), false);
+}
+
+console.log("\n=== 27. a short-id exercise's tracking-mode override survives ===");
+{
+  /* The Log screen's mode control persisted only when String(id).length > 2, so
+     every library id from 9 to 99 was silently skipped — including Bench Press,
+     id 73 — while the detail modal persisted unconditionally. Both now route
+     through one helper, so the two paths cannot disagree. */
+  const h = appEnv({});
+  truthy("both call sites share one persistence helper", typeof h.A.setTrackMode === "function");
+  h.A.setTrackMode(73, "time");           // Bench Press — a 2-digit library id
+  eq("id 73 (Bench Press) persists its override", (h.S.state.overrides["73"] || {}).mode, "time");
+  h.A.setTrackMode(9, "reps");            // the shortest 1-digit id
+  eq("a 1-digit id persists too", (h.S.state.overrides["9"] || {}).mode, "reps");
+  h.A.setTrackMode(171, "weight_time");
+  eq("a 3-digit id still persists", (h.S.state.overrides["171"] || {}).mode, "weight_time");
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  eq("the length>2 gate is gone", /String\(en\.id\)\.length > 2/.test(src), false);
+  truthy("the Log control routes through the shared helper", /setTrackMode\(en\.id, en\.mode\)/.test(src));
+  truthy("the detail-modal control routes through the same helper", /setTrackMode\(id, e\.target\.value\)/.test(src));
+}
+
+console.log("\n=== 28. the dead 'Hide from lists' control is gone ===");
+{
+  /* The exercise detail modal rendered a dt-hide button with no listener and no
+     engine support, and its label keyed off S.overrides[id] — which is set by
+     the mode/weight overrides too, so it read "Unhide" whenever ANY override
+     existed. Removing it is the smaller correct change. */
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  eq("no dt-hide control remains", /dt-hide/.test(src), false);
+  eq("and no listener for it either", /#dt-hide/.test(src), false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
