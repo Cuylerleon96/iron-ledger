@@ -541,6 +541,23 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .import-box textarea:focus { box-shadow: 0 0 0 2px var(--gold); }
 .detail-modal { display: grid; gap: .5rem; }
 
+/* the "How to do it" cue block inside the exercise detail modal */
+.cue-block { display: grid; gap: .3rem; margin: .1rem 0 .15rem; }
+.cue-head {
+  margin: 0; font-family: var(--pxd); font-size: .6rem; color: var(--gold-l);
+  letter-spacing: .05em; text-shadow: var(--outline-sm);
+}
+.cue-steps {
+  margin: 0; padding-left: 1.15rem; display: grid; gap: .22rem;
+  font-family: 'Pixelify Sans', var(--px); font-size: .78rem; line-height: 1.5;
+  color: #e8f4ff; letter-spacing: 0;
+}
+.cue-steps li { padding-left: .1rem; }
+.cue-src {
+  margin: 0; font-family: 'Pixelify Sans', var(--px); font-size: .58rem;
+  color: #9db8cc; letter-spacing: 0;
+}
+
 /* ---------------- celebration (the badge-get moment) ---------------- */
 /* A full-screen Gen-3 "badge get" panel: gold frame, a chunky star, the event
    named in the pixel font. It reuses the modal shell, so it inherits the focus

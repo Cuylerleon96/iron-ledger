@@ -107,7 +107,11 @@ secondary muscles half.
 a group below 70% of your average score and under its MEV is "under-trained".
 
 ### Sources
-- Exercise data: [wger](https://wger.de) open exercise database, CC-BY-SA (930 exercises).
+- Exercise data: [wger](https://wger.de) open exercise database, CC-BY-SA (954 exercises).
+  Thin/empty form cues are gap-filled by name from
+  [yuhonas/free-exercise-db](https://github.com/yuhonas/free-exercise-db) (Unlicense /
+  public domain) — its instructions only, never its images (the maintainer states their
+  provenance is unknown).
 - Strength standards: Strength Level and Brolic published bodyweight-ratio tables.
 - Volume landmarks: Renaissance Periodization's published MEV/MAV/MRV ranges (mid-range values).
 - 1RM formula: Epley.
@@ -168,6 +172,9 @@ Four things this pipeline gets right on purpose, each of which bit once:
 - A rolling previous-state backup is kept in `localStorage`.
 - **Export JSON** for a real backup; **Export CSV** for spreadsheets; **Import JSON**
   merges or replaces. Export regularly — the exported file is the durable copy.
+- Form cues come from the wger community database (CC-BY-SA), with thin/empty cues
+  gap-filled from yuhonas/free-exercise-db (public domain); the source is shown under
+  each exercise's "How to do it" steps.
 
 ---
 
@@ -200,7 +207,7 @@ copy of the web assets. Re-sync after every change.
 index.html               shell
 css/style.css            the whole visual system
 css/fonts.css            self-hosted pixel fonts
-js/data.js               930-exercise library (generated)
+js/data.js               954-exercise library (generated)
 js/engine.js             all scoring, PRs, weak points, XP — pure, no DOM
 js/chart.js              dependency-free SVG radar / line / bar charts
 js/store.js              persistence, import/export, migration

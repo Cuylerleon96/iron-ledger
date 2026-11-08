@@ -683,5 +683,75 @@ console.log("=== the HUD and the dashboard chip show sessions THIS WEEK, not a c
      G.TERMS.filter((t) => /streak/i.test(t.term) || (t.aliases || []).some((a) => /streak/i.test(a))).map((t) => t.id), []);
 }
 
+console.log("=== exercise form cue: full text, real steps, honest provenance ===");
+{
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  // the library, straight from the generated bundle
+  const lc = { console: { log() {} }, Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, module: { exports: {} } };
+  lc.globalThis = lc; vm.createContext(lc);
+  vm.runInContext(fs.readFileSync(path.join(B, "js", "data.js"), "utf8") + "\n;globalThis.__L=EXERCISE_LIB;", lc, { filename: "data.js" });
+  const LIB = lc.__L;
+
+  // (a) no truncation: the kettlebell swing keeps its WHOLE last step
+  const kb = LIB.find((e) => e.id === 9);
+  truthy("the 2 Handed Kettlebell Swing is in the library", !!kb);
+  const kbSteps = kb.d.split("\n");
+  eq("its cue is step-structured (4 steps, not one paragraph)", kbSteps.length, 4);
+  eq("its LAST step is complete, not cut mid-word",
+     kbSteps[3], "Let the kettlebell swing back down, hinge again as it passes between your legs and go straight into the next rep.");
+  truthy("its cue is longer than the old 280-char truncation", kb.d.length > 280);
+  eq("the old '…then driv' cut-off no longer ends the cue", /\bthen driv$/.test(kb.d), false);
+  eq("no cue sits exactly on the 2000-char cap", LIB.filter((e) => e.d.length === 2000).length, 0);
+
+  // (b) a multi-step cue renders as separate STEPS, not one paragraph
+  //     (load the real app.js behind a DOM stub, as the HUD section does)
+  const mkNode = () => ({ innerHTML: "", className: "", dataset: {}, style: {}, children: [],
+    addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+    append() {}, prepend() {}, remove() {}, click() {}, focus() {}, contains: () => false,
+    querySelector: () => mkNode(), querySelectorAll: () => [],
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false } });
+  const uiStore = {};
+  const ui = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+    setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+    document: { addEventListener() {}, removeEventListener() {}, querySelector: () => mkNode(), querySelectorAll: () => [], getElementById: () => mkNode(), createElement: () => mkNode(), createElementNS: () => mkNode(), body: mkNode(), visibilityState: "visible", activeElement: null },
+    navigator: { clipboard: { writeText: async () => {} } },
+    localStorage: { getItem: (k) => (k in uiStore ? uiStore[k] : null), setItem: (k, v) => { uiStore[k] = String(v); }, removeItem: (k) => { delete uiStore[k]; } },
+    Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+  };
+  ui.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+  ui.window = ui; ui.globalThis = ui; vm.createContext(ui);
+  vm.runInContext('localStorage.setItem("fitness-app-v1", JSON.stringify({version:1,createdAt:"2026-01-01T00:00:00.000Z",profile:{name:"C",sex:"M",heightCm:180,weightKg:82,weeklyTarget:4,units:"kg"},workouts:[],bodylog:[],overrides:{},custom:[],achievements:{},settings:{seeded:true}}));', ui);
+  vm.runInContext(["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/chart.js", "js/app.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n") + "\n;globalThis.__X={App};", ui, { filename: "ui.js" });
+  const u = { A: ui.__X.App };
+  const multi = u.A.cueBlock({ n: "X", d: "First step.\nSecond step.\nThird step." });
+  truthy("a multi-step cue renders an ordered list", /<ol class="cue-steps">/.test(multi));
+  eq("…with one <li> per step", (multi.match(/<li>/g) || []).length, 3);
+  truthy("…and NOT as one run-on paragraph", !/cue-line/.test(multi));
+  truthy("…under a 'How to do it' heading", /How to do it/.test(multi));
+  const one = u.A.cueBlock({ d: "Just one instruction." });
+  truthy("a single-line cue renders as a readable line, not a 1-item list", /cue-line/.test(one) && !/<ol/.test(one));
+
+  // (c) NO cue -> NOTHING rendered (no empty box, no placeholder)
+  eq("an empty cue renders nothing at all", u.A.cueBlock({ d: "" }), "");
+  eq("a missing cue renders nothing at all", u.A.cueBlock({}), "");
+  eq("a whitespace-only cue renders nothing", u.A.cueBlock({ d: "   \n  " }), "");
+
+  // (d) a gap-filled cue comes from the public-domain source, and says so
+  const filled = LIB.filter((e) => e.f === 1);
+  truthy("at least one cue was gap-filled from free-exercise-db", filled.length > 0);
+  const rd = filled.find((e) => e.n === "Ring Dips");
+  truthy("Ring Dips is one of the gap-filled entries", !!rd);
+  eq("its first step is the free-exercise-db instruction verbatim",
+     rd.d.split("\n")[0], "Grip a ring in each hand, and then take a small jump to help you get into the starting position with your arms locked out.");
+  truthy("every gap-filled cue is non-empty", filled.every((e) => e.d.trim().length > 0));
+  truthy("a gap-filled entry's block credits free-exercise-db", /free-exercise-db/.test(u.A.cueBlock(rd)));
+  truthy("a wger entry's block credits the wger community database", /wger community database/.test(u.A.cueBlock(kb)));
+  truthy("the detail modal renders the cue through cueBlock", /\$\{cueBlock\(info\)\}/.test(app));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1,12 +1,11 @@
 {
-  "versionCode": 50,
-  "versionName": "1.0.49",
+  "versionCode": 51,
+  "versionName": "1.0.50",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "6ed45c7a53b9972c86b197d329344a6f99ba457b8eb7d1fe686fe62c8b48a62e",
-  "sizeBytes": 3311860,
+  "sha256": "1e70845b9c57ed56d066895bd59123f887bec28d46b4c1adfb1fc7b1889d0492",
+  "sizeBytes": 3836027,
   "published": "2026-11-08",
   "notes": [
-    "The HUD no longer shows a consecutive-day streak; it shows sessions logged this week against your weekly session target (e.g. 2 / 4 this week) and reads 'target met' once you hit it.",
-    "The dashboard's streak chip is now a sessions-this-week indicator too, so no day-streak number and no 'no streak' wording appear anywhere in the app."
+    "Exercise pages now show a proper step-by-step 'How to do it': full instructions with no cut-off text, and thin cues filled in from a public-domain database."
   ]
 }

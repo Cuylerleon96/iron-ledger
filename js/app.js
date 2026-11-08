@@ -1410,6 +1410,24 @@
     return `<p class="target-line ${cls}">Target <b>${tgt}${unit}</b> · now <b>${cur}</b> (${Math.round(tp.pct)}%)${esc(eta)}</p>`;
   }
 
+  // The form cue as a proper "How to do it" block: real numbered STEPS when the
+  // data is step-structured, a readable line otherwise, with a small source
+  // line. When there is no cue, NOTHING is rendered — no empty box, no
+  // placeholder (no-dead-UI rule). Instructions are never invented here; the
+  // text comes verbatim from the library.
+  function cueBlock(info) {
+    const cue = (info.d || "").trim();
+    if (!cue) return "";
+    const steps = cue.split("\n").map((s) => s.trim()).filter(Boolean);
+    const body = steps.length > 1
+      ? `<ol class="cue-steps">${steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>`
+      : `<p class="muted small cue-line">${esc(steps[0])}</p>`;
+    const src = info.f
+      ? "Form cue from free-exercise-db (public domain); library from wger (CC-BY-SA)"
+      : "Form cue from the wger community database (CC-BY-SA)";
+    return `<section class="cue-block"><h4 class="cue-head">How to do it</h4>${body}<p class="cue-src">${esc(src)}</p></section>`;
+  }
+
   function exDetail(id) {
     const info = findEx(id) || { n: Engine.exName(S, id), c: "", e: [], p: [], s: [], m: "weight_reps", d: "" };
     const series = Engine.seriesFor(S, id);
@@ -1420,7 +1438,7 @@
       <h3>${esc(info.n)}</h3>
       <p class="muted small">${esc(info.c)}${(info.e || []).length ? " · " + esc(info.e.join(", ")) : " · bodyweight"}
         ${(info.p || []).length ? " · " + esc(info.p.join(", ")) : ""}</p>
-      ${info.d ? `<p class="muted small">${esc(info.d)}</p>` : ""}
+      ${cueBlock(info)}
       <div class="chips">
         <span class="chip">${series.length} sessions</span>
         <span class="chip">${bestLabel({ best, mode: best.mode })}</span>
@@ -1932,7 +1950,7 @@
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
-    celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText,
+    celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();
