@@ -6,7 +6,13 @@
   "sizeBytes": 3230383,
   "published": "2026-11-08",
   "notes": [
-    "Includes every 1.0.1 fix: muscle-legend text collision, library and picker row layout, chart label outlines, log defaults to today",
-    "Smoother rendering: dropped a full-screen compositing layer and the fixed background"
+    "Iron Ledger now updates itself from GitHub releases",
+    "Fixed the muscle-legend text collision (CHBELOW MEV)",
+    "Library and exercise-picker rows stack cleanly on phones",
+    "Muscle-bar values no longer wrap and misalign the row",
+    "Chart labels are outlined so coloured text stays readable on the panel",
+    "New sessions default to today's date",
+    "Smoother rendering: dropped a full-screen compositing layer and the fixed background",
+    "Release-signed \u2014 uninstall the previous debug build before installing"
   ]
 }
