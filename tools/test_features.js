@@ -466,6 +466,7 @@ console.log("=== glossary: every term the UI shows has ONE entry, and every entr
     "volume", "tonnage", "reps", "effort-set", "rpe", "e1rm",
     "mev-mav-mrv", "below-mev", "mev-mav", "optimal", "over-mrv", "untrained",
     "deload", "plateau", "density", "freshness", "baseline", "pr", "next-target", "tiers",
+    "xp-multiplier",
     "attr-STR", "attr-END", "attr-POW", "attr-MOB", "attr-CON", "attr-VIT",
   ];
   eq("every required term has an entry", REQUIRED.filter((id) => !G.has(id)), []);

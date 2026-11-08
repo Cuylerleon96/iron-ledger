@@ -1,13 +1,14 @@
 {
-  "versionCode": 41,
-  "versionName": "1.0.40",
+  "versionCode": 42,
+  "versionName": "1.0.41",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d4e4c51bce7d3f1393bc98d81987504d99430c5f02347495b1e56ef6c11c571c",
-  "sizeBytes": 3295335,
+  "sha256": "94da4b2440f4fa0383c96797bcc619b443785307df61b31115c83bfd8fb12dab",
+  "sizeBytes": 3298626,
   "published": "2026-11-08",
   "notes": [
-    "Set types: mark a set as a warm-up, a drop set or taken to failure \u2014 a warm-up is no longer counted as a working set or adds tonnage, and drop and failure sets count for more effort.",
-    "Body measurements: log waist, chest and arm alongside your weight in the same bodyweight log, see each as a trend, and they travel with your export.",
-    "Accessibility: the dialog now traps Tab, closes on Escape and returns focus to whatever opened it; the consistency grid's cells read out their date and sets; and the smallest labels are easier to read."
+    "Getting stronger now pays: a personal record is worth 100 XP, up from 20, so a PR session always beats an identical session without one.",
+    "Sets past a muscle group's MRV now earn about half XP, so junk volume is no longer the cheapest XP in the game.",
+    "Titles arrive sooner: Rookie to Trainee now lands at level 3, and each title after it steps three levels apart instead of five.",
+    "Every session now shows the XP it earned with its multiplier, like '+180 XP (x1.5)', and tapping it opens the breakdown of where the XP came from."
   ]
 }

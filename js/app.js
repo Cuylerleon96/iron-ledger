@@ -117,7 +117,8 @@
 
   /* ================= toasts ================= */
   function toast(msg, kind = "", ms = 2600) {
-    const t = el("div", { class: "toast " + kind }, msg);
+    const t = el("div", { class: "toast " + kind });
+    if (msg && msg.nodeType === 1) t.append(msg); else t.innerHTML = msg;
     $("#toasts").append(t);
     setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 400); }, ms);
   }
@@ -1004,21 +1005,55 @@
       ${st.avgRest ? `<span>rest ${fmtRest(st.avgRest)}</span>` : ""}`;
   }
 
+  /* ================= XP display ================= */
+  /* A session's XP is shown the way a game shows it: the number WITH the
+     multiplier that produced it, e.g. "+180 XP (x1.5)". Tapping it opens the
+     named factors that composed it — each one an idea the app already teaches
+     (a PR, the weekly target, a group's own MRV). */
+  const xpMultText = (m) => "x" + (Math.round(m * 1000) / 1000);
+  function xpBreakdown(w, sx) {
+    const f = sx.factors;
+    const row = (label, val) => `<div class="xp-row"><span>${label}</span><b>${esc(val)}</b></div>`;
+    const box = el("div", { class: "xp-break" });
+    box.innerHTML =
+      `<h3>+${fmt(sx.xp)} XP <span class="muted">(${esc(xpMultText(sx.mult))})</span></h3>
+       <p class="muted small">${esc(w.date)} — base XP for the work logged, then one ${term("xp-multiplier", "XP multiplier")} on top.</p>
+       <div class="xp-rows">
+         ${row("Base XP (tonnage, sets, exercises, PRs)", fmt(sx.base))}
+         ${row("Improvement — a PR this session", xpMultText(f.improvement))}
+         ${row("Consistency — weekly target met", xpMultText(f.consistency))}
+         ${row("Volume — over-MRV reduction", xpMultText(f.volume))}
+       </div>
+       <p class="muted small">${esc(xpMultText(f.improvement))} × ${esc(xpMultText(f.consistency))} × ${esc(xpMultText(f.volume))} = ${esc(xpMultText(sx.mult))}${sx.capped ? " (capped)" : ""} · capped at ×${Engine.XP.CAP}</p>
+       <div class="row end"><button class="btn ghost" id="xb-ok">Got it</button></div>`;
+    openModal(box, "narrow");
+    $("#xb-ok", box).addEventListener("click", closeModal);
+  }
+  /* The tappable XP-with-multiplier control, shared by the save toast and every
+     History card, so the same number is read the same way in both places. */
+  function xpChip(w, sx) {
+    const b = el("button", { class: "btn ghost tiny xp-chip", type: "button",
+      title: "Tap to see where this XP came from" },
+      `+${fmt(sx.xp)} XP (${xpMultText(sx.mult)})`);
+    b.addEventListener("click", () => xpBreakdown(w, sx));
+    return b;
+  }
+
   function saveDraft() {
     const entries = draft.entries
       .map((en) => ({ ...en, sets: en.sets.filter((s) => Object.values(s).some((v) => v !== undefined && v !== null && v !== "")) }))
       .filter((en) => en.sets.length);
     if (!entries.length) { toast("Add at least one set", "warn"); return; }
-    const before = Engine.summary(S);
     const w = Store.upsertWorkout({ id: draft.id || undefined, date: draft.date, note: draft.note, entries });
-    const after = Engine.summary(Store.state);
-    const gained = after.xp - before.xp;
+    const sx = Engine.sessionXp(Store.state, w);
     const newB = Engine.newAchievements(Store.state);
     Store.unlock(newB);
     draft = newDraft();
-    let msg = `+${fmt(gained)} XP · ${entries.length} exercises saved`;
-    if (newB.length) msg += ` · ${newB.length} badge${newB.length > 1 ? "s" : ""} unlocked!`;
-    toast(msg, "good", 4200);
+    let suffix = ` · ${entries.length} ${pl(entries.length, "exercise")} saved`;
+    if (newB.length) suffix += ` · ${newB.length} badge${newB.length > 1 ? "s" : ""} unlocked!`;
+    const line = el("span");
+    line.append(xpChip(w, sx), el("span", {}, suffix));
+    toast(line, "good", 4200);
     if (newB.length) showBadges(newB);
     render();
   }
@@ -1167,6 +1202,7 @@
           return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt + restTxt)}</span></div>`;
         }).join("")}
       </div>`;
+    $(".row", card).prepend(xpChip(w, Engine.sessionXp(S, w)));
     $(".ed", card).addEventListener("click", () => {
       draft = JSON.parse(JSON.stringify(w));
       draft.dateTouched = true;          // editing keeps the workout's own date

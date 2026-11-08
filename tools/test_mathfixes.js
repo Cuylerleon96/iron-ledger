@@ -972,5 +972,88 @@ console.log("\n=== 33. body measurements: same log, trended back ===");
   truthy("each check-in shows its measurements back", /Engine\.MEASURES\.filter\(\(m\) => Engine\.num\(b\[m\.key\]\) > 0\)/.test(src));
 }
 
+console.log("\n=== 34. XP rebalance: improvement leads, junk volume pays less, ONE scaler ===");
+{
+  const e = env();
+
+  // ---- A PR must outweigh volume: the same session with a PR outscores itself.
+  const noPr = base({ workouts: [wk(iso(2), [{ w: 100, r: 10 }, { w: 100, r: 10 }])] });
+  const prDay = base({ workouts: [wk(iso(4), [{ w: 100, r: 10 }]), wk(iso(2), [{ w: 100, r: 10 }, { w: 100, r: 10 }])] });
+  const a = e.E.sessionXp(noPr, noPr.workouts[0]);
+  const b = e.E.sessionXp(prDay, prDay.workouts[1]);
+  console.log(`     identical 2-set session: no PR ${a.xp} XP (base ${a.base}, ${a.mult}) | with a PR ${b.xp} XP (base ${b.base}, ${b.mult})`);
+  eq("a PR now pays 100 (was 20)", e.E.XP.PR, 100);
+  truthy("a PR session outscores the same session without one", b.xp > a.xp);
+  truthy("...and lifts the session's multiplier", b.mult > a.mult);
+  eq("the PR is counted once, not once per metric it moved", b.prs, 1);
+  eq("...so the base rose by exactly the PR award", b.base - a.base, 100);
+
+  // ---- Volume past MRV earns less than the SAME volume below it. One group,
+  //      so the arithmetic is exact: 4 prior sessions of 6 + the tested 5.
+  const cx = { id: "cq", n: "Chest Only Press", c: "Chest", g: ["Chest"], p: ["Chest"], s: [], e: [], m: "weight_reps" };
+  const cprof = { name: "C", sex: "M", heightCm: 178, weightKg: 80, bodyFatPct: 15, weeklyTarget: 99, units: "kg" };
+  const five = Array.from({ length: 5 }, () => ({ w: 40, r: 10 }));
+  const six = Array.from({ length: 6 }, () => ({ w: 40, r: 10 }));
+  const day = (d, sets) => wk(d, sets, "cq", "Chest Only Press");
+  const under = base({ custom: [cx], profile: cprof, workouts: [day("2026-06-05", five)] });
+  const over = base({ custom: [cx], profile: cprof, workouts: [
+    day("2026-06-01", six), day("2026-06-02", six), day("2026-06-03", six), day("2026-06-04", six), day("2026-06-05", five),
+  ] });
+  const su = e.E.sessionXp(under, under.workouts[0]);
+  const so = e.E.sessionXp(over, over.workouts[4]);
+  const weekSets = 6 * 4 + 5;
+  console.log(`     chest, same 5-set session: week ${5} sets -> ${su.xp} XP (vol ${su.factors.volume}, MRV ${e.E.LANDMARKS.Chest.mrv}) | week ${weekSets} sets -> ${so.xp} XP (vol ${so.factors.volume})`);
+  truthy("the session's week is past the group's own MRV", weekSets > e.E.LANDMARKS.Chest.mrv);
+  eq("the session below MRV pays full rate", su.factors.volume, 1);
+  eq("a session wholly past MRV earns about half (the negative side of the scaler)", so.factors.volume, 0.5);
+  truthy("the same session earns less once it is past MRV", so.xp < su.xp);
+  eq("...and its base is unchanged (only the scaler moved)", so.base, su.base);
+
+  // ---- The composed multiplier is capped.
+  eq("the composed multiplier is capped", e.E.composeMult(3, 3, 3), e.E.XP.CAP);
+  eq("...at x2.0", e.E.XP.CAP, 2);
+  truthy("no real session can exceed the cap",
+    [prDay, over].every((st) => st.workouts.every((w) => e.E.sessionXp(st, w).mult <= e.E.XP.CAP)));
+
+  // ---- Consistency is sessions PER WEEK, and never consecutive days. Two weeks
+  //      with the same number of sessions — one crammed, one spread — read the
+  //      same multiplier, though only one of them is a streak. (1 June 2026 is a
+  //      Monday, so every date below sits in one Monday-start week.)
+  const one = (d) => wk(d, [{ w: 100, r: 10 }]);
+  const consec = base({ workouts: ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"].map(one) });
+  const spread = base({ workouts: ["2026-06-01", "2026-06-03", "2026-06-05", "2026-06-07"].map(one) });
+  const mc = e.E.sessionXp(consec, consec.workouts[0]).mult;
+  const ms = e.E.sessionXp(spread, spread.workouts[0]).mult;
+  console.log(`     4 sessions/profiled week, consecutive -> ${mc}; spread -> ${ms} (weekly target 3)`);
+  eq("the multiplier does not grow from consecutive days", mc, ms);
+  truthy("...but does reward meeting the weekly target (a session count)", mc > 1);
+  const lone = base({ workouts: [one("2026-06-01")] });
+  const sl = e.E.sessionXp(lone, lone.workouts[0]);
+  eq("a session with no PR and an unmet target has a multiplier of exactly 1", sl.mult, 1);
+  eq("...with none of its factors moved", sl.factors, { improvement: 1, consistency: 1, volume: 1 });
+
+  // ---- Titles now step every 3 levels: Trainee lands at level 3, not level 6.
+  eq("titles step every 3 levels", [e.E.title(1), e.E.title(3), e.E.title(6), e.E.title(9)], ["Rookie", "Trainee", "Grinder", "Lifter"]);
+  const toLevel3 = 300 + 729;    // level 1 + level 2 requirements, 300*lvl^1.28
+  const at3 = e.E.levelInfo(toLevel3);
+  console.log(`     ${toLevel3} XP -> level ${at3.level} (${e.E.title(at3.level)}); level 6 would be ${e.E.levelInfo(6408).level}`);
+  eq("Trainee arrives at level 3", at3.level, 3);
+  eq("...and is titled Trainee", e.E.title(at3.level), "Trainee");
+  eq("the curve shape is unchanged (level 3 still needs 1,029 XP)", toLevel3, 1029);
+  eq("the level ring still reports into / need / pct",
+    [typeof at3.into, typeof at3.need, at3.pct], ["number", "number", 0]);
+
+  // ---- DISPLAY: the multiplier rides WITH the session XP, tappable to the
+  //      breakdown, and the term has ONE glossary entry (nothing shown unexplained).
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const GL = require(path.join(B, "js", "glossary.js"));
+  truthy("the session XP is shown with its multiplier", appSrc.includes("XP (${xpMultText(sx.mult)})"));
+  truthy("tapping it opens the breakdown", /addEventListener\("click", \(\) => xpBreakdown\(w, sx\)\)/.test(appSrc));
+  truthy("the breakdown names every factor", ["Base XP", "Improvement", "Consistency", "Volume"].every((k) => appSrc.includes(k)));
+  truthy("the multiplier has ONE glossary entry", GL.has("xp-multiplier"));
+  truthy("...and the breakdown links the term to it", /term\("xp-multiplier"/.test(appSrc));
+  truthy("the save toast carries the same control", /line\.append\(xpChip\(w, sx\)/.test(appSrc));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

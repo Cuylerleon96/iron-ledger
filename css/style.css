@@ -671,3 +671,21 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   padding: .4rem .5rem; cursor: pointer;
 }
 .gloss-item:active { transform: translateY(1px); }
+
+/* ---- XP display: the number WITH its multiplier, and the breakdown ---- */
+.xp-chip {
+  font-family: var(--px); font-size: .6rem; color: var(--gold);
+  border: 2px solid rgba(248, 208, 48, .45); border-radius: 6px;
+  padding: .2rem .4rem; white-space: nowrap;
+}
+.xp-chip:active { transform: translateY(1px); }
+.xp-break { display: grid; gap: .5rem; }
+.xp-break h3 { font-family: var(--pxd); font-size: .74rem; color: var(--gold); text-shadow: var(--outline); }
+.xp-rows { display: grid; gap: .25rem; }
+.xp-row {
+  display: flex; justify-content: space-between; gap: .5rem;
+  font-size: .72rem; color: #e6f0f4;
+  background: rgba(0, 0, 0, .28); border: 2px solid rgba(255, 255, 255, .2);
+  border-radius: 6px; padding: .3rem .45rem;
+}
+.xp-row b { color: var(--gold); font-family: var(--px); font-size: .62rem; }

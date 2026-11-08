@@ -1707,17 +1707,136 @@ const Engine = (() => {
     return { days, weeks, bestDays, bestWeeks, lastDate: dates[dates.length - 1], daysSince };
   }
 
-  /* ---------- XP & levels ---------- */
-  function xp(state) {
-    let total = 0;
+  /* ---------- XP & levels ----------
+
+     XP is earned PER SESSION, and each session's total carries a displayed
+     multiplier (the scaler) — the way a game shows "+180 XP (x1.5)". The rule is
+     the one the rest of the app already teaches:
+
+       - IMPROVEMENT OUTWEIGHS VOLUME. A PR pays XP.PR (100) flat, far more than
+         any set term, so getting stronger is the most valuable thing a session
+         can produce. It is also worth a named multiplier below.
+       - VOLUME PAST MRV IS NOT FULL-PRICE. The app tells the user that sets past
+         a muscle's MRV are counterproductive; the XP curve says the same thing
+         through the "volume" factor, which is the negative side of the ONE
+         scaler mechanism (never a second, separate penalty).
+       - NOTHING IS COUNTED TWICE. A session's base is multiplied ONCE. A PR that
+         also raises tonnage (and reps, and e1RM) earns its bonus once for the
+         session, not once per metric it moved. (That multi-count was a recorded
+         pitfall.)
+
+     Every factor is a number the app already believes in — the PR/record
+     tracker, the weekly session target (Discipline), and each muscle group's own
+     MRV landmark (Muscle balance). The composed multiplier is capped so it
+     cannot run away.
+
+     THERE IS DELIBERATELY NO CONSECUTIVE-DAY STREAK FACTOR. A game would grow
+     the multiplier with consecutive training days, and that is exactly why it
+     must not be here: this app warns elsewhere about overtraining, and a
+     streak-driven multiplier would push a beginner straight toward it.
+     Consistency is measured in SESSIONS PER WEEK against the weekly target. */
+  const XP = {
+    SESSION: 50,           // flat, for logging a session at all
+    PR: 100,               // one PR — worth most, so improvement leads (was 20)
+    IMPROVEMENT: 1.25,     // a session containing a PR
+    CONSISTENCY_MIN: 1.10, // the week's sessions met the weekly target
+    CONSISTENCY_MAX: 1.25, // ...and then some
+    OVER_MRV: 0.5,         // a session wholly past a group's MRV earns about half
+    CAP: 2.0,              // the composed multiplier cannot exceed this
+  };
+
+  /* Monday-start week key for a date. Pure in the date itself, so XP does not
+     depend on when it happened to be rendered. */
+  const weekKeyOf = (d) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return dstr(x); };
+
+  /* PRs per calendar date — the same one achievement per exercise per session
+     prCount reports, built once so xp() stays linear. */
+  function prsByDate(state) {
+    const m = {};
+    for (const r of prTable(state)) for (const p of r.prs) if (p.hit.length) m[p.date] = (m[p.date] || 0) + 1;
+    return m;
+  }
+
+  /* Share-weighted sets per muscle group for one Monday-start week, in the SAME
+     units muscleGroups compares to the MEV/MAV/MRV landmarks: the primary group
+     takes full credit, secondary groups half. No second definition of volume. */
+  function weekGroupSets(state, weekKey) {
+    const m = {};
     for (const w of state.workouts || []) {
-      total += 50;
-      let tonnage = 0, sets = 0;
-      for (const en of w.entries || []) { const s = entryStats(en); tonnage += s.tonnage; sets += s.sets; }
-      total += Math.round(tonnage / 1000) + sets * 2;
-      total += (w.entries || []).length * 5;
+      if (weekKeyOf(w.date) !== weekKey) continue;
+      for (const en of w.entries || []) {
+        const st = entryStats(en);
+        if (!st.sets) continue;
+        exGroups(state, en.id).forEach((g, i) => {
+          if (!GROUP_ORDER.includes(g)) return;
+          m[g] = (m[g] || 0) + st.sets * (i === 0 ? 1 : 0.5);
+        });
+      }
     }
-    total += prCount(state, 3650) * 20;
+    return m;
+  }
+
+  /* How much of a session sits past each trained group's own MRV, and how much
+     it contributes in total (same share-weighted units). A session entirely past
+     MRV reads over === total. */
+  function overMrvSplit(state, w, weekSets) {
+    let over = 0, total = 0;
+    for (const en of w.entries || []) {
+      const st = entryStats(en);
+      if (!st.sets) continue;
+      exGroups(state, en.id).forEach((g, i) => {
+        if (!GROUP_ORDER.includes(g)) return;
+        const mine = st.sets * (i === 0 ? 1 : 0.5);
+        total += mine;
+        const beyond = Math.max(0, (weekSets[g] || 0) - LANDMARKS[g].mrv);
+        over += Math.min(mine, beyond);
+      });
+    }
+    return { over, total };
+  }
+
+  /* The compose step, alone, so "the multiplier is capped" is provable directly. */
+  const composeMult = (improvement, consistency, volume) =>
+    Math.min(XP.CAP, improvement * consistency * volume);
+
+  /* One session's earned XP and the named factors that produced it. */
+  function sessionXp(state, w, opts) {
+    const prs = (opts && opts.prs) || prsByDate(state);
+    const wks = (opts && opts.weekSets) || {};
+    const wk = weekKeyOf(w.date);
+    const weekSets = wks[wk] || (wks[wk] = weekGroupSets(state, wk));
+
+    let tonnage = 0, sets = 0;
+    for (const en of w.entries || []) { const s = entryStats(en); tonnage += s.tonnage; sets += s.sets; }
+    const nPr = prs[w.date] || 0;
+    const base = XP.SESSION + Math.round(tonnage / 1000) + sets * 2
+               + (w.entries || []).length * 5 + nPr * XP.PR;
+
+    const improvement = nPr > 0 ? XP.IMPROVEMENT : 1;
+    const target = num(state.profile.weeklyTarget) || 4;
+    const sessionsInWeek = (state.workouts || []).filter((x) => weekKeyOf(x.date) === wk).length;
+    const ratio = target > 0 ? sessionsInWeek / target : 0;
+    const consistency = ratio >= 1
+      ? Math.min(XP.CONSISTENCY_MAX, XP.CONSISTENCY_MIN + (ratio - 1) * 0.15)
+      : 1;
+    const split = overMrvSplit(state, w, weekSets);
+    const volume = split.total > 0
+      ? Math.max(XP.OVER_MRV, 1 - (1 - XP.OVER_MRV) * (split.over / split.total)) : 1;
+
+    const raw = composeMult(improvement, consistency, volume);
+    const r3 = (v) => Math.round(v * 1000) / 1000;
+    return {
+      xp: Math.round(base * raw), base, mult: r3(raw), capped: improvement * consistency * volume > XP.CAP,
+      prs: nPr, overMrv: split.over > 0,
+      factors: { improvement, consistency: r3(consistency), volume: r3(volume) },
+    };
+  }
+
+  function xp(state) {
+    const prs = prsByDate(state);
+    const weekSets = {};
+    let total = 0;
+    for (const w of state.workouts || []) total += sessionXp(state, w, { prs, weekSets }).xp;
     const st = streaks(state);
     total += st.bestDays * 15 + st.bestWeeks * 50;   // best ever, never current
     total += (state.bodylog || []).length * 10;
@@ -1729,7 +1848,12 @@ const Engine = (() => {
     return { level: lvl, into: totalXp - cum, need, pct: Math.round(((totalXp - cum) / need) * 100), total: totalXp };
   }
   const TITLES = ["Rookie", "Trainee", "Grinder", "Lifter", "Ironclad", "Forged", "Veteran", "Beast", "Titan", "Mythic"];
-  const title = (lvl) => TITLES[Math.min(TITLES.length - 1, Math.floor((lvl - 1) / 5))] + (lvl > 50 ? " ★" + (lvl - 50) : "");
+  /* Titles step every 3 levels, so the first promotion — Rookie to Trainee —
+     lands at level 3 rather than level 6. Five-level steps put Trainee months out
+     for a beginner, which is too long to be told you are still a Rookie. The
+     curve shape is untouched; only the title boundaries moved. */
+  const TITLE_STEP = 3;
+  const title = (lvl) => TITLES[Math.min(TITLES.length - 1, Math.floor(lvl / TITLE_STEP))] + (lvl > 50 ? " ★" + (lvl - 50) : "");
 
   /* ---------- achievements ---------- */
   const ACHIEVEMENTS = [
@@ -1836,7 +1960,7 @@ const Engine = (() => {
     SET_TYPES, setType, setTypeLabel, isWarmupSet, setEffort,
     exInfo, exName, exMode, exGroups, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
-    title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
+    sessionXp, composeMult, XP, weekKeyOf, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,

@@ -28,6 +28,11 @@ const Glossary = (() => {
      the entry corresponds to something on screen. */
   const TERMS = [
     {
+      id: "xp-multiplier", term: "XP multiplier", aliases: ["XP multiplier", "XP scaler", "multiplier"],
+      plain: "A session's XP is not paid flat. What you did earns a base amount, and a small multiplier — shown next to the XP as \u201cx1.5\u201d — rewards the things this app already values: getting stronger, and turning up as often as you planned. Piling on extra sets past what a muscle can recover earns less, not more.",
+      real: "Composed from named factors and capped at \u00d72.0: improvement \u00d71.25 when the session sets a PR; consistency \u00d71.10\u20131.25 when the sessions logged in that week meet your weekly target (a SESSION count, never consecutive days); and volume, the negative side, down to \u00d70.5 when the session pushes a muscle group past its own MRV from the landmarks. The session's base is multiplied once — a PR that also raises tonnage is counted once, not once per metric.",
+    },
+    {
       id: "volume", term: "Volume", aliases: ["volume", "weekly volume", "sets per week"],
       plain: "How much training you did — the work you gave a muscle, counted in sets. More is not automatically better: there is a range that builds muscle and a point past which it only costs you recovery.",
       real: "Volume here is completed working sets per muscle group, per week. A set counts when it is a real, finished set for that movement; the muscle-balance card weights each set by the movement's effort factor before comparing it to your landmarks.",
