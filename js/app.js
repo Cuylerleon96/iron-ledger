@@ -304,7 +304,7 @@
 
     /* muscle balance */
     const mb = el("section", { class: "card chart-card" });
-    mb.innerHTML = `<div class="card-head"><h3>Muscle balance</h3><span class="muted">working sets per week</span></div>`;
+    mb.innerHTML = `<div class="card-head"><h3>Muscle balance</h3><span class="muted">sets per week</span></div>`;
     const mbHost = el("div", { class: "radar-host" });
     mb.append(mbHost);
     const mlist = el("div", { class: "attr-legend" });
@@ -385,7 +385,7 @@
         : x.basis === "estimated"
           ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.`
           : "Log a loaded lift to start measuring strength.";
-      case "END": return `Cardio ${Math.round(x.cardioMinPerWk)} min/wk · best single set ${x.maxReps} reps · ${Math.round(x.setsPerWk)} working sets/wk.`
+      case "END": return `Cardio ${Math.round(x.cardioMinPerWk)} min/wk · best single set ${x.maxReps} reps · ${Math.round(x.setsPerWk)} sets/wk.`
         + (x.avgRest
             ? ` Average rest ${fmtRest(x.avgRest)} and ${x.density}% of session time actually working — short rest raises the endurance demand, which is why it counts here and nowhere else.`
             : " Log rest between sets to factor training density in; nothing else reads it.");

@@ -18,7 +18,7 @@ const Engine = (() => {
 
   const GROUP_ORDER = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Calves", "Core"];
 
-  /* Weekly working-set landmarks, working sets/week.
+  /* Weekly set landmarks, sets/week (all completed sets — see entryStats).
      MEV = minimum effective volume, MAV = adaptive (sweet spot), MRV = max
      recoverable volume. Reference ranges from Renaissance Periodization's
      published volume landmark tables (Israetel et al.), mid-range values. */
@@ -121,7 +121,12 @@ const Engine = (() => {
     }
   }
 
-  /* A working set = a completed set. Time/distance modes count sets too. */
+  /* Every COMPLETED set counts, warm-up or not. Warm-ups are deliberately not
+     marked or distinguished (the owner's call: they are just logged like anything
+     else), so nothing here can tell a ramp from a top set. That is why the UI
+     says "sets", never "working sets" — a working set properly excludes warm-ups,
+     and claiming that precision would misstate what is actually counted. */
+  
   function entryStats(entry) {
     const mode = entry.mode || "weight_reps";
     const sets = (entry.sets || []).filter((s) => {
@@ -398,7 +403,7 @@ const Engine = (() => {
       for (const s of en.sets || []) maxReps = Math.max(maxReps, num(s.r));
     }
     const repScore = interp(maxReps, [5, 10, 15, 20, 30], [10, 30, 48, 66, 88]);
-    // volume tolerance: working sets per week
+    // volume tolerance: sets per week
     let sets = 0;
     for (const w of ws) for (const en of w.entries || []) sets += entryStats(en).sets;
     const setScore = interp(sets / weeks, [0, 20, 40, 60, 90], [6, 30, 55, 75, 95]);
@@ -616,13 +621,13 @@ const Engine = (() => {
       out.push({ kind: "volume", severity: mg[g].score < 40 ? "high" : "med", group: g,
         title: `${g} is under-trained`, detail: `${mg[g].setsPerWk} sets/wk vs a ${mg[g].landmarks.mev}–${mg[g].landmarks.mav} target.`,
         fix: need > 0
-          ? `Add ~${need} working ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
+          ? `Add ~${need} ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
           : `Progressively overload ${g.toLowerCase()}.` });
     }
     // 2. completely untrained
     const untrained = GROUP_ORDER.filter((g) => mg[g].setsPerWk <= 0 && g !== "Calves");
     if (untrained.length) out.push({ kind: "gap", severity: untrained.length > 2 ? "high" : "med",
-      title: `No data for ${untrained.join(", ")}`, detail: "These groups have had no working sets in the last 4 weeks.",
+      title: `No data for ${untrained.join(", ")}`, detail: "No sets logged for these groups in the last 4 weeks.",
       fix: `Add a compound movement for ${untrained.length === 1 ? "it" : "each"}: ${untrained.map((g) => suggestFor(g)).join("; ")}.` });
 
     // 3. push / pull balance
@@ -837,7 +842,7 @@ const Engine = (() => {
     { id: "cardio10",  name: "Road Work",        desc: "10 km of logged cardio",            test: (c) => c.cardioKm >= 10 },
     { id: "cardio50",  name: "Long Haul",        desc: "50 km of logged cardio",            test: (c) => c.cardioKm >= 50 },
     { id: "cardio100", name: "Endurance Athlete",desc: "100 km of logged cardio",           test: (c) => c.cardioKm >= 100 },
-    { id: "bigset",    name: "Volume King",      desc: "20+ working sets in one session",   test: (c) => c.maxSetsSession >= 20 },
+    { id: "bigset",    name: "Volume King",      desc: "20+ sets in one session",           test: (c) => c.maxSetsSession >= 20 },
     { id: "balanced",  name: "Balanced",         desc: "Every muscle group scoring 60+",    test: (c) => c.balanced },
     { id: "variety",   name: "Well-Rounded",     desc: "Train 6+ muscle groups in a week",  test: (c) => c.groupsWeek >= 6 },
     { id: "weighin",   name: "On the Record",    desc: "Log 10 bodyweight check-ins",       test: (c) => c.weighins >= 10 },
