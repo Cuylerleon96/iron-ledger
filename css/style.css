@@ -41,6 +41,12 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* Form controls do not inherit `color`: the UA stylesheet applies
+   `color: buttontext` to <button>, so any element we style as a tag/pill but
+   create as a <button> silently gets near-black text on its dark fill. Reset it
+   here; the class rules below (.inp, .btn, ...) still set their own colours. */
+button, input, select, textarea { color: inherit; font-family: inherit; }
 html { font-size: 16px; }
 body {
   margin: 0;
@@ -190,6 +196,7 @@ main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: gr
   padding: .2rem .45rem; border-radius: 5px; font-size: .62rem; white-space: nowrap;
   background: rgba(0, 0, 0, .34); border: 2px solid var(--cream);
   box-shadow: 0 0 0 1px var(--ink); text-shadow: var(--outline-sm);
+  color: var(--cream);
 }
 .chip.up { border-color: var(--red); color: var(--red-l); }
 .chip.down { border-color: var(--sky); color: var(--sky); }
@@ -371,7 +378,7 @@ input[type="date"] { color-scheme: light; }
 
 /* ---------------- history ---------------- */
 .hist-body { display: grid; gap: .2rem; margin-top: .45rem; }
-.hist-ex { display: flex; gap: .5rem; font-size: .62rem; padding: .22rem 0; border-bottom: 2px dotted rgba(255, 255, 255, .12); }
+.hist-ex { display: flex; flex-wrap: wrap; gap: .5rem; font-size: .62rem; padding: .22rem 0; border-bottom: 2px dotted rgba(255, 255, 255, .12); }
 .hist-n { min-width: 168px; font-weight: 700; text-shadow: var(--outline-sm); }
 .hist-s { color: #cfe0e8; }
 .hist-head { display: flex; justify-content: space-between; gap: .5rem; align-items: flex-start; flex-wrap: wrap; }

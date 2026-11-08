@@ -12,7 +12,14 @@
    * Everything here runs AFTER first paint and never blocks it. */
 const Updater = (() => {
   "use strict";
-  const DEFAULT_FEED = "https://raw.githubusercontent.com/Cuylerleon96/iron-ledger/main/update/info.json";
+  /* Primary feed is a release ASSET: github.com serves it fresh, and the
+     "latest" URL always points at the newest release, so it cannot lag behind a
+     publish. The repo copy is kept as a fallback (and is human-readable in git). */
+  const FEEDS = [
+    "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/info.json",
+    "https://raw.githubusercontent.com/Cuylerleon96/iron-ledger/main/update/info.json",
+  ];
+  const DEFAULT_FEED = FEEDS[0];
   const FEED_KEY = "iron-ledger-feed-url";
   const OFFERED_KEY = "iron-ledger-update-offered";
 
@@ -20,6 +27,10 @@ const Updater = (() => {
   const isAndroid = () => !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && plugin());
 
   const feedUrl = () => localStorage.getItem(FEED_KEY) || DEFAULT_FEED;
+  const feedCandidates = () => {
+    const custom = localStorage.getItem(FEED_KEY);
+    return custom ? [custom] : FEEDS;
+  };
   function setFeedUrl(u) {
     const v = (u || "").trim();
     if (v) localStorage.setItem(FEED_KEY, v); else localStorage.removeItem(FEED_KEY);
@@ -40,15 +51,19 @@ const Updater = (() => {
     if (!isAndroid()) return { state: "unsupported", reason: "not the Android build" };
     const info = await installed();
     if (!info) return { state: "error", reason: "cannot read installed version" };
-    let feed, raw;
-    try {
-      const url = feedUrl() + (feedUrl().includes("?") ? "&" : "?") + "t=" + Date.now();
-      const r = await fetch(url, { cache: "no-store" });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      raw = await r.text();
-      feed = JSON.parse(raw);
-    } catch (e) {
-      return { state: "error", reason: "could not reach the update feed (" + (e && e.message) + ")", installed: info };
+    // Try each feed in turn. cache:"no-store" defeats the WebView's own HTTP
+    // cache (the one we control); the fallback covers the repo copy's CDN lag.
+    let feed = null, lastErr = null;
+    for (const url of feedCandidates()) {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        feed = await r.json();
+        break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!feed) {
+      return { state: "error", reason: "could not reach the update feed (" + (lastErr && lastErr.message) + ")", installed: info };
     }
     const latest = Number(feed.versionCode || 0);
     const has = latest > Number(info.versionCode);

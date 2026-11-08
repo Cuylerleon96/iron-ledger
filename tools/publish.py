@@ -224,9 +224,18 @@ def main():
             api("DELETE", f"/repos/{OWNER}/{REPO}/releases/assets/{asset['id']}")
 
     print("uploading APK asset…")
-    upload = rel["upload_url"].split("{")[0] + f"?name={ASSET_NAME}"
-    api("POST", upload, raw=APK.read_bytes(),
+    upload = rel["upload_url"].split("{")[0]
+    api("POST", upload + f"?name={ASSET_NAME}", raw=APK.read_bytes(),
         content_type="application/vnd.android.package-archive")
+
+    # Also publish the feed as a release asset. The app prefers
+    # releases/latest/download/info.json because it is fresh by construction,
+    # whereas raw.githubusercontent.com serves through a CDN with a 5-minute TTL
+    # that is not keyed on the query string — long enough for a freshly published
+    # release to still read as "up to date".
+    print("uploading feed asset…")
+    api("POST", upload + "?name=info.json",
+        raw=(json.dumps(feed, indent=2) + "\n").encode(), content_type="application/json")
 
     # the feed goes live only once the asset it points at really exists
     FEED_FILE.parent.mkdir(parents=True, exist_ok=True)
