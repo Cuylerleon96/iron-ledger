@@ -1,11 +1,11 @@
 {
-  "versionCode": 60,
-  "versionName": "1.0.59",
+  "versionCode": 61,
+  "versionName": "1.0.60",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "51f71aca28e7789719615c6cf032b1e86eebd054e8c386eea6ee63c27205ce63",
-  "sizeBytes": 3862869,
+  "sha256": "0deb0dfcc80e4d011c809d4d164143affa66557d61c43d240d4c3f760303bba1",
+  "sizeBytes": 3863668,
   "published": "2026-11-08",
   "notes": [
-    "Nutrition: a logged-food row now reads on two lines at phone width (412 px) - the food name and its remove x on the first line, the portion and macros on the second - so the name no longer overlaps the grams."
+    "Sex is now optional when a body-fat % is set \u2014 and the Profile field explains itself."
   ]
 }

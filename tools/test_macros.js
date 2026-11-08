@@ -619,5 +619,72 @@ eq("eating-disorder source cites NICE NG69", /NG69/.test(edr.source), true);
 eq("the three refusal sources are all different", new Set([u18.source, prg.source, edr.source]).size, 3);
 eq("the floor's own source is untouched", /ISSN position stand/.test(M.FLOOR_SOURCE), true);
 
+/* ============================================================
+   (19) SEX IS OPTIONAL WHEN A BODY-FAT % IS KNOWN
+   ============================================================ */
+console.log("\n--- (19) sex optional when a body-fat % is known ---");
+const noSexBf = M.plan({ weightKg: 80, heightCm: 180, ageY: 30, bodyFatPct: 20, goal: "maintain", pace: "maintain" });
+eq("a body-fat % but NO sex is NOT refused", noSexBf.refused, false);
+eq("...it produces a real target", isFinite(noSexBf.target.kcal) && noSexBf.target.kcal > 0, true);
+eq("...via the sex-independent FFM path", noSexBf.bmr.method, "ffm-cunningham");
+eq("...rmrFFM takes no sex input (identical with sex M or F)",
+   M.rmrFFM({ weightKg: 80, bodyFatPct: 20 }).kcal, M.rmrFFM({ weightKg: 80, bodyFatPct: 20, sex: "F" }).kcal);
+eq("...the CONSERVATIVE higher floor (1500) is used", noSexBf.target.floor, 1500);
+eq("...and that assumption is reported to the caller", noSexBf.target.floorAssumed, true);
+eq("...the floor's sex is the male value", noSexBf.target.floorSex, "M");
+
+const noSexNoBf = M.plan({ weightKg: 80, heightCm: 180, ageY: 30, goal: "maintain", pace: "maintain" });
+eq("no sex AND no body-fat % STILL refuses", noSexNoBf.refused, true);
+eq("...it returns no numbers", NO_NUMBERS(noSexNoBf), true);
+eq("...it says plainly it will not guess", /won't guess/.test(noSexNoBf.reason), true);
+eq("...it points at Profile", /Profile/.test(noSexNoBf.reason), true);
+eq("...it names the body-fat % alternative route", /body-fat %/.test(noSexNoBf.reason), true);
+eq("...it names the sex-independent lean-mass route", /lean-mass/.test(noSexNoBf.reason), true);
+eq("the refusal contains NO imperative 'must'", /\bmust\b/i.test(noSexNoBf.reason), false);
+eq("a nonsense sex ('X') with no body-fat % still refuses", M.plan({ sex: "X", weightKg: 80, heightCm: 180, ageY: 30 }).refused, true);
+eq("...but 'X' WITH a body-fat % does NOT refuse", M.plan({ sex: "X", weightKg: 80, heightCm: 180, ageY: 30, bodyFatPct: 20 }).refused, false);
+
+/* The sex-SPECIFIC Mifflin weight form is UNCHANGED for M and F: on the SAME
+   body the +5 / -161 sex term is the only difference -> a 166 kcal/day gap.
+   (Mifflin-St Jeor is ONE regression carrying a sex term — not two equations.) */
+const miffBase = 10 * 80 + 6.25 * 180 - 5 * 30;      // = 1775
+const mM = M.rmrMifflin({ sex: "M", weightKg: 80, heightCm: 180, ageY: 30 }).kcal;
+const mF = M.rmrMifflin({ sex: "F", weightKg: 80, heightCm: 180, ageY: 30 }).kcal;
+eq("Mifflin male (+5) is unchanged", mM, miffBase + 5);          // 1780
+eq("Mifflin female (-161) is unchanged", mF, miffBase - 161);    // 1614
+eq("the 166 kcal/day sex gap still holds", mM - mF, 166);
+
+/* ============================================================
+   (20) THE NUTRITION TAB renders the conservative-floor note
+   ============================================================ */
+console.log("\n--- (20) Nutrition tab: sexless profile with a body-fat % ---");
+{
+  const truthy2 = (label, got) => eq(label, !!got, true);
+  const src3 = fs.readFileSync(path.join(__dirname, "..", "js", "macros.js"), "utf8") + "\n;\n"
+    + fs.readFileSync(path.join(__dirname, "..", "js", "nutrition.js"), "utf8");
+  const c3 = { console, module: { exports: {} }, Date, Math, JSON, Object, Array, Set, Map,
+    isFinite, parseFloat, parseInt, Number, String, Boolean, RegExp, Error, setTimeout, clearTimeout };
+  c3.globalThis = c3; vm.createContext(c3);
+  vm.runInContext(src3 + "\n;globalThis.__N3={Macros:Macros,Nutrition:Nutrition};", c3, { filename: "nutrition3.js" });
+  const N3 = c3.__N3.Nutrition;
+  const NO_TRAIN = { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 };
+  const SEXLESS = { name: "C", sex: undefined, heightCm: 178, weightKg: 80, bodyFatPct: 20,
+    goalWeightKg: 78, goalBodyFatPct: 15, birthYear: 1994 };
+  const v3 = N3.view(SEXLESS, { year: 2026, training: NO_TRAIN });
+  eq("a body-fat %, no sex -> the tab is in the 'ok' state", v3.state, "ok");
+  eq("...four targets are produced", v3.targets.map((t) => t.key), ["kcal", "protein", "fat", "carbs"]);
+  eq("...the floor shown is 1500", v3.maintenance.floor, 1500);
+  eq("...the floor label says sex is not set", /sex not set/.test(v3.maintenance.floorLabel), true);
+  truthy2("...the conservative-floor note is on the page",
+    /higher floor/.test(v3.html) && /1500/.test(v3.html) && /Sex isn't set/i.test(v3.html));
+  truthy2("...and it says setting sex may change the floor", /may change this floor/.test(v3.html));
+  const NEITHER = Object.assign({}, SEXLESS, { bodyFatPct: null });
+  const v4 = N3.view(NEITHER, { year: 2026, training: NO_TRAIN });
+  eq("neither sex nor body-fat % -> the 'refused' state", v4.state, "refused");
+  eq("...no numbers are shown", v4.targets, null);
+  truthy2("...the new refusal text is on the page", /won't guess/.test(v4.html));
+  eq("...and it contains no 'must'", /\bmust\b/i.test(v4.html), false);
+}
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

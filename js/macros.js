@@ -322,7 +322,12 @@ const Macros = (() => {
     const b = bmi(inputs.weightKg, inputs.heightCm);
     const bf = bfKnown(inputs);
     if (inputs.athlete) out.push("Athlete: a formula RMR under-reads trained energy needs — validate against measured intake.");
-    if (b < LEAN_BMI || (bf && inputs.bodyFatPct <= ESSENTIAL_BF[inputs.sex]))
+    /* Sex is read here ONLY to pick the essential-fat threshold. When it is not
+       set, fall back to the HIGHER threshold (F = 12%) so a very-lean reading is
+       still flagged — a safety warning must never be silently dropped just
+       because sex is missing. */
+    const essSex = inputs.sex === "M" ? "M" : "F";
+    if (b < LEAN_BMI || (bf && inputs.bodyFatPct <= ESSENTIAL_BF[essSex]))
       out.push("Very lean: a calorie deficit may be unsafe at this body composition.");
     if (b >= HEAVY_BMI) out.push("Very heavy (BMI >= 35): have a clinician review these targets.");
     return out;
@@ -345,8 +350,16 @@ const Macros = (() => {
       return refuse("Disclosed eating-disorder risk — calorie and macro targets are not appropriate here.", SOURCES.eatingDisorder);
     if (weightKg == null || heightCm == null || !isFinite(weightKg) || !isFinite(heightCm))
       return refuse("Weight and height are required.", SOURCES.mifflin);
-    if (sex !== "M" && sex !== "F")
-      return refuse('Sex must be "M" or "F" (Mifflin-St Jeor is sex-specific).', SOURCES.mifflin);
+    /* Sex: the WEIGHT-based Mifflin form needs it, and so does the intake floor.
+       It is NOT needed by the FFM path — rmrFFM (Cunningham) reads weight +
+       body-fat % only, taking no sex argument — so a profile that knows its
+       body-fat % can be planned without sex. Only when NEITHER sex NOR body-fat
+       % is available does this refuse, and even then it says what to do rather
+       than issuing a "must". */
+    const sexKnown = sex === "M" || sex === "F";
+    if (!sexKnown && !bfKnown(inputs))
+      return refuse("We won't guess this one. Set your sex in Profile — or add a body-fat % " +
+        "and we'll use the lean-mass equation instead, which doesn't need it.", SOURCES.mifflin);
 
     const bmr = rmr(inputs);
     /* `pal` is optional and additive: when the UI supplies the factor DERIVED
@@ -359,7 +372,12 @@ const Macros = (() => {
     const adj = energyAdjustment(targetRate);
     const computedTarget = Math.round(tdee.kcal + adj.kcalPerDay);
 
-    const floor = FLOORS[sex];
+    /* The intake floor is sex-specific (1500 M / 1200 F). When sex is not set we
+       use the HIGHER floor — FLOORS.M = 1500 — the conservative choice, so the
+       plan never lands under what either floor intends. Reported as
+       `floorAssumed` so the UI can say plainly that sex was missing. */
+    const floorSex = sexKnown ? sex : "M";
+    const floor = FLOORS[floorSex];
     let targetKcal = computedTarget;
     let floorApplied = false;
     if (targetKcal < floor) { targetKcal = floor; floorApplied = true; }
@@ -384,7 +402,8 @@ const Macros = (() => {
       pace: { key: pace.key, label: pace.label, pctPerWeek: pace.pctPerWeek,
               targetRateKgPerWeek: targetRate, source: pace.source },
       target: { kcal: targetKcal, computedTarget, adjustmentKcalPerDay: roundKcal(adj.kcalPerDay, 10),
-                targetRateKgPerWeek: targetRate, floor, floorApplied, source: FLOOR_SOURCE },
+                targetRateKgPerWeek: targetRate, floor, floorSex, floorAssumed: !sexKnown,
+                floorApplied, source: FLOOR_SOURCE },
       protein: { g: p.g, gPerKg: p.gPerKg, basis: p.basis, basisKg: p.basisKg, range: p.range,
                  floorApplied: p.floorApplied, kcal: p.g * 4, source: p.source },
       fat: { g: f.g, gPerKg: f.gPerKg, floorApplied: f.floorApplied, kcal: f.g * 9, source: f.source },

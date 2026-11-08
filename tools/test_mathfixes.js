@@ -524,6 +524,14 @@ console.log("\n=== 19. first run: nothing may be invented or imposed ===");
   // then. The recording logic itself is proven in tools/test_bodylog.js.
   truthy("the profile save snapshots the dated profile fields", /Store\.recordProfileLog\(\)/.test(appSrc));
   truthy("...and the save handler is the one that calls it", /p\.units = g\("#p-u"\);\s*(?:\/\/[^\n]*\n\s*)*Store\.recordProfileLog\(\);/.test(appSrc));
+  // The Profile tab must EXPLAIN why sex is asked, and offer the body-fat %
+  // alternative — without claiming two separately-fitted equations (Mifflin-St
+  // Jeor is ONE regression carrying a sex term).
+  truthy("the Profile tab explains the sex field",
+    /An input to the calorie formula, not a question about who you are/.test(appSrc) && /166 kcal\/day/.test(appSrc));
+  truthy("...it offers the body-fat % route instead", /add a body-fat % and the lean-mass equation is used instead/.test(appSrc));
+  eq("...and never claims two separately-fitted equations", /fitted separately/.test(appSrc), false);
+  truthy("...the helper sits directly under the sex control", /id="p-sex"[\s\S]{0,400}?id="p-sex-note"/.test(appSrc));
   // The "Strength is a ratio… add your bodyweight" explanation MOVED to the one
   // shared source (js/glossary.js) as part of the glossary unification, so this
   // now proves the explanation still exists AND that the UI renders it from there.

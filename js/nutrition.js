@@ -220,7 +220,9 @@ const Nutrition = (() => {
       tdee: plan.tdee.kcal,
       tdeeNote: plan.tdee.note,
       floor: plan.target.floor,
-      floorLabel: profile.sex === "F" ? "women" : "men",
+      floorLabel: plan.target.floorAssumed ? "conservative value — sex not set"
+        : (profile.sex === "F" ? "women" : "men"),
+      floorAssumed: plan.target.floorAssumed,
       floorApplied: plan.target.floorApplied,
     };
 
@@ -274,6 +276,10 @@ const Nutrition = (() => {
           (maintenance.floorApplied
             ? "The floor is what's shown — the computed target came in below it."
             : "Not applied — your target sits above it.") + "</p>" +
+        (maintenance.floorAssumed
+          ? '<p class="small n-floor-assumed" id="n-floor-assumed">Sex isn\'t set on your profile, so we used the ' +
+            "higher floor — 1500 kcal/day, the value for men. Setting your sex in Profile may change this floor.</p>"
+          : "") +
       "</div>" +
       '<p class="muted small n-limits">' + esc(limits) + "</p>";
 

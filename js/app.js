@@ -1891,6 +1891,7 @@
       <div class="form-grid">
         <label>Name<input class="inp" id="p-name" value="${esc(p.name)}"></label>
         <label>Sex<select class="inp" id="p-sex"><option value="M" ${p.sex === "M" ? "selected" : ""}>Male</option><option value="F" ${p.sex === "F" ? "selected" : ""}>Female</option></select></label>
+        <p class="muted small grid-note" id="p-sex-note">An input to the calorie formula, not a question about who you are — this term shifts the estimate by about 166 kcal/day. If you'd rather not set it, add a body-fat % and the lean-mass equation is used instead.</p>
         <label>Birth year<input class="inp" id="p-by" type="number" inputmode="numeric" min="1900" max="${new Date().getFullYear()}" placeholder="e.g. 1990" value="${p.birthYear ?? ""}"></label>
         <label>Height (cm)<input class="inp" id="p-h" type="number" value="${p.heightCm ?? ""}"></label>
         <label>Bodyweight (${U.label()})<input class="inp" id="p-w" type="number" step="0.1" value="${p.weightKg ? U.w(p.weightKg).toFixed(1) : ""}"></label>
