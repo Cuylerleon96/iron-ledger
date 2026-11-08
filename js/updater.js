@@ -12,29 +12,21 @@
    * Everything here runs AFTER first paint and never blocks it. */
 const Updater = (() => {
   "use strict";
-  /* Primary feed is a release ASSET: github.com serves it fresh, and the
-     "latest" URL always points at the newest release, so it cannot lag behind a
-     publish. The repo copy is kept as a fallback (and is human-readable in git). */
+  /* ONE feed, baked in. The user never sees or edits an address: the URL is an
+     implementation detail, and an editable URL box is exactly the kind of
+     unexplained UI that should not exist. The release ASSET is primary because
+     github.com serves it fresh and "latest" always points at the newest release,
+     so it cannot lag behind a publish; the repo copy is the fallback against CDN
+     lag on raw.githubusercontent.com. */
   const FEEDS = [
     "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/info.json",
     "https://raw.githubusercontent.com/Cuylerleon96/iron-ledger/main/update/info.json",
   ];
-  const DEFAULT_FEED = FEEDS[0];
-  const FEED_KEY = "iron-ledger-feed-url";
   const OFFERED_KEY = "iron-ledger-update-offered";
 
   const plugin = () => (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.AppUpdater) || null;
   const isAndroid = () => !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && plugin());
 
-  const feedUrl = () => localStorage.getItem(FEED_KEY) || DEFAULT_FEED;
-  const feedCandidates = () => {
-    const custom = localStorage.getItem(FEED_KEY);
-    return custom ? [custom] : FEEDS;
-  };
-  function setFeedUrl(u) {
-    const v = (u || "").trim();
-    if (v) localStorage.setItem(FEED_KEY, v); else localStorage.removeItem(FEED_KEY);
-  }
 
   async function installed() {
     const P = plugin();
@@ -54,7 +46,7 @@ const Updater = (() => {
     // Try each feed in turn. cache:"no-store" defeats the WebView's own HTTP
     // cache (the one we control); the fallback covers the repo copy's CDN lag.
     let feed = null, lastErr = null;
-    for (const url of feedCandidates()) {
+    for (const url of FEEDS) {
       try {
         const r = await fetch(url, { cache: "no-store" });
         if (!r.ok) throw new Error("HTTP " + r.status);
@@ -107,6 +99,6 @@ const Updater = (() => {
     if (P) { try { await P.openInstallSettings(); } catch (e) { /* ignore */ } }
   }
 
-  return { DEFAULT_FEED, isAndroid, feedUrl, setFeedUrl, installed, check, install, openInstallSettings, offered, markOffered };
+  return { isAndroid, installed, check, install, openInstallSettings, offered, markOffered };
 })();
 if (typeof module !== "undefined") module.exports = Updater;

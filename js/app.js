@@ -955,13 +955,9 @@
     upd.innerHTML = `
       <div class="card-head"><h3>App updates</h3><span class="muted" id="up-status"></span></div>
       <p class="muted small">Checks a public release feed over the network. Nothing about your training is ever uploaded.</p>
-      <div class="row"><button class="btn" id="up-check">Check for updates</button><span class="muted small" id="up-version"></span></div>
-      <label class="mini-lab">Update feed URL
-        <input class="inp" id="up-feed" value="${esc(typeof Updater !== "undefined" ? Updater.feedUrl() : "")}">
-      </label>`;
+      <div class="row"><button class="btn" id="up-check">Check for updates</button><span class="muted small" id="up-version"></span></div>`;
     host.append(upd);
     $("#up-check", upd).addEventListener("click", () => updateCheck(true));
-    $("#up-feed", upd).addEventListener("change", (e) => { Updater.setFeedUrl(e.target.value); toast("Update feed saved"); });
     if (typeof Updater !== "undefined") Updater.installed().then((i) => {
       const v = $("#up-version", upd);
       if (v) v.textContent = i ? `installed v${i.versionName} (build ${i.versionCode})` : "browser build — nothing to install";
