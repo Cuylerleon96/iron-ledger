@@ -1,13 +1,14 @@
 {
-  "versionCode": 21,
-  "versionName": "1.0.20",
+  "versionCode": 22,
+  "versionName": "1.0.21",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "63ef9ec04983f44bef94e31247c96df39e60512c614e2277f18945a5b1c6c2df",
-  "sizeBytes": 3261934,
+  "sha256": "9ea5349ae93f3c10ab58e59ae0819789d00bc23a6b6529aabe9eb3a86343098b",
+  "sizeBytes": 3264240,
   "published": "2026-11-08",
   "notes": [
-    "Mobility now counts control-at-range work, not only stretching. Plank, side plank, bird dog, deadbug, Pallof press, Turkish get-up, thoracic and landmine rotation, cat-cow, 9090 hip and deep squat holds all count. 96 real movements were scoring zero because the app only recognised six words in the exercise name",
-    "The Mobility axis is now labelled range and control, because that is what it measures",
-    "Crunches and sit-ups still do not count toward Mobility, deliberately. They train a short range under load, which is strength and not range, and counting them would stop the axis measuring range at all. The app now explains that on screen instead of leaving you a bare zero"
+    "Bodyweight exercises can now be graded with no weight entered. An unweighted pull-up or push-up was rejected outright and scored zero. The load is now your bodyweight times a published fraction for the movement - pull-up 1.0, dip 0.95, push-up 0.64, inverted row 0.6 - plus anything strapped on, so a 20 lb belt on a 138 lb body scores as the 158 lb actually moving",
+    "The bodyweight used is recorded at the moment you log the set, so an old session is always scored with the bodyweight that was true that day, not today",
+    "Fix: a movement with no published ratio table, such as pull-ups and dips, entered the Strength average as a zero and dragged it down",
+    "Discipline now has two halves. It was frequency only, and the streak it displayed counted for nothing. Continuity, meaning how regularly you turn up, now carries 30 percent, built from smooth signals rather than a streak counter so that one hard week costs a few points instead of wiping the score"
   ]
 }

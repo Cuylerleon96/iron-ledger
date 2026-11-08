@@ -45,7 +45,9 @@ console.log("\n=== session totals (read off his History screen) ===");
 console.log("\n=== attributes (his Dashboard) ===");
 {
   const a = E.attributes(st, 28, 0);
-  const want = { STR: 35, END: 36, POW: 11, MOB: 0, CON: 11, VIT: 79 };
+  // CON was 11 when Discipline was frequency-only; continuity now carries 30%
+  // and his recent 2-day run lifts it to 28
+  const want = { STR: 35, END: 36, POW: 11, MOB: 0, CON: 28, VIT: 79 };
   for (const k of Object.keys(want)) eq(k, a[k].score, want[k]);
   // STR was 41 before the estimated-Strength fix; the basis is what changed:
   // a leg press and two machine presses scored on their OWN tables now

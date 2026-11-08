@@ -298,5 +298,102 @@ console.log("\n=== 15. what counts as Mobility ===");
   truthy("the axis is labelled range & control, not range of motion", /sub: "range & control"/.test(fs.readFileSync(path.join(B, "js", "engine.js"), "utf8")));
 }
 
+console.log("\n=== 16. Discipline: frequency AND continuity ===");
+{
+  const e = env();
+  const mk = (offsets, target = 4) => base({
+    profile: Object.assign({}, base().profile, { weeklyTarget: target }),
+    workouts: offsets.map((o, i) => ({ id: "w" + i, date: iso(o), note: "",
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] })),
+  });
+  const con = (offsets, target) => e.E.attributes(mk(offsets, target), 28, 0).CON;
+
+  eq("no sessions scores zero", con([]).score, 0);
+
+  const every2 = []; for (let d = 27; d >= 0; d -= 2) every2.push(d);
+  const regular = con(every2);
+  // 6w = the streak printed but never scored; both components exist now
+  truthy("frequency is reported", regular.detail.frequency > 0);
+  truthy("continuity is reported", regular.detail.continuity > 0);
+  eq("the score is frequency-led, continuity-weighted",
+    Math.round(0.70 * regular.detail.frequency + 0.30 * regular.detail.continuity), regular.score);
+
+  // regularity must actually change the score at the SAME session count
+  const fortnight = []; for (let d = 13; d >= 0; d -= 1) fortnight.push(d);   // 14 in 2 weeks
+  const cram = con(fortnight);
+  console.log(`     14 sessions every 2nd day -> ${regular.score}; the same 14 crammed into 2 weeks -> ${cram.score}`);
+  truthy("regular beats crammed at the same session count", regular.score > cram.score);
+
+  // THE CONSTRAINT: one hard week is a dent, not a collapse
+  const missed = []; for (let d = 8; d <= 27; d += 2) missed.push(d);
+  const gap = regular.score - con(missed).score;
+  console.log(`     steady 4 weeks -> ${regular.score}; one full week missed -> ${con(missed).score}  (costs ${gap} points)`);
+  truthy("one missed week costs less than a third of the score", gap < 34);
+  truthy("...and the continuity term itself barely moves for it",
+    regular.detail.continuity - con(missed).detail.continuity < 35);
+  truthy("a broken streak does NOT read zero", con(missed).detail.continuity > 40);
+
+  // three quarters of plan is good training, not a fail
+  const threePerWk = [27, 25, 23, 20, 18, 16, 13, 11, 9, 6, 4, 2];
+  const t = con(threePerWk);
+  console.log(`     3 sessions/week against a 4/week target -> ${t.score} (${t.tier}), frequency ${Math.round(t.detail.frequency)}`);
+  truthy("a 25% shortfall is still a respectable score", t.score >= 75);
+
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the explanation names both components", /frequency \$\{Math\.round\(x\.frequency\)\}/.test(src) && /continuity/.test(src));
+}
+
+console.log("\n=== 17. bodyweight movements: the load is the body ===");
+{
+  const e = env();
+  const BW = 70;
+  const custom = [{ id: "b1", n: "Pull Up", c: "Back", g: ["Back"], p: ["Lats"], s: ["Arms"], e: ["Pull-up bar"], m: "weight_reps" },
+                  { id: "b2", n: "Push Up", c: "Chest", g: ["Chest"], p: ["Chest"], s: [], e: ["Bodyweight"], m: "weight_reps" },
+                  { id: "b3", n: "Plank", c: "Abs", g: ["Core"], p: ["Abs"], s: [], e: ["Bodyweight"], m: "time" }];
+  const bst = (sets) => base({ custom, profile: Object.assign({}, base().profile, { weightKg: BW }),
+    workouts: [{ id: "p", date: iso(1), note: "", entries: [{ id: "b1", name: "Pull Up", mode: "weight_reps", sets }] }] });
+  const st = (sets) => bst(sets);
+
+  // factors: published fraction of bodyweight moved
+  eq("pull-up moves the whole body", e.E.bwFactor("Pull Up"), 1.00);
+  eq("dip ~0.95", e.E.bwFactor("Dip"), 0.95);
+  eq("push-up ~0.64", e.E.bwFactor("Push Up"), 0.64);
+  eq("plank is isometric, 0", e.E.bwFactor("Plank"), 0.00);
+  eq("an unknown movement takes the mid-range assumption", e.E.bwFactor("Zercher Carry"), 0.65);
+  truthy("a pull-up is recognised as bodyweight", e.E.isBodyweight("Pull Up"));
+
+  // THE BUG: an unweighted bodyweight set was rejected outright
+  const plain = e.E.entryStats(st([{ r: 8, bwKg: BW }]).workouts[0].entries[0]);
+  eq("an unweighted pull-up counts as a set", plain.sets, 1);
+  truthy("...and has a real tonnage", plain.tonnage > 0);
+  near("...tonnage is bodyweight x reps", plain.tonnage, BW * 8, 1);
+  truthy("...and a real estimated 1RM (was 0)", plain.est1RM > 0);
+  near("...about bodyweight x 1.4 at 8 reps", plain.est1RM, BW * (1 + 8 / 30), 1);
+
+  // the weight box is only what is STRAPPED ON
+  const w20 = 20 / 2.2046226;
+  const wtd = e.E.entryStats(st([{ w: w20, r: 8, bwKg: BW }]).workouts[0].entries[0]);
+  near("a belt adds on TOP of the body", wtd.est1RM, (BW + w20) * (1 + 8 / 30), 1);
+  truthy("...so 20 lb of belt is not read as a 26 lb total", wtd.est1RM > BW);
+
+  // and it is gradable end to end
+  const two = base({ custom, profile: Object.assign({}, base().profile, { weightKg: BW }), targets: { b1: { value: 100 } },
+    workouts: [{ id: "a", date: iso(7), note: "", entries: [{ id: "b1", name: "Pull Up", mode: "weight_reps", sets: [{ r: 6, bwKg: BW }] }] },
+               { id: "b", date: iso(0), note: "", entries: [{ id: "b1", name: "Pull Up", mode: "weight_reps", sets: [{ r: 10, bwKg: BW }] }] }] });
+  const cmp = e.E.compareLast(two, "b1");
+  truthy("6 -> 10 reps reads as progress", cmp && cmp.better && cmp.est1RM.pct > 0);
+  truthy("it has a target percentage", e.E.targetProgress(two, "b1").pct > 0);
+  truthy("it sets PRs", e.E.prTable(two).some((x) => x.prs.length > 0));
+  truthy("it volume-loads the back", e.E.muscleGroups(two, 28).Back.setsPerWk > 0);
+
+  // a core lift with no published table must not enter the strength average as a 0
+  const mixed = base({ custom, profile: Object.assign({}, base().profile, { weightKg: BW }),
+    workouts: [{ id: "a", date: iso(1), note: "", entries: [{ id: 73, name: "Barbell Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] },
+               { id: "b", date: iso(2), note: "", entries: [{ id: "b1", name: "Pull Up", mode: "weight_reps", sets: [{ r: 8, bwKg: BW }] }] }] });
+  const ss = e.E.attributes(mixed, 28, 0).STR;
+  eq("only tabled lifts enter the ratio average", Object.keys(ss.detail.lifts), ["bench"]);
+  truthy("a pull-up does not drag Strength down", ss.score > 60);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

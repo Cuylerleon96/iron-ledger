@@ -106,7 +106,39 @@ const Engine = (() => {
      labelled as one wherever density is shown. */
   const REP_SECONDS = 3;
 
-  /* Epley: 1RM ≈ w·(1 + r/30). Accurate to ~12 reps; flagged as an estimate. */
+  /* ---------- bodyweight movements ----------
+     On a pull-up or a push-up the load is YOURSELF, not the number in the weight
+     box. Those sets used to be rejected outright (the filter demanded w > 0), so
+     unweighted bodyweight work could not be logged or graded at all, and adding
+     20 lb of belt weight estimated a 1RM of about 26 lb — nonsense, because the
+     weight you enter is strapped ON TOP of the body moving it.
+
+     The fraction of bodyweight actually moved, per movement family. These are the
+     standard published figures from kinetic and EMG work (push-up ~0.64 BW, dip
+     ~0.95, pull-up/chin-up ~1.0), rounded; anything unmatched takes a mid-range
+     0.65. They are approximations and are labelled as such. */
+  const BW_FACTOR = [
+    [/pull.?up|chin.?up|muscle.?up|lat pull.?up/i, 1.00],
+    [/\bdip\b|dips/i, 0.95],
+    [/push.?up|press.?up/i, 0.64],
+    [/inverted row|bodyweight row|australian pull/i, 0.60],
+    [/pistol|single.?leg squat|bulgarian|split squat|lunge|step.?up/i, 0.85],
+    [/nordic|glute.?ham|razor curl/i, 0.70],
+    [/calf raise|heel raise/i, 1.00],
+    [/bodyweight squat|air squat|\bsquat\b.*bodyweight/i, 0.65],
+    [/sissy squat|reverse hyper|back extension|hyperextension/i, 0.45],
+    [/plank|hold|isometric|hollow|\bl.?sit\b|dead ?hang|flexed arm hang/i, 0.00],
+    [/sit.?up|crunch|leg raise|knee raise|\bv.?up\b/i, 0.40],
+  ];
+  const BW_NAME = /pull.?up|chin.?up|push.?up|press.?up|\bdip\b|inverted row|bodyweight|plank|hollow|\bl.?sit\b|pistol|nordic|glute.?ham|hanging|flexed arm hang|muscle.?up|air squat|sissy|reverse hyper|back extension|hyperextension|crunch|sit.?up|leg raise|knee raise|bird dog|dead ?bug|bear crawl|mountain climber/i;
+  const bwFactor = (name) => {
+    const n = String(name || "");
+    for (const [re, f] of BW_FACTOR) if (re.test(n)) return f;
+    return 0.65;                        // mid-range assumption, labelled as one
+  };
+  const isBodyweight = (name) => BW_NAME.test(String(name || ""));
+
+  /* Epley: 1RM = w·(1 + r/30). Accurate to ~12 reps; flagged as an estimate. */
   const est1RM = (w, r) => (w > 0 && r > 0 ? w * (1 + Math.min(r, 12) / 30) : 0);
 
   function setVolume(s, mode) {
@@ -129,8 +161,11 @@ const Engine = (() => {
   
   function entryStats(entry) {
     const mode = entry.mode || "weight_reps";
+    const bw = isBodyweight(entry.name);
     const sets = (entry.sets || []).filter((s) => {
-      if (mode === "weight_reps") return num(s.w) > 0 && num(s.r) > 0;
+      // a bodyweight movement is valid on reps alone — the weight box holds only
+      // what is strapped on, so requiring it discarded every unweighted set
+      if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw);
       if (mode === "reps") return num(s.r) > 0;
       if (mode === "time") return num(s.t) > 0;
       if (mode === "distance_time") return num(s.d) > 0 || num(s.t) > 0;
@@ -147,10 +182,18 @@ const Engine = (() => {
          a weight and substitute Math.max(1, reps) when reps were undefined, so a
          20kg x 45s hold scored "20 kg of tonnage" — a number nobody lifted,
          feeding totals, XP and badges. */
-      if (mode === "weight_reps" && num(s.w) > 0) tonnage += num(s.w) * num(s.r);
+      /* The load actually moved: body weight for a bodyweight movement, plus
+         whatever is strapped on. `loadKg` on the set is a full override, and
+         bwKg is stamped at log time so an old session is scored with the
+         bodyweight that was true THAT day rather than today's. */
+      const loadKg = mode === "weight_reps"
+        ? (num(s.loadKg) > 0 ? num(s.loadKg)
+           : num(s.w) + (bw ? num(s.bwKg) * bwFactor(entry.name) : 0))
+        : 0;
+      if (mode === "weight_reps" && loadKg > 0) tonnage += loadKg * num(s.r);
       /* `best` has to be the mode's OWN best, or every non-weight mode reports 0
          and its trend, ETA and plateau detection silently never work. */
-      const e = mode === "weight_reps" ? est1RM(num(s.w), num(s.r))
+      const e = mode === "weight_reps" ? est1RM(loadKg, num(s.r))
         : mode === "reps" ? num(s.r)
         : mode === "time" ? num(s.t)
         : mode === "distance_time" ? num(s.d)
@@ -393,6 +436,12 @@ const Engine = (() => {
     for (const w of ws) for (const en of w.entries || []) {
       if (!isCoreLift(state, en.id)) continue;
       const k = liftKey(exInfo(state, en.id).n);
+      /* A movement can be a core lift and still have no published ratio table —
+         pull-ups, chin-ups, dips. Those entered the average under a `null` key and
+         were then scored as 0, so three good lifts plus one pull-up read worse
+         than the three alone. Only tabled lifts are averaged here; the rest are
+         handled by the fallback. */
+      if (!k || !STANDARDS[k]) continue;
       const s = entryStats(en);
       if (s.est1RM > (out[k] || 0)) out[k] = s.est1RM;
     }
@@ -609,14 +658,47 @@ const Engine = (() => {
     return { score: clamp(interp(perWk, [0, 15, 40, 80, 150], [4, 30, 55, 78, 95])), minPerWk: perWk, sessions };
   }
 
+  /* Discipline has two parts, and only one of them used to count.
+     FREQUENCY — did you show up enough times (sessions vs your weekly target).
+     CONTINUITY — did you show up regularly, which is a different question, and the
+     streak the card printed contributed exactly nothing to the score.
+
+     Continuity is deliberately built from two SMOOTH signals rather than a streak
+     counter, because a counter is all-or-nothing: break it and it reads zero. One
+     hard week should be a dent, not a collapse.
+       - the longest stretch with no session anywhere in the window (plus the wait
+         since the last one), interpolated, so 3 days is near-perfect and 7 days
+         still scores 75
+       - how many of the window's four weeks had at least one session
+     The stretch before a first-ever session is ignored: that is when he started,
+     not evidence of irregularity. */
   function consistencyScore(state, ws) {
     const target = num(state.profile.weeklyTarget) || 4;
     const sessions = ws.length;
     const expected = target * (28 / 7);
     const rate = expected > 0 ? sessions / expected : 0;
-    const s = clamp(interp(rate, [0, 0.25, 0.5, 0.75, 1, 1.25], [0, 22, 45, 68, 86, 97]));
+    /* Softer around the target than it used to be: hitting three quarters of your
+       plan is still good training, and the old curve read it as a fail. */
+    const frequency = clamp(interp(rate, [0, 0.25, 0.5, 0.75, 1, 1.25], [0, 25, 50, 72, 88, 97]));
     const st = streaks(state);
-    return { score: s, sessions, expected, rate, streakDays: st.days, streakWeeks: st.weeks };
+    if (!sessions) {
+      return { score: 0, sessions: 0, expected, rate: 0, frequency: 0, continuity: 0,
+               longestGap: null, weeksCovered: 0, streakDays: st.days, streakWeeks: st.weeks };
+    }
+    const dates = [...new Set(ws.map((w) => w.date))].sort();
+    const t = (d) => new Date(d + "T12:00:00").getTime();
+    const noon = new Date(); noon.setHours(12, 0, 0, 0);
+    let longestGap = Math.max(0, Math.round((noon.getTime() - t(dates[dates.length - 1])) / DAY));
+    for (let i = 1; i < dates.length; i++) longestGap = Math.max(longestGap, Math.round((t(dates[i]) - t(dates[i - 1])) / DAY));
+    const gapScore = interp(longestGap, [0, 3, 7, 10, 14, 21], [100, 95, 75, 58, 40, 18]);
+    const weekOf = (d) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return dstr(x); };
+    const covered = new Set(dates.map(weekOf)).size;
+    const coveredScore = interp(Math.min(4, covered) / 4, [0, 0.25, 0.5, 0.75, 1], [0, 25, 52, 78, 100]);
+    const continuity = clamp(0.55 * gapScore + 0.45 * coveredScore);
+    // frequency leads, continuity carries real weight but not control
+    const score = clamp(0.70 * frequency + 0.30 * continuity);
+    return { score, sessions, expected, rate, frequency, continuity, longestGap,
+             weeksCovered: covered, streakDays: st.days, streakWeeks: st.weeks };
   }
 
   /* Below this, fat is not leanness any more, it is the essential-fat floor:
@@ -1399,7 +1481,7 @@ const Engine = (() => {
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility,
+    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };

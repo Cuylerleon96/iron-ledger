@@ -488,7 +488,9 @@
       case "MOB": return x.minPerWk > 0
         ? `${Math.round(x.minPerWk)} min/wk across ${x.sessions} ${pl(x.sessions, "session")} of mobility and control work — stretching, joint work, and stability or rotation drills. Loaded flexion like crunches is strength, not range, so it counts toward Core instead.`
         : "No mobility or control work logged. Stretching, foam rolling, joint rotations, or stability and rotation drills (plank, bird dog, Pallof press, Turkish get-up) all count. Crunches and sit-ups do not — they train a short range under load, which is strength.";
-      case "CON": return `${x.sessions} ${pl(x.sessions, "session")} in 28 days against a target of ${fmt(x.expected)} · ${x.streakDays}-day streak.`;
+      case "CON": return `${x.sessions} ${pl(x.sessions, "session")} in 28 days against a target of ${fmt(x.expected)} — frequency ${Math.round(x.frequency)}/100, continuity ${Math.round(x.continuity)}/100`
+        + (x.longestGap != null ? ` (longest stretch without training ${x.longestGap} ${pl(x.longestGap, "day")}, ${x.weeksCovered} of the last 4 weeks trained)` : "")
+        + `. Continuity rewards turning up regularly, and one missed week costs only a few points.`;
       case "VIT": return (x.basis && x.basis !== "no data")
         ? `Scored from ${x.basis}${x.log ? ` · ${x.log} bodyweight check-in${x.log > 1 ? "s" : ""}` : ""}.`
         : "Add bodyweight, body-fat and height in Profile to score vitality.";
@@ -570,6 +572,10 @@
     })();
     const mode = Engine.exMode(S, ex.id);
     const sets = prevEntry ? prevEntry.sets.map((s) => ({ ...s })) : [{}];
+    if (Engine.isBodyweight(ex.n)) {
+      const bw = Engine.bodyweight(S);
+      if (bw > 0) sets.forEach((s) => { s.bwKg = s.bwKg || bw; });
+    }
     draft.entries.push({ id: ex.id, name: ex.n, mode, sets });
     toast(last ? `Pre-filled ${sets.length} sets from ${last.date}` : `Added ${ex.n}`);
     render();
@@ -690,6 +696,13 @@
 
   function setRow(en, s, si, idx) {
     const row = el("div", { class: "set-row" });
+    /* A bodyweight movement's load IS the body, so record which body at the time
+       of logging. Without this the engine sees only the strapped-on weight, which
+       is usually nothing, and an unweighted pull-up cannot be graded at all. */
+    if (Engine.isBodyweight(en.name)) {
+      const bw = Engine.bodyweight(S);
+      if (bw > 0) s.bwKg = s.bwKg || bw;
+    }
     /* A field shows DISPLAY units; storage stays canonical kg — the same rule the
        engine, the footer and the target line follow. This used to print s.w
        straight out, so the moment anything re-rendered, a set the user had typed
@@ -715,7 +728,11 @@
       // say when the estimate is capped, so 12 and 20 reps at the same load
       // reading identically is explained rather than looking like a bug
       const capped = Engine.num(s.r) > 12 && e1;
-      inner += `<span class="e1${capped ? " capped" : ""}"${capped ? ` title="Epley is only accurate to about 12 reps, so this estimate is capped — it will not rise further at this weight"` : ""}>${e1 ? (capped ? "≥" : "") + fmtW(U.w(e1)) + " e1RM" : ""}</span>`;
+      const bwMov = Engine.isBodyweight(en.name);
+      const title = bwMov
+        ? `Bodyweight movement: the load is your body (about ${fmtW(U.w(Engine.num(s.bwKg) * Engine.bwFactor(en.name)))} ${U.label()}) plus anything strapped on${capped ? ". Epley is only accurate to about 12 reps, so this estimate is capped" : ""}`
+        : (capped ? "Epley is only accurate to about 12 reps, so this estimate is capped — it will not rise further at this weight" : "");
+      inner += `<span class="e1${capped ? " capped" : ""}${bwMov ? " bw" : ""}" title="${esc(title)}">${e1 ? (capped ? "≥" : "") + fmtW(U.w(e1)) + " e1RM" : ""}</span>`;
     }
     inner += `<button class="btn ghost tiny x" title="remove">✕</button>`;
     row.innerHTML = inner;
