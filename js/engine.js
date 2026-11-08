@@ -100,7 +100,13 @@ const Engine = (() => {
   const tierOf = (s) => (TIERS.find((t) => s >= t[0]) || TIERS[TIERS.length - 1])[1];
 
   /* ---------- set / entry maths ---------- */
-  // Epley: 1RM ≈ w·(1 + r/30). Accurate to ~12 reps; flagged as an estimate.
+  /* Seconds of actual work per repetition. A moderate tempo is ~2s down / 1s up,
+     so 3s is the standard assumption. It exists ONLY to turn reps into a
+     work-time so training density can be computed; it is an estimate and is
+     labelled as one wherever density is shown. */
+  const REP_SECONDS = 3;
+
+  /* Epley: 1RM ≈ w·(1 + r/30). Accurate to ~12 reps; flagged as an estimate. */
   const est1RM = (w, r) => (w > 0 && r > 0 ? w * (1 + Math.min(r, 12) / 30) : 0);
 
   function setVolume(s, mode) {
@@ -128,6 +134,7 @@ const Engine = (() => {
       return false;
     });
     let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, tonnage = 0, rpeSum = 0, rpeN = 0;
+    let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0;
     for (const s of sets) {
       volume += setVolume(s, mode);
       reps += num(s.r); time += num(s.t); dist += num(s.d);
@@ -135,11 +142,21 @@ const Engine = (() => {
       const e = mode === "weight_reps" ? est1RM(num(s.w), num(s.r)) : num(s.w) || num(s.t);
       if (e > best) { best = e; bestSet = s; }
       if (num(s.rpe) > 0) { rpeSum += num(s.rpe); rpeN++; }
+      const restVal = num(s.rest) > 0 ? num(s.rest) : num(entry.restDefault);
+      if (restVal > 0) { restSum += restVal; restN++; }
+      // sets are classified by reps so rest can be judged against the work it
+      // is resting from: heavy/low-rep wants long rest, high-rep wants short
+      if (num(s.r) > 0 && num(s.r) <= 5) hardReps++;
+      if (num(s.r) >= 12) highReps++;
+      workSec += num(s.r) * REP_SECONDS + num(s.t);
     }
     return {
       sets: sets.length, volume, reps, time, dist, tonnage,
       est1RM: mode === "weight_reps" ? best : 0,
       best, bestSet, avgRPE: rpeN ? rpeSum / rpeN : null,
+      avgRest: restN ? restSum / restN : null,
+      totalRest: restSum,
+      restN, workSec, hardReps, highReps,
     };
   }
 
@@ -245,7 +262,7 @@ const Engine = (() => {
       for (const en of w.entries || []) {
         if (en.id !== exId) continue;
         const s = entryStats(en);
-        pts.push({ date: w.date, est1RM: s.est1RM, volume: s.volume, tonnage: s.tonnage, top: s.best, reps: s.reps, sets: s.sets });
+        pts.push({ date: w.date, est1RM: s.est1RM, volume: s.volume, tonnage: s.tonnage, top: s.best, reps: s.reps, sets: s.sets, rpe: s.avgRPE, rest: s.avgRest });
       }
     }
     return pts;
@@ -329,8 +346,35 @@ const Engine = (() => {
     let sets = 0;
     for (const w of ws) for (const en of w.entries || []) sets += entryStats(en).sets;
     const setScore = interp(sets / weeks, [0, 20, 40, 60, 90], [6, 30, 55, 75, 95]);
-    const score = 0.42 * cardioScore + 0.28 * repScore + 0.30 * setScore;
-    return { score: clamp(score), cardioMinPerWk: minPerWk, distKm, maxReps, setsPerWk: sets / weeks };
+
+    // Rest interval is a training VARIABLE, not a virtue. Short rest raises the
+    // cardiovascular demand (endurance); long rest is what LETS you express heavy
+    // loads (strength/power). So rest moves Stamina only — Strength and Power are
+    // deliberately untouched, because penalising long rest would punish exactly
+    // the heavy work they are built from. Counted only when rest was actually
+    // recorded; otherwise the original weighting stands rather than inventing a
+    // default nobody entered.
+    let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0;
+    for (const w of ws) for (const en of w.entries || []) {
+      const st = entryStats(en);
+      restSum += st.totalRest; restN += st.restN; workSec += st.workSec;
+      hardReps += st.hardReps; highReps += st.highReps;
+    }
+    const avgRest = restN ? restSum / restN : null;
+    // share of the session spent working rather than resting
+    const density = (workSec + restSum) > 0 ? Math.round((workSec / (workSec + restSum)) * 100) : null;
+
+    let score;
+    if (avgRest != null) {
+      const densityScore = avgRest <= 45 ? 92
+        : avgRest >= 300 ? 22
+        : clamp(interp(avgRest, [45, 60, 90, 120, 180, 300], [92, 78, 62, 50, 36, 22]), 22, 92);
+      score = 0.36 * cardioScore + 0.24 * repScore + 0.22 * setScore + 0.18 * densityScore;
+    } else {
+      score = 0.42 * cardioScore + 0.28 * repScore + 0.30 * setScore;
+    }
+    return { score: clamp(score), cardioMinPerWk: minPerWk, distKm, maxReps, setsPerWk: sets / weeks,
+             avgRest, density, hardReps, highReps, restN };
   }
 
   function powerScore(state, ws) {
@@ -395,7 +439,9 @@ const Engine = (() => {
       const gap = Math.abs(bw - goal);
       parts.push({ w: 0.5, v: clamp(100 - gap * 4) }); used.push("weight vs goal");
     }
-    const bf = num(state.profile.bodyFatPct);
+    // Prefer the log (the source of truth); the profile copy is only a fallback.
+    const bfLogged = log.filter((b) => num(b.bodyFatPct) > 0);
+    const bf = bfLogged.length ? num(bfLogged[bfLogged.length - 1].bodyFatPct) : num(state.profile.bodyFatPct);
     if (bf > 0) {
       const sex = state.profile.sex || "M";
       const lo = sex === "F" ? 18 : 8, hi = sex === "F" ? 28 : 18;
@@ -493,6 +539,7 @@ const Engine = (() => {
   function weakPoints(state, days = 28) {
     const mg = muscleGroups(state, days);
     const attrs = attributes(state, days);
+    const ws = windowWorkouts(state, days, 0);
     const out = [];
     const trained = GROUP_ORDER.filter((g) => mg[g].setsPerWk > 0);
     const vals = trained.map((g) => mg[g].score);
@@ -540,19 +587,53 @@ const Engine = (() => {
         title: "Quad / hamstring gap", detail: `Quads ${Math.round(quad)} sets vs hamstrings ${Math.round(ham)}.`,
         fix: "Add Romanian deadlifts, leg curls or good mornings for the posterior chain." });
     }
-    // 5. stagnant lifts
-    for (const id of trainedExerciseIds(state)) {
+    // 5. stagnant lifts. Deliberately a longer window than the muscle analysis:
+    // four sessions of a lift trained every few weeks do not fit inside 90 days,
+    // so a genuine plateau could never be seen. The four-session guard below
+    // keeps it meaningful either way.
+    for (const id of trainedExerciseIds(state, 365)) {
       const pts = seriesFor(state, id);
       if (pts.length < 4) continue;
       const last4 = pts.slice(-4).map((p) => p.est1RM || p.top).filter((v) => v > 0);
       if (last4.length < 4) continue;
       const spread = (Math.max(...last4) - Math.min(...last4)) / Math.max(...last4);
       const flat = last4[3] <= Math.max(...last4.slice(0, 3)) && spread < 0.03;
-      if (flat) out.push({ kind: "stagnant", severity: "low", title: `${exName(state, id)} has plateaued`,
-        detail: `No estimated-1RM improvement across the last 4 sessions.`,
-        fix: "Change the stimulus: add a rep, drop to 3×5 and push load, or deload a week." });
+      if (flat) {
+        // RPE turns a generic "change the stimulus" into an actual instruction:
+        // near-maximal effort with no progress means recover, not push harder.
+        const lastRpe = pts[pts.length - 1].rpe;
+        const fix = lastRpe == null
+          ? "Change the stimulus: add a rep, drop to 3×5 and push load, or deload a week."
+          : lastRpe >= 8.5
+            ? `Stalled at RPE ${lastRpe.toFixed(1)} — that is near-maximal, so the limiter is recovery, not effort. Deload a week, then retest.`
+            : `Stalled but only at RPE ${lastRpe.toFixed(1)} — there is headroom. Add load next session.`;
+        out.push({ kind: "stagnant", severity: "low", title: `${exName(state, id)} has plateaued`,
+          detail: `No estimated-1RM improvement across the last 4 sessions.`, fix });
+      }
     }
-    // 6. low attributes
+    // 6. rest interval judged against the work it is resting FROM
+    let rSum = 0, rN = 0, hard = 0, high = 0, totSets = 0;
+    for (const w of ws) for (const en of w.entries || []) {
+      const st = entryStats(en);
+      rSum += st.totalRest; rN += st.restN; hard += st.hardReps; high += st.highReps; totSets += st.sets;
+    }
+    if (rN && totSets) {
+      const avgRest = rSum / rN;
+      const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
+      if (avgRest < 75 && hard / totSets > 0.35) {
+        out.push({ kind: "density", severity: "low",
+          title: `Short rest (${mmss(avgRest)}) on heavy sets`,
+          detail: `${hard} of ${totSets} sets are 5 reps or fewer, but your average rest is under 1:15. Short rest caps the load you can express, so the strength work suffers even when the effort feels maximal.`,
+          fix: "Rest 2\u20133 min between sets of 5 or fewer reps, and keep the short rest for your higher-rep sets." });
+      } else if (avgRest > 150 && high / totSets > 0.35) {
+        out.push({ kind: "density", severity: "low",
+          title: `Long rest (${mmss(avgRest)}) on high-rep sets`,
+          detail: `${high} of ${totSets} sets are 12+ reps but you rest over 2:30, which blunts the endurance stimulus those sets are there for.`,
+          fix: "Cut rest to 45\u201375 s on the high-rep work, or superset it with something else." });
+      }
+    }
+
+    // 7. low attributes
     for (const a of ATTRIBUTES) {
       if (attrs[a.key].score < 30 && attrs[a.key].score > 0)
         out.push({ kind: "attribute", severity: "low", title: `${a.label} is your weakest attribute`,
@@ -746,13 +827,18 @@ const Engine = (() => {
   /* ---------- summary ---------- */
   function summary(state) {
     const ws = state.workouts || [];
-    let tonnage = 0, sets = 0, reps = 0, time = 0, dist = 0;
+    let tonnage = 0, sets = 0, reps = 0, time = 0, dist = 0, restTotal = 0, restN = 0, workSec = 0;
     for (const w of ws) for (const en of w.entries || []) {
-      const s = entryStats(en); tonnage += s.tonnage; sets += s.sets; reps += s.reps; time += s.time; dist += s.dist;
+      const s = entryStats(en);
+      tonnage += s.tonnage; sets += s.sets; reps += s.reps; time += s.time; dist += s.dist;
+      restTotal += s.totalRest; restN += s.restN; workSec += s.workSec;
     }
+    const avgRest = restN ? restTotal / restN : null;
+    const density = (workSec + restTotal) > 0 ? Math.round((workSec / (workSec + restTotal)) * 100) : null;
     const totalXp = xp(state);
     return {
       sessions: ws.length, tonnage, sets, reps, timeMin: time / 60, distKm: dist / 1000,
+      restMin: restTotal / 60, avgRest, density,
       xp: totalXp, level: levelInfo(totalXp), title: title(levelInfo(totalXp).level),
       streak: streaks(state), prs: prCount(state, 28), prsAll: prCount(state, 3650),
       exercises: trainedExerciseIds(state, 3650).length,

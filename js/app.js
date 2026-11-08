@@ -12,6 +12,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const today = () => Engine.dstr(new Date());
   const pl = (n, s, p) => (n === 1 ? s : (p || s + "s"));
+  const fmtRest = (sec) => { const s = Math.round(sec); return s < 60 ? s + "s" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
   const fmt = (n, d = 0) => (isFinite(n) ? Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
 
   /* ---------- units ---------- */
@@ -89,41 +90,45 @@
     if (!t) return null;
     const rpeM = t.match(/@\s*(\d+(?:\.\d+)?)/);
     const rpe = rpeM ? parseFloat(rpeM[1]) : undefined;
-    const body = t.replace(/@\s*\d+(?:\.\d+)?/, "").trim();
+    // rest token: "r90" (seconds). Letters are unambiguous — time uses "s"/"m",
+    // and this is stripped before the rest of the string is parsed.
+    const restM = t.match(/\br\s*(\d+)\b/);
+    const rest = restM ? parseFloat(restM[1]) : undefined;
+    const body = t.replace(/@\s*\d+(?:\.\d+)?/, "").replace(/\br\s*\d+\b/, "").trim();
     const clockM = body.match(/(\d+):(\d{2})/);
     const secs = (m) => m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : undefined;
     const num = (m) => (m ? parseFloat(m[1]) : undefined);
 
     if (mode === "time") {
       const s = clockM ? secs(clockM) : num(body.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|secs)?\s*$/));
-      return s ? { t: s, rpe } : null;
+      return s ? { t: s, rpe, rest } : null;
     }
     if (mode === "reps") {
       const r = num(body.match(/^(\d+(?:\.\d+)?)/));
-      return r ? { r, rpe } : null;
+      return r ? { r, rpe, rest } : null;
     }
     if (mode === "distance_time") {
       const kmM = body.match(/(\d+(?:\.\d+)?)\s*km/), mM = body.match(/(\d+(?:\.\d+)?)\s*m\b/);
       const d = kmM ? parseFloat(kmM[1]) * 1000 : mM ? parseFloat(mM[1]) : undefined;
       const time = clockM ? secs(clockM) : num(body.match(/(\d+(?:\.\d+)?)\s*(?:min|m(?:in)?s?)$/));
       const tt = clockM ? secs(clockM) : (time !== undefined && !kmM && !mM ? undefined : time);
-      return { d, t: clockM ? secs(clockM) : tt, rpe };
+      return { d, t: clockM ? secs(clockM) : tt, rpe, rest };
     }
     if (mode === "weight_time") {
       const w = num(body.match(/^(\d+(?:\.\d+)?)/));
       const s = clockM ? secs(clockM) : num(body.match(/[x*]\s*(\d+(?:\.\d+)?)/)) ?? num(body.match(/(\d+(?:\.\d+)?)\s*(?:s|sec)/));
-      return w ? { w, t: s, rpe } : null;
+      return w ? { w, t: s, rpe, rest } : null;
     }
     if (mode === "weight_distance") {
       const w = num(body.match(/^(\d+(?:\.\d+)?)/));
       const d = num(body.match(/[x*]\s*(\d+(?:\.\d+)?)/)) ?? num(body.match(/(\d+(?:\.\d+)?)\s*m/));
-      return w ? { w, d, rpe } : null;
+      return w ? { w, d, rpe, rest } : null;
     }
     // weight_reps
     const m = body.match(/^(\d+(?:\.\d+)?)\s*(?:kg|lb|#)?\s*[x*\/\s]\s*(\d+(?:\.\d+)?)/);
-    if (m) return { w: parseFloat(m[1]), r: parseFloat(m[2]), rpe };
+    if (m) return { w: parseFloat(m[1]), r: parseFloat(m[2]), rpe, rest };
     const one = body.match(/^(\d+(?:\.\d+)?)/);
-    if (one) return { w: parseFloat(one[1]), r: undefined, rpe };
+    if (one) return { w: parseFloat(one[1]), r: undefined, rpe, rest };
     return null;
   }
 
@@ -243,11 +248,12 @@
           <div class="lvl-in"><span class="lvl-num">${s.level.level}</span><span class="lvl-lab">LEVEL</span></div>
         </div>
         <div class="hero-meta">
-          <h2>${esc(s.title)}</h2>
-          <p class="muted">${fmt(s.level.into)} / ${fmt(s.level.need)} XP → next LV · ${fmt(s.xp)} total</p>
+          <h2>${esc(S.profile.name || s.title)}</h2>
+          <p class="muted">${S.profile.name ? esc(s.title) + " · " : ""}${fmt(s.level.into)} / ${fmt(s.level.need)} XP → next LV · ${fmt(s.xp)} total</p>
           <div class="chips">
             <span class="chip">${s.sessions} ${pl(s.sessions, "session")}</span>
             <span class="chip">${fmt(s.tonnage / 1000, 1)} t lifted</span>
+            ${s.density ? `<span class="chip">${s.density}% work time</span>` : ""}
             <span class="chip">${s.streak.days}d streak</span>
             <span class="chip">${s.prs} ${pl(s.prs, "PR")} this month</span>
           </div>
@@ -375,7 +381,10 @@
         : x.basis === "estimated"
           ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.`
           : "Log a loaded lift to start measuring strength.";
-      case "END": return `Cardio ${Math.round(x.cardioMinPerWk)} min/wk · best single set ${x.maxReps} reps · ${Math.round(x.setsPerWk)} working sets/wk.`;
+      case "END": return `Cardio ${Math.round(x.cardioMinPerWk)} min/wk · best single set ${x.maxReps} reps · ${Math.round(x.setsPerWk)} working sets/wk.`
+        + (x.avgRest
+            ? ` Average rest ${fmtRest(x.avgRest)} and ${x.density}% of session time actually working — short rest raises the endurance demand, which is why it counts here and nowhere else.`
+            : " Log rest between sets to factor training density in; nothing else reads it.");
       case "POW": return `${x.plyoReps} explosive reps logged · ${x.heavySets} heavy low-rep sets (≤3 reps).`;
       case "MOB": return `${Math.round(x.minPerWk)} min/wk of mobility or stretching work.`;
       case "CON": return `${x.sessions} ${pl(x.sessions, "session")} in 28 days against a target of ${fmt(x.expected)} · ${x.streakDays}-day streak.`;
@@ -479,12 +488,18 @@
       </div>
       ${cmpBanner}
       <div class="sets" id="sets-${idx}"></div>
+      <div class="entry-rest">
+        <label>Rest between sets <input class="inp num rest-default" type="number" inputmode="numeric" min="0" step="5" placeholder="secs" value="${en.restDefault ?? ""}" style="width:72px"> sec</label>
+        <span class="muted small">Applies to every set — blank sets fall back to it.</span>
+      </div>
       <div class="quick"><input class="inp" placeholder="${quickHint(en.mode)}" data-idx="${idx}"><button class="btn ghost tiny qadd" data-idx="${idx}">Add set</button></div>
       <div class="entry-foot">
-        <span>${st.sets} sets</span>
+        <span>${st.sets} ${pl(st.sets, "set")}</span>
         ${st.tonnage ? `<span>${fmt(U.w(st.tonnage) / 1, 0)} ${U.label()} tonnage</span>` : ""}
         ${st.est1RM ? `<span>best e1RM <b>${fmt(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
-        ${st.reps ? `<span>${st.reps} reps</span>` : ""}
+        ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
+        ${st.avgRPE ? `<span>avg RPE ${st.avgRPE.toFixed(1)}</span>` : ""}
+        ${st.avgRest ? `<span>rest ${fmtRest(st.avgRest)}</span>` : ""}
         <span class="muted">${prev.date ? "all-time best " + bestLabel({ best: prev, mode: en.mode }) : "first time logging this"}</span>
       </div>`;
 
@@ -504,6 +519,14 @@
       en.sets.push(p); render();
     };
     $(".qadd", card).addEventListener("click", doAdd);
+    const rd = $(".rest-default", card);
+    rd.addEventListener("input", (e) => {
+      const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
+      en.restDefault = v;
+      // keep every set's placeholder in step so the effective value is always visible
+      $$(".rest-wrap input", card).forEach((i) => { i.placeholder = v ? String(v) : "rest"; });
+      updateEntryFoot(idx);
+    });
     qi.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } });
     return card;
   }
@@ -516,7 +539,7 @@
 
   function setRow(en, s, si, idx) {
     const row = el("div", { class: "set-row" });
-    const f = (k, ph, w = 74) => `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${s[k] ?? ""}" style="width:${w}px">`;
+    const f = (k, ph, w = 64) => `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${s[k] ?? ""}" style="width:${w}px">`;
     let inner = `<span class="set-n">${si + 1}</span>`;
     if (en.mode === "weight_reps") inner += f("w", U.label()) + `<span class="x">×</span>` + f("r", "reps");
     else if (en.mode === "reps") inner += f("r", "reps");
@@ -524,7 +547,9 @@
     else if (en.mode === "weight_time") inner += f("w", U.label()) + `<span class="x">×</span>` + f("t", "secs") + `<span class="unit">s</span>`;
     else if (en.mode === "distance_time") inner += f("d", "metres", 88) + `<span class="unit">${U.dlab()}</span>` + f("t", "secs", 88) + `<span class="unit">s</span>`;
     else if (en.mode === "weight_distance") inner += f("w", U.label()) + `<span class="x">×</span>` + f("d", "metres") + `<span class="unit">${U.dlab()}</span>`;
-    inner += `<span class="rpe-wrap"><input class="inp num" data-k="rpe" type="number" min="1" max="10" step="0.5" placeholder="RPE" value="${s.rpe ?? ""}" style="width:60px"></span>`;
+    inner += `<span class="rpe-wrap"><input class="inp num" data-k="rpe" type="number" min="1" max="10" step="0.5" placeholder="RPE" value="${s.rpe ?? ""}" style="width:52px"></span>`;
+    const restPh = en.restDefault ? String(en.restDefault) : "rest";
+    inner += `<span class="rest-wrap"><input class="inp num" data-k="rest" type="number" inputmode="numeric" min="0" step="5" placeholder="${restPh}" value="${s.rest ?? ""}" style="width:56px" title="Rest after this set, in seconds. Leave blank to use the exercise default."></span>`;
     if (en.mode === "weight_reps") {
       const e1 = Engine.est1RM(Engine.num(s.w), Engine.num(s.r));
       inner += `<span class="e1">${e1 ? fmt(U.w(e1)) + " e1RM" : ""}</span>`;
@@ -551,10 +576,12 @@
     const st = Engine.entryStats(en);
     const foot = $$(".card.entry")[idx] && $(".entry-foot", $$(".card.entry")[idx]);
     if (!foot) return;
-    foot.innerHTML = `<span>${st.sets} sets</span>
+    foot.innerHTML = `<span>${st.sets} ${pl(st.sets, "set")}</span>
       ${st.tonnage ? `<span>${fmt(U.w(st.tonnage))} ${U.label()} tonnage</span>` : ""}
       ${st.est1RM ? `<span>best e1RM <b>${fmt(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
-      ${st.reps ? `<span>${st.reps} reps</span>` : ""}`;
+      ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
+      ${st.avgRPE ? `<span>avg RPE ${st.avgRPE.toFixed(1)}</span>` : ""}
+      ${st.avgRest ? `<span>rest ${fmtRest(st.avgRest)}</span>` : ""}`;
   }
 
   function saveDraft() {
@@ -678,12 +705,20 @@
     host.append(head);
     if (!ws.length) { host.append(el("p", { class: "muted pad" }, "No sessions logged yet.")); return; }
     ws.forEach((w) => {
-      let tonnage = 0, sets = 0;
-      (w.entries || []).forEach((en) => { const s = Engine.entryStats(en); tonnage += s.tonnage; sets += s.sets; });
+      let tonnage = 0, sets = 0, rpeSum = 0, rpeN = 0;
+      (w.entries || []).forEach((en) => {
+        const s = Engine.entryStats(en);
+        tonnage += s.tonnage; sets += s.sets;
+        if (s.avgRPE) { rpeSum += s.avgRPE * s.sets; rpeN += s.sets; }
+      });
+      const sessionRpe = rpeN ? (rpeSum / rpeN) : null;
+      let restSum2 = 0, restN2 = 0;
+      (w.entries || []).forEach((en) => { const s = Engine.entryStats(en); restSum2 += s.totalRest; restN2 += s.restN; });
+      const sessionRest = restN2 ? restSum2 / restN2 : null;
       const card = el("section", { class: "card hist" });
       card.innerHTML = `
         <div class="hist-head">
-          <div><b>${w.date}</b> <span class="muted">· ${(w.entries || []).length} exercises · ${sets} sets · ${fmt(U.w(tonnage))} ${U.label()}</span>
+          <div><b>${w.date}</b> <span class="muted">· ${(w.entries || []).length} ${pl((w.entries || []).length, "exercise")} · ${sets} ${pl(sets, "set")} · ${fmt(U.w(tonnage))} ${U.label()}${sessionRpe ? ` · avg RPE ${sessionRpe.toFixed(1)}` : ""}${sessionRest ? ` · rest ${fmtRest(sessionRest)}` : ""}</span>
           ${w.note ? `<div class="muted small">${esc(w.note)}</div>` : ""}</div>
           <div class="row"><button class="btn ghost tiny ed">Edit</button><button class="btn ghost tiny cp">Repeat</button></div>
         </div>
@@ -691,7 +726,8 @@
           ${(w.entries || []).map((en) => {
             const s = Engine.entryStats(en);
             const setsTxt = (en.sets || []).map((x) => setText(x, en.mode)).join("  ·  ");
-            return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt)}</span></div>`;
+            const restTxt = s.avgRest ? `  ·  rest ${fmtRest(s.avgRest)}` : "";
+            return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt + restTxt)}</span></div>`;
           }).join("")}
         </div>`;
       $(".ed", card).addEventListener("click", () => {
@@ -708,12 +744,13 @@
   }
 
   function setText(s, mode) {
-    if (mode === "weight_reps") return `${fmt(U.w(Engine.num(s.w)))}×${s.r ?? "?"}`;
-    if (mode === "reps") return `${s.r ?? "?"} reps`;
-    if (mode === "time") return `${s.t ?? "?"}s`;
-    if (mode === "weight_time") return `${fmt(U.w(Engine.num(s.w)))}×${s.t ?? "?"}s`;
-    if (mode === "distance_time") return `${fmt(Engine.num(s.d))}m ${s.t ? s.t + "s" : ""}`;
-    if (mode === "weight_distance") return `${fmt(U.w(Engine.num(s.w)))}×${fmt(Engine.num(s.d))}m`;
+    const rpe = s.rpe ? `@${s.rpe}` : "";
+    if (mode === "weight_reps") return `${fmt(U.w(Engine.num(s.w)))}×${s.r ?? "?"}${rpe}`;
+    if (mode === "reps") return `${s.r ?? "?"} reps${rpe}`;
+    if (mode === "time") return `${s.t ?? "?"}s${rpe}`;
+    if (mode === "weight_time") return `${fmt(U.w(Engine.num(s.w)))}×${s.t ?? "?"}s${rpe}`;
+    if (mode === "distance_time") return `${fmt(Engine.num(s.d))}m ${s.t ? s.t + "s" : ""}${rpe}`;
+    if (mode === "weight_distance") return `${fmt(U.w(Engine.num(s.w)))}×${fmt(Engine.num(s.d))}m${rpe}`;
     return "";
   }
 
@@ -864,6 +901,7 @@
         <label>Height (cm)<input class="inp" id="p-h" type="number" value="${p.heightCm ?? ""}"></label>
         <label>Bodyweight (${U.label()})<input class="inp" id="p-w" type="number" step="0.1" value="${p.weightKg ? U.w(p.weightKg).toFixed(1) : ""}"></label>
         <label>Body fat %<input class="inp" id="p-bf" type="number" step="0.1" value="${p.bodyFatPct ?? ""}"></label>
+        <p class="muted small grid-note">These two are read from your <b>bodyweight log</b> — editing them here records a check-in for today.</p>
         <label>Goal weight (${U.label()})<input class="inp" id="p-gw" type="number" step="0.1" value="${p.goalWeightKg ? U.w(p.goalWeightKg).toFixed(1) : ""}"></label>
         <label>Weekly session target<input class="inp" id="p-wt" type="number" value="${p.weeklyTarget ?? 4}"></label>
         <label>Units<select class="inp" id="p-u"><option value="kg" ${U.kg ? "selected" : ""}>Kilograms</option><option value="lb" ${!U.kg ? "selected" : ""}>Pounds</option></select></label>
@@ -918,12 +956,23 @@
       const g = (id) => $(id).value;
       p.name = g("#p-name"); p.sex = g("#p-sex");
       p.heightCm = parseFloat(g("#p-h")) || null;
-      p.weightKg = g("#p-w") ? U.wi(parseFloat(g("#p-w"))) : null;
-      p.bodyFatPct = parseFloat(g("#p-bf")) || null;
+      // Weight and body fat are not stored on the profile directly — they are
+      // logged. Saving here records today's check-in, so there is exactly one
+      // place a measurement lives and the two screens cannot disagree.
+      const wKg = g("#p-w") ? U.wi(parseFloat(g("#p-w"))) : null;
+      const bfPct = g("#p-bf") ? parseFloat(g("#p-bf")) : null;
+      if (wKg) {
+        Store.addBodyLog({ date: today(), weightKg: wKg, bodyFatPct: bfPct || null });
+      } else {
+        p.weightKg = null;
+        if (bfPct) p.bodyFatPct = bfPct;
+      }
       p.goalWeightKg = g("#p-gw") ? U.wi(parseFloat(g("#p-gw"))) : null;
       p.weeklyTarget = parseInt(g("#p-wt"), 10) || 4;
       p.units = g("#p-u");
-      Store.save(true); toast("Profile saved", "good"); render();
+      Store.save(true);
+      toast(wKg ? "Saved — recorded a check-in for today" : "Profile saved", "good");
+      render();
     });
     $("#b-add", bw).addEventListener("click", () => {
       const w = parseFloat($("#b-w", bw).value);

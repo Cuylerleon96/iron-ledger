@@ -9,7 +9,7 @@ const Store = (() => {
     version: 1,
     createdAt: new Date().toISOString(),
     profile: {
-      name: "", sex: "M", birthYear: null, heightCm: null,
+      name: "", sex: "M", heightCm: null,
       weightKg: null, bodyFatPct: null, goalWeightKg: null,
       weeklyTarget: 4, units: "kg",
     },
@@ -72,16 +72,37 @@ const Store = (() => {
   function deleteWorkout(id) { state.workouts = state.workouts.filter((w) => w.id !== id); save(true); }
   function workoutById(id) { return state.workouts.find((w) => w.id === id) || null; }
 
+  /* The bodyweight log is the SINGLE SOURCE OF TRUTH for body composition.
+     The profile's weight and body-fat are derived from the newest check-in that
+     actually carries each value, so a measurement is entered once and both views
+     stay in step. Only ever wrote weightKg before, which meant body fat had to be
+     typed twice and could silently drift out of the score. */
+  function syncProfileFromLog() {
+    const log = state.bodylog;
+    if (!log.length) return;
+    const lastWith = (k) => {
+      for (let i = log.length - 1; i >= 0; i--) {
+        const v = Number(log[i][k]);
+        if (isFinite(v) && v > 0) return v;
+      }
+      return null;
+    };
+    const w = lastWith("weightKg");
+    if (w !== null) state.profile.weightKg = w;
+    const bf = lastWith("bodyFatPct");
+    if (bf !== null) state.profile.bodyFatPct = bf;
+  }
+
   function addBodyLog(entry) {
     const i = state.bodylog.findIndex((b) => b.date === entry.date);
     if (i >= 0) state.bodylog[i] = entry; else state.bodylog.push(entry);
     state.bodylog.sort((a, b) => a.date.localeCompare(b.date));
-    if (state.bodylog.length) state.profile.weightKg = state.bodylog[state.bodylog.length - 1].weightKg;
+    syncProfileFromLog();
     save(true);
   }
   function deleteBodyLog(date) {
     state.bodylog = state.bodylog.filter((b) => b.date !== date);
-    if (state.bodylog.length) state.profile.weightKg = state.bodylog[state.bodylog.length - 1].weightKg;
+    syncProfileFromLog();
     save(true);
   }
 
@@ -130,9 +151,11 @@ const Store = (() => {
   }
 
   function exportCSV() {
+    // `rest` was a declared-but-never-collected field; exporting an always-empty
+    // column is noise, and RPE is real data so it stays.
     const rows = [["date", "exercise", "mode", "set", "weight_kg", "reps", "seconds", "distance_m", "rpe", "rest_s"]];
     state.workouts.forEach((w) => (w.entries || []).forEach((en) => {
-      (en.sets || []).forEach((s, i) => rows.push([w.date, en.name || en.id, en.mode || "", i + 1, s.w ?? "", s.r ?? "", s.t ?? "", s.d ?? "", s.rpe ?? "", s.rest ?? ""]));
+      (en.sets || []).forEach((s, i) => rows.push([w.date, en.name || en.id, en.mode || "", i + 1, s.w ?? "", s.r ?? "", s.t ?? "", s.d ?? "", s.rpe ?? "", (s.rest ?? en.restDefault ?? "")]));
     }));
     return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   }
