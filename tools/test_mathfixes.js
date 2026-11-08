@@ -600,7 +600,12 @@ console.log("\n=== 23. push-up variants, from published force-plate measurement 
   eq("an incline crunch is still the hard head-below case", e.E.bwFactor("Incline Crunches"), 0.85);
   eq("an incline bench press is not bodyweight at all", e.E.isBodyweight("Incline Bench Press"), false);
   // knee push-up sits between
-  truthy("knee push-up is measured lower than flat", e.E.bwFactor("Knee Push-ups") < 0.64);
+  eq("knee push-up takes the two-study consensus, not a midpoint", e.E.bwFactor("Knee Push-ups"), 0.49);
+  // rows are measured, for the suspension variant; endpoints key on the direction word
+  eq("an upright/incline row is the easier end", e.E.bwFactor("Incline Row"), 0.37);
+  eq("a feet-elevated row is the harder end", e.E.bwFactor("Feet-Elevated Row"), 0.79);
+  eq("a plain inverted row keeps its reference", e.E.bwFactor("Inverted Row"), 0.60);
+  truthy("...and the harder end is the larger fraction", e.E.bwFactor("Feet-Elevated Row") > e.E.bwFactor("Incline Row"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

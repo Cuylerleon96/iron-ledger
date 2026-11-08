@@ -128,13 +128,30 @@ const Engine = (() => {
        (Gouvali & Boudolos 2005). Assumed standard setups, same convention as the
        40-degree bench: hands elevated ~30-40 cm (near the low end), feet elevated
        ~40-60 cm (near the top).
+       The published relationship with elevation is roughly LINEAR in height, not a
+       pure cosine: Ebben measures 64 -> 55 -> 41 %BM for flat -> +30.5 cm -> +61 cm
+       of hand elevation, about 0.20 %BM per 30 cm.
        NAMING TRAP: for push-ups 'incline' means HANDS elevated = EASIER, and
        'decline' means FEET elevated = HARDER — the opposite of the bench-crunch
        convention. These match on the direction word, never a shared 'incline'. */
     [/push.?up.*(feet|decline)|decline push.?up|feet.?elevated push.?up/i, 0.74],
     [/push.?up.*(hands|incline)|incline push.?up|hands.?elevated push.?up/i, 0.55],
-    [/knee push.?up|modified push.?up|push.?up.*knee/i, 0.51],
+    /* 0.49, not a midpoint: Ebben/Wurm 2011 and Suprak 2011 independently measure
+       49%; Gouvali & Boudolos 2005 report 52.9% for the on-knees variant. Two of
+       three agree, so the consensus value wins. */
+    [/knee push.?up|modified push.?up|push.?up.*knee/i, 0.49],
     [/push.?up|press.?up/i, 0.64],
+    /* Rows: MEASURED, but only for the suspension/TRX row — the plain-bar inverted
+       row has no independent published %BW figure, and the 40-75% numbers on
+       fitness sites are estimates, not measurements, so they are not used here.
+       Melrose & Dawes (J Athl Enhancement 2014/15) dynamometer values by body
+       angle from vertical: 30 deg 37.44%, 45 deg 52.88%, 60 deg 68.08%,
+       75 deg 79.38%. Giancotti 2021 agrees directionally (force platform).
+       The reference 0.60 sits at roughly 50 deg from vertical. Endpoints are keyed
+       on the direction word, with the angle assumption stated: the more upright
+       the body, the smaller the fraction lifted. */
+    [/incline row|standing row|upright row|high anchor row/i, 0.37],
+    [/decline row|feet.?elevated row|horizontal row|low anchor row/i, 0.79],
     [/inverted row|bodyweight row|australian pull/i, 0.60],
     [/pistol|single.?leg squat|bulgarian|split squat|lunge|step.?up/i, 0.85],
     [/nordic|glute.?ham|razor curl/i, 0.70],
