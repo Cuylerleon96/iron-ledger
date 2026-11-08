@@ -183,14 +183,16 @@ console.log("\n=== 9. per-exercise weighting: a set is not a set ===");
   const ov = base({ custom, overrides: { x2: { weight: 1.3 } } });
   eq("an explicit override wins", e.E.exerciseWeight(ov, "x2"), 1.3);
   // and the score actually uses it
-  const sets = Array.from({ length: 20 }, () => ({ w: 20, r: 15 }));
+  // 4 sets, not 20: at 20 both are far past MRV where the score is meant to DECLINE
+  // (peak at the optimum), so the comparison has to be made inside the useful range
+  const sets = Array.from({ length: 4 }, () => ({ w: 20, r: 15 }));
   const flat = e.E.muscleGroups(base({ custom, workouts: [wk(iso(1), sets, "x2")] }), 28).Core;
   const inc = e.E.muscleGroups(base({ custom, workouts: [wk(iso(1), sets, "x1")] }), 28).Core;
-  console.log(`     20 identical sets -> flat crunch score ${flat.score}, incline crunch score ${inc.score}`);
+  console.log(`     4 identical sets -> flat crunch score ${flat.score}, incline crunch score ${inc.score}`);
   truthy("the same work scores higher when it is harder work", inc.score > flat.score);
   // one session in the log means a one-week history, so 20 sets reads as 20/wk —
   // previously it was divided by four weeks the user had not existed for
-  eq("raw sets/wk is scaled to the available weeks", [flat.setsPerWk, inc.setsPerWk], [20, 20]);
+  eq("raw sets/wk is scaled to the available weeks", [flat.setsPerWk, inc.setsPerWk], [4, 4]);
 }
 
 console.log("\n=== 10. cardio is gauged by time AND distance ===");

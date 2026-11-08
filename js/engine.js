@@ -1157,6 +1157,22 @@ const Engine = (() => {
     return exGroups(state, id).length <= 1 && (info.s || []).length === 0;
   }
 
+  /* Work per rep relative to the movement's own flat/standard variant, derived
+     from the geometry that set the incline-crunch standard: a 40-degree bench with
+     the head below the hips sweeps 75 degrees against a flat crunch's 35, so the
+     same set is 2.12x the work. The effort weight has to be able to SAY that —
+     the +/-15% range cap could not, which is why an incline crunch scored barely
+     above a flat one while being more than twice the work. Applied after the
+     clamp, because the clamp is for attribute-derived nudges, not geometry. */
+  const WORK_FACTOR = [
+    [/incline crunch|decline crunch|decline sit.?up/i, 2.12],
+  ];
+  const workFactor = (name) => {
+    const n = String(name || "");
+    for (const [re, f] of WORK_FACTOR) if (re.test(n)) return f;
+    return 1;
+  };
+
   function exerciseWeight(state, id) {
     const info = exInfo(state, id);
     const o = (state.overrides && state.overrides[id]) || {};
@@ -1175,7 +1191,7 @@ const Engine = (() => {
     let rom = 0;
     for (const re of ROM_W) if (re.test(hay)) rom++;
     w *= 1 + Math.min(0.15, rom * 0.05);
-    return Math.round(Math.max(0.6, Math.min(1.35, w)) * 100) / 100;
+    return Math.round(Math.max(0.6, Math.min(1.35, w)) * workFactor(info.n) * 100) / 100;
   }
 
   function muscleGroups(state, days = 28) {
@@ -1240,7 +1256,12 @@ const Engine = (() => {
     const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
 
     // 1. lagging muscle groups
-    const lag = GROUP_ORDER.filter((g) => mg[g].setsPerWk > 0 && mg[g].score < Math.max(45, mean * 0.7))
+    /* Groups below their MEV are lagging by the same bands the card prints next to
+       them. Without this, Core showed "below MEV" in the status list while the
+       weak-point list ignored it — two halves of one card disagreeing about the
+       same group because one used a score threshold and the other a volume band. */
+    const lag = GROUP_ORDER.filter((g) => mg[g].setsPerWk > 0
+      && (mg[g].score < Math.max(45, mean * 0.7) || mg[g].status === "below MEV"))
       .sort((a, b) => mg[a].score - mg[b].score);
     for (const g of lag.slice(0, 3)) {
       const need = Math.max(0, Math.ceil(mg[g].landmarks.mev - mg[g].setsPerWk));
@@ -1572,7 +1593,7 @@ const Engine = (() => {
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight,
+    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
     exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };

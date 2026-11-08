@@ -316,7 +316,7 @@
 
     /* muscle balance */
     const mb = el("section", { class: "card chart-card" });
-    mb.innerHTML = `<div class="card-head"><h3>Muscle balance</h3><span class="muted">sets per week</span></div>`;
+    mb.innerHTML = `<div class="card-head"><h3>Muscle balance</h3><span class="muted">effort sets / raw sets</span></div>`;
     const mbHost = el("div", { class: "radar-host" });
     mb.append(mbHost);
     const mlist = el("div", { class: "attr-legend" });
@@ -325,7 +325,8 @@
       mlist.append(el("div", { class: "attr-row mrow" },
         `<span class="attr-name">${g}</span>
          <span class="attr-tier status-${m.status.replace(/[^a-z]/gi, "")}">${m.status}</span>
-         <span class="attr-score">${m.setsPerWk}/wk</span>`));
+         <span class="attr-score">${m.effPerWk}/wk</span>
+         <span class="muted mraw">${m.setsPerWk} raw</span>`));
     });
     mb.append(mlist);
     const barHost = el("div", { class: "bar-host" });

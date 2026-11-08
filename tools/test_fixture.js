@@ -81,14 +81,15 @@ console.log("\n=== summary + weak points ===");
   eq("no tilde in any advice", wp.some((w) => /~/.test(w.fix || "")), false);
   // legs now reads MEV->MAV and chest optimal, so only core and shoulders remain
   eq("advice wording", wp.filter((w) => w.kind === "volume").map((w) => w.fix),
-    ["Add about 2 sets/week of core work.", "Add about 3 sets/week of shoulders work."]);
+    ["Add about 3 sets/week of shoulders work.", "Add about 2 sets/week of core work."]);
 }
 
 console.log("\n=== per-exercise effort weights (derived, nothing entered) ===");
 {
   // ids stay NUMBERS for library exercises — Object.keys() would stringify them
   // and exInfo looks library ids up as numbers, silently missing every one
-  const want = [[171, 0.89], [1904, 0.71], [375, 0.84], ["u1", 1.04], [1185, 0.75], [369, 0.85], [366, 0.85]];
+  // 171 is Incline Crunches: 0.89 from its attributes x 2.12 the work (40 deg, head below hips)
+  const want = [[171, 1.89], [1904, 0.71], [375, 0.84], ["u1", 1.04], [1185, 0.75], [369, 0.85], [366, 0.85]];
   for (const [id, w] of want) eq(`weight of exercise ${id}`, E.exerciseWeight(st, id), w);
   truthyV("incline crunches outweigh a flat crunch", E.exerciseWeight(st, 171) > 0.85);
 }

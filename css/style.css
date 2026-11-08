@@ -254,6 +254,7 @@ main > * { min-width: 0; }
 .dot { width: 12px; height: 12px; border: 2px solid var(--cream); border-radius: 2px; box-shadow: 0 0 0 1px var(--ink); }
 .attr-name { font-weight: 700; text-shadow: var(--outline-sm); }
 .attr-tier { color: var(--gold); font-weight: 700; font-size: .64rem; text-shadow: var(--outline-sm); }
+.mraw { font-size: 9px; opacity: 0.75; margin-left: 6px; }
 .attr-score { text-align: right; font-weight: 700; text-shadow: var(--outline-sm); }
 .attr-row .up { color: var(--red-l); font-weight: 700; }
 .attr-row .down { color: var(--sky); font-weight: 700; }

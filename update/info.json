@@ -1,12 +1,12 @@
 {
-  "versionCode": 28,
-  "versionName": "1.0.27",
+  "versionCode": 29,
+  "versionName": "1.0.28",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "7d376532f970458be68264a9107add48257e84856f5e4477eb9be43ae10800f8",
-  "sizeBytes": 3266688,
+  "sha256": "6892bbebd2e3146d5bec2f1f7faab4840a1f30f01c29263d9d2fc76fbd73ee1e",
+  "sizeBytes": 3267178,
   "published": "2026-11-08",
   "notes": [
-    "Your incline crunch standard is now derived, not assumed: bench at 40 degrees with the head BELOW the hips. The trunk sweeps -40 to +35 degrees, which is 75 degrees of travel against a flat crunchs 35, or 2.12x the work per rep. The load factor goes 0.40 to 0.85 and is 0.40 x 2.12, computed from the geometry",
-    "On your numbers: load 70.3 to 132.5 lb, e1RM 98 to 185 lb, tonnage 2,108 to 3,974 lb. Flat crunches, sit-ups and hanging leg raises keep the flat-bench 0.40, as they should"
+    "Muscle balance now shows BOTH numbers: the effort-weighted figure first, with the raw set count labelled beside it. Your incline crunch was scoring barely above a flat crunch while being more than twice the work, because a 15 percent range cap could not express a 2.1x effect",
+    "The geometry now drives the effort weight too: Incline Crunches goes 0.89 to 1.89, so Core reads 3.8 effort sets per week against 2 raw \u2014 and the status bands and weak-point list now agree, instead of one flagging Core and the other ignoring it"
   ]
 }
