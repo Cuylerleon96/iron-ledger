@@ -30,8 +30,8 @@ const NO_NUMBERS = (p) => p.refused === true && p.bmr === undefined && p.target 
   && p.protein === undefined && p.fat === undefined && p.carbs === undefined && p.totals === undefined;
 
 console.log("--- exported surface ---");
-["rmr","rmrMifflin","rmrFFM","rmrCunningham","tdeeFallback","paceRate","energyAdjustment","controller",
- "protein","fat","carbs","plan","refuse","bmi","roundKcal","round5"].forEach((k) => eq(`exposes ${k}()`, typeof M[k], "function"));
+["rmr","rmrMifflin","rmrFFM","rmrCunningham","rmrMifflinFFM","rmrKatch","tdeeFallback","paceRate","energyAdjustment","controller",
+ "protein","fat","carbs","plan","refuse","bmi","roundKcal","round5","activityFactor","observedTdee","activityLevelFor"].forEach((k) => eq(`exposes ${k}()`, typeof M[k], "function"));
 eq("exposes PACE_BANDS", typeof M.PACE_BANDS, "object");
 eq("exposes SOURCES", typeof M.SOURCES, "object");
 
@@ -66,14 +66,28 @@ eq("woman plan fat 50 g", wp.fat.g, 50);
 eq("woman plan carbs 195 g", wp.carbs.g, 195);
 
 console.log("\n--- (2) FFM path when body fat is supplied, weight path when not ---");
-// LBM = 80*(1-0.20) = 64 ; RMR = 19.7*64 + 413 = 1260.8 + 413 = 1673.8
-eq("rmr() picks FFM when bf given", M.rmr({ ...MAN, bodyFatPct: 20 }).method, "ffm-mifflin");
-near("FFM rmr 19.7*64+413", M.rmrFFM({ weightKg: 80, bodyFatPct: 20 }).kcal, 1673.8);
+// LBM = 80*(1-0.20) = 64
+// DEFAULT FFM is now CUNNINGHAM: 500 + 22*64 = 1908 (was Mifflin-FFM 19.7*64+413 = 1673.8)
+eq("rmr() picks FFM when bf given", M.rmr({ ...MAN, bodyFatPct: 20 }).method, "ffm-cunningham");
+near("default FFM rmr is Cunningham 500+22*64", M.rmrFFM({ weightKg: 80, bodyFatPct: 20 }).kcal, 1908);
 eq("rmr() picks weight path when bf null", M.rmr({ ...MAN, bodyFatPct: null }).method, "mifflin-weight");
 near("weight path rmr", M.rmr({ ...MAN, bodyFatPct: null }).kcal, 1780);
-// Cunningham alternative exposed: 500 + 22*64 = 1908
-near("cunningham alternative", M.rmrCunningham({ weightKg: 80, bodyFatPct: 20 }).kcal, 1908);
-eq("default FFM is NOT cunningham", M.plan({ ...MAN, bodyFatPct: 20, goal: "maintain", pace: "maintain" }).bmr.method, "ffm-mifflin");
+// rmrCunningham stays, now the SAME as the default path
+near("rmrCunningham = 500 + 22*64", M.rmrCunningham({ weightKg: 80, bodyFatPct: 20 }).kcal, 1908);
+// named alternatives remain reachable, but NOT the default
+near("Mifflin-FFM alternative 19.7*64+413", M.rmrMifflinFFM({ weightKg: 80, bodyFatPct: 20 }).kcal, 1673.8);
+near("Katch-McArdle alternative 370+21.6*64", M.rmrKatch({ weightKg: 80, bodyFatPct: 20 }).kcal, 1752.4);
+eq("Mifflin-FFM method tag", M.rmrMifflinFFM({ weightKg: 80, bodyFatPct: 20 }).method, "ffm-mifflin");
+eq("Katch method tag", M.rmrKatch({ weightKg: 80, bodyFatPct: 20 }).method, "ffm-katch");
+eq("default FFM path IS cunningham", M.plan({ ...MAN, bodyFatPct: 20, goal: "maintain", pace: "maintain" }).bmr.method, "ffm-cunningham");
+eq("the basis string states the change to Cunningham", /Cunningham/.test(M.plan({ ...MAN, bodyFatPct: 20, goal: "maintain", pace: "maintain" }).bmr.basis), true);
+// the owner's REAL profile: LBM = 70*(1-0.12) = 55.164090
+//   Cunningham = 500 + 22*55.164090 = 1713.610  |  weight eq (178cm,30y) = 10*70466+6.25*178-5*30+5 = 1584.365
+const CU = { sex: "M", weightKg: 70, heightCm: 178, ageY: 30, bodyFatPct: 12 };
+near("the owner Cunningham RMR", M.rmrFFM(CU).kcal, 1713.61, 0.01);
+near("the owner weight-equation RMR", M.rmrMifflin(CU).kcal, 1594.365, 0.01);
+eq("Cunningham LIFTS the owner ABOVE the weight equation", M.rmr(CU).kcal > M.rmrMifflin(CU).kcal, true);
+eq("the old Mifflin-FFM default did the OPPOSITE (bias removed)", M.rmrMifflinFFM(CU).kcal < M.rmrMifflin(CU).kcal, true);
 
 console.log("\n--- (3) 1200/1500 floor clamps + flag ---");
 // woman 45 kg,150 cm,60 y: RMR = 450+937.5-300-161 = 926.5 ; TDEE = 926.5*1.2 = 1111.8
@@ -373,8 +387,9 @@ console.log("\n--- (14) Nutrition tab view-model ---");
 
   /* ---- the maintenance line: equation, WHY, the derived factor, the caveat ---- */
   const m = v.maintenance;
-  eq("the FFM path is used because the profile has a body-fat %", m.method, "ffm-mifflin");
+  eq("the FFM path is used because the profile has a body-fat %", m.method, "ffm-cunningham");
   truthy("the equation is named", /fat-free-mass/.test(m.equation));
+  truthy("...and names Cunningham", /Cunningham/.test(m.equation));
   truthy("the WHY states lean mass is known", /lean mass/i.test(m.why));
   eq("the activity factor is the DERIVED one (4 sessions/wk -> 1.375)", m.activity.pal, 1.375);
   eq("the plan used that same factor (no dropdown, no second number)", v.plan.tdee.pal, 1.375);
@@ -396,7 +411,104 @@ console.log("\n--- (14) Nutrition tab view-model ---");
   eq("...and it is a select", /<select/i.test(v.html), true);
   eq("no food-log surface is rendered", /food|log it|add food|intake-log/i.test(v.html), false);
   eq("no Vitality / logging opt-out is rendered", /vitality/i.test(v.html), false);
+
+  /* ---- (g) the maintenance line NAMES the factor and its basis ---- */
+  // a DECLARED level, no observation -> "YOU SET THIS"
+  const CVD = N.view(Object.assign({}, FULL, { activityLevel: "moderate" }), { phase: null, year: YEAR, training });
+  eq("declared level drives the factor", CVD.maintenance.activity.pal, 1.55);
+  eq("declared tier is reported", CVD.maintenance.activity.tier, 2);
+  truthy("...named YOU SET THIS", /YOU SET THIS/.test(CVD.maintenance.activity.text));
+  truthy("the honest starting-estimate caveat is shown", CVD.html.includes(MM.ACTIVITY_LEVEL_CAVEAT) && /starting estimate/.test(CVD.maintenance.activity.caveat));
+  truthy("...and the basis names the level", /you set your activity level/i.test(CVD.maintenance.activity.basis));
+  // an OBSERVED value passing the gate -> "OBSERVED from N days"
+  const dl = (n) => { const d = new Date(Date.UTC(2026, 0, 1)); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const obIntakes = []; for (let i = 0; i < 14; i++) obIntakes.push({ date: dl(i), macros: { kcal: 2500 } });
+  const obLog = [{ date: dl(0), weightKg: 80 }, { date: dl(14), weightKg: 78.6 }];
+  const CVO = N.view(Object.assign({}, FULL, { weightKg: 80, bodyFatPct: 20, activityLevel: "sedentary" }),
+    { phase: null, year: YEAR, training, intake: obIntakes, bodylog: obLog });
+  eq("observed factor beats the declared level", CVO.maintenance.activity.method, "observed");
+  eq("observed tier is reported", CVO.maintenance.activity.tier, 1);
+  truthy("...named OBSERVED with its span", /OBSERVED from 14 days/.test(CVO.maintenance.activity.text));
+  truthy("the disagreement is stated PLAINLY", /disagree/.test(CVO.maintenance.activity.disagreement || ""));
+  truthy("...and rendered, never a silent switch", CVO.html.includes("n-activity-disagree"));
+  truthy("the observed caveat is shown (no silent-switch)", CVO.html.includes("CANNOT tell non-adherence from metabolic drift"));
 }
+
+/* ============================================================
+   (15) DECLARED activity level + the four-tier PRECEDENCE
+   ============================================================ */
+console.log("\n--- (15) declared activity level + precedence ---");
+eq("ACTIVITY_LEVELS is an array", Array.isArray(M.ACTIVITY_LEVELS), true);
+eq("four conventional bands, in order", M.ACTIVITY_LEVELS.map((l) => l.key), ["sedentary", "light", "moderate", "very-active"]);
+eq("band factors 1.2/1.375/1.55/1.725", M.ACTIVITY_LEVELS.map((l) => l.factor), [1.2, 1.375, 1.55, 1.725]);
+eq("every band has a plain-language blurb", M.ACTIVITY_LEVELS.every((l) => typeof l.blurb === "string" && l.blurb.length > 5), true);
+eq("sedentary blurb is the desk-job line", /desk job, little exercise/.test(M.ACTIVITY_LEVELS[0].blurb), true);
+eq("activityLevelFor('moderate') = 1.55", M.activityLevelFor("moderate").factor, 1.55);
+eq("activityLevelFor unknown -> null", M.activityLevelFor("nope"), null);
+// (2) DECLARED is used when no observation exists, and it BEATS training
+const decl = M.activityFactor({ activityLevel: "moderate" }, { sessionsPerWeek: 4 }, null);
+eq("declared level wins over training (tier 2)", decl.tier, 2);
+eq("declared value 1.55", decl.pal, 1.55);
+eq("declared method tag", decl.method, "declared");
+eq("declared basis names the level", /you set your activity level/i.test(decl.basis), true);
+eq("declared caveat is the honest one", decl.caveat, M.ACTIVITY_LEVEL_CAVEAT);
+eq("...and says starting estimate", /starting estimate/.test(decl.caveat), true);
+// (3) TRAINING-derived when no level and no observation
+const tr = M.activityFactor({}, { sessionsPerWeek: 4 }, null);
+eq("training tier when no level (tier 3)", tr.tier, 3);
+eq("training value 1.375", tr.pal, 1.375);
+// (4) FALLBACK when nothing
+const fb = M.activityFactor({}, {}, null);
+eq("fallback tier (tier 4)", fb.tier, 4);
+eq("fallback pal 1.2", fb.pal, 1.2);
+eq("fallback basis", fb.basis, "no training logged");
+// (1) OBSERVED beats declared AND training
+const obsStub = { factor: 1.62, n: 17, spanDays: 17, weighIns: 3, basis: "Observed from 17 days of your intake and weigh-ins", caveat: M.OBSERVED_CAVEAT };
+const ob = M.activityFactor({ activityLevel: "sedentary" }, { sessionsPerWeek: 4 }, obsStub);
+eq("observed wins over declared+training (tier 1)", ob.tier, 1);
+eq("observed method tag", ob.method, "observed");
+eq("observed pal is the observed factor", ob.pal, 1.62);
+
+/* ============================================================
+   (16) OBSERVED activity factor: the gate, hand-reconciliation, caveats
+   ============================================================ */
+console.log("\n--- (16) observedTdee ---");
+const od = (n) => { const d = new Date(Date.UTC(2026, 0, 1)); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const intakeDays = (nDays, kcal) => { const a = []; for (let i = 0; i < nDays; i++) a.push({ date: od(i), macros: { kcal } }); return a; };
+const bl = [{ date: od(0), weightKg: 80.0 }, { date: od(14), weightKg: 78.6 }];
+// HAND-RECONCILED: 14 intake days @ 2500 kcal ; slope = (78.6-80)/14 = -0.1 kg/day
+//   TDEE = mean intake - slope*7700 = 2500 - (-0.1*7700) = 2500 + 770 = 3270 kcal/day
+const o = M.observedTdee({ intakes: intakeDays(14, 2500), bodylog: bl, rmrKcal: 2000 });
+eq("the gate passes with 14 logged days + 2 weigh-ins/14d", o !== null, true);
+eq("hand-reconciled kcal/day EQUALS 3270", Math.round(o.kcalPerDay * 1000) / 1000, 3270);
+eq("n = distinct logged days", o.n, 14);
+eq("spanDays = 14", o.spanDays, 14);
+eq("factor = kcal/day / rmr = 1.635", Math.round(o.factor * 1000) / 1000, 1.635);
+eq("weight trend reported as kg/week (-0.7)", Math.round(o.trendKgPerWeek * 100) / 100, -0.7);
+eq("7700 flagged a FIRST APPROXIMATION", /FIRST APPROXIMATION/.test(o.approximation.label), true);
+eq("source names the energy-balance identity", /Energy-balance/.test(o.source), true);
+// every required caveat string is present
+eq("caveat: intake is under-reported", /UNDER-REPORTED/.test(o.caveat), true);
+eq("caveat: 7700 approximation drifts", /7700 kcal\/kg is a FIRST APPROXIMATION/.test(o.caveat), true);
+eq("caveat: window / weight noise", /NOISE/.test(o.caveat), true);
+eq("caveat: cannot tell non-adherence from drift", /CANNOT tell non-adherence from metabolic drift/.test(o.caveat), true);
+// GATE boundary: 9 logged days -> null (falls back), 10 -> observed
+eq("9 logged days -> NULL (declared/training stands)", M.observedTdee({ intakes: intakeDays(9, 2500), bodylog: bl, rmrKcal: 2000 }), null);
+eq("10 logged days -> observed", M.observedTdee({ intakes: intakeDays(10, 2500), bodylog: bl, rmrKcal: 2000 }) !== null, true);
+// weigh-in gate: span < 5 days, or a single weigh-in -> null
+eq("weigh-ins spanning only 4 days -> null", M.observedTdee({ intakes: intakeDays(14, 2500), bodylog: [{ date: od(0), weightKg: 80 }, { date: od(4), weightKg: 79.5 }], rmrKcal: 2000 }), null);
+eq("a single weigh-in -> null", M.observedTdee({ intakes: intakeDays(14, 2500), bodylog: [{ date: od(0), weightKg: 80 }], rmrKcal: 2000 }), null);
+eq("no intake logged -> null", M.observedTdee({ intakes: [], bodylog: bl, rmrKcal: 2000 }), null);
+eq("no rmr supplied -> factor null but kcal/day still computed", M.observedTdee({ intakes: intakeDays(14, 2500), bodylog: bl }).factor, null);
+// precedence THROUGH the gate
+const win = M.activityFactor({ activityLevel: "sedentary" }, { sessionsPerWeek: 4 },
+  M.observedTdee({ intakes: intakeDays(14, 2500), bodylog: bl, rmrKcal: 2000 }));
+eq("gate passes -> OBSERVED wins", win.method, "observed");
+eq("...pal is the observed factor", Math.round(win.pal * 1000) / 1000, Math.round((3270 / 2000) * 1000) / 1000);
+const lose = M.activityFactor({ activityLevel: "sedentary" }, { sessionsPerWeek: 4 },
+  M.observedTdee({ intakes: intakeDays(9, 2500), bodylog: bl, rmrKcal: 2000 }));
+eq("gate fails (9 days) -> the DECLARED level stands", lose.method, "declared");
+eq("...pal is the declared 1.2", lose.pal, 1.2);
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

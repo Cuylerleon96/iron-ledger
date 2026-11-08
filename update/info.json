@@ -1,11 +1,11 @@
 {
-  "versionCode": 55,
-  "versionName": "1.0.54",
+  "versionCode": 56,
+  "versionName": "1.0.55",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "ba7aa1bb691e515d8324f880c8b42f7d9104164999150db2e34d85e5434e2a52",
-  "sizeBytes": 3853258,
+  "sha256": "da855c68f788c1cca139113e18c9d9c9dec957ff13c0e2b7509aec5023c67a50",
+  "sizeBytes": 3857305,
   "published": "2026-11-08",
   "notes": [
-    "Log foods in the Nutrition tab and see today's totals against your targets. Fixed the carbs total so it reflects what you logged."
+    "Your maintenance estimate now starts from the activity level you set, then replaces it with a value observed from your own logged intake and weigh-ins."
   ]
 }

@@ -136,11 +136,21 @@ const Nutrition = (() => {
     const phaseKey = (cfg.phase && Macros.phaseFor(cfg.phase)) ? cfg.phase : rec.key;
     const phase = Macros.phaseFor(phaseKey);
 
-    /* --- the plan. The activity factor is DERIVED from logged training, never a
-           dropdown, and is passed into the plan so the number shown is the number
-           used. --- */
+    /* --- the activity factor: the OBSERVED value when its gate passes, else the
+           user's DECLARED level, else the training-derived value, else the 1.2
+           fallback. Macros.activityFactor owns that precedence and reports which
+           tier it used; the chosen factor is handed to the plan so the number shown
+           is the number the targets were built from. AMENDED 2026-11-08: a declared
+           level IS allowed now — but only as a starting value, replaced by an
+           observed one once intake and weigh-ins exist (see Macros.observedTdee). --- */
     const training = cfg.training || { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 };
-    const activity = Macros.activityFactor(profile, training);
+    const rmrInputs = { sex: profile.sex, weightKg: num(profile.weightKg), heightCm: num(profile.heightCm),
+      ageY: age, bodyFatPct: num(profile.bodyFatPct) };
+    const observed = Macros.observedTdee({
+      intakes: cfg.intake || [], bodylog: cfg.bodylog || [],
+      windowDays: cfg.windowDays, rmrKcal: Macros.rmr(rmrInputs).kcal,
+    });
+    const activity = Macros.activityFactor(profile, training, observed);
 
     const plan = Macros.plan({
       sex: profile.sex, weightKg: num(profile.weightKg), heightCm: num(profile.heightCm),
@@ -167,20 +177,42 @@ const Nutrition = (() => {
     ];
 
     /* --- maintenance estimate --- */
-    const ffm = plan.bmr.method === "ffm-mifflin";
+    const ffm = /^ffm-/.test(plan.bmr.method);
+    const EQ = {
+      "ffm-cunningham": "the Cunningham fat-free-mass form (500 + 22 × lean mass)",
+      "ffm-mifflin": "the Mifflin fat-free-mass form (19.7 × lean mass + 413)",
+      "ffm-katch": "the Katch-McArdle fat-free-mass form (370 + 21.6 × lean mass)",
+    };
     // one decimal: this app does not show more precision than the input carries
     const lbm1 = plan.bmr.lbmKg == null ? null : Math.round(plan.bmr.lbmKg * 10) / 10;
+    /* The maintenance line NAMES which activity factor is in use and WHY — no number
+       without its basis. */
+    const activityText = activity.method === "observed"
+      ? "OBSERVED from " + Math.round(activity.spanDays || 0) + " days of your intake and weigh-ins"
+      : activity.method === "declared" ? "YOU SET THIS — a starting estimate"
+      : activity.method === "fallback" ? "the default start (no activity level set, no training logged)"
+      : "derived from your logged training";
+    const r2 = (x) => Math.round(x * 100) / 100;
+    const declared = Macros.activityLevelFor(profile.activityLevel);
+    /* If the set level and the observed value disagree, say so PLAINLY rather than
+       silently switching. */
+    const disagreement = (declared && observed && isFinite(observed.factor) &&
+        Math.abs(observed.factor - declared.factor) >= 0.05)
+      ? "Heads up: your set level (activity factor " + declared.factor + ") and the OBSERVED value (activity factor " +
+        r2(observed.factor) + ") disagree — the observed value is the one being used."
+      : null;
     const maintenance = {
       rmr: plan.bmr.kcal,
       method: plan.bmr.method,
       lbmKg: lbm1,
-      equation: ffm
-        ? "the Mifflin fat-free-mass form (19.7 × lean mass + 413)"
-        : "the Mifflin weight-based form (10 × weight + 6.25 × height − 5 × age, +5 / −161)",
+      equation: ffm ? EQ[plan.bmr.method] : "the Mifflin weight-based form (10 × weight + 6.25 × height − 5 × age, +5 / −161)",
       why: ffm
         ? "Fat-free-mass form, because your profile has a body-fat % — lean mass (" + lbm1 + " kg) is known and used."
         : "Weight-based form, because no body-fat % is set on the profile.",
-      activity: { pal: activity.pal, method: activity.method, basis: activity.basis, caveat: activity.caveat },
+      activity: { pal: activity.pal, method: activity.method, tier: activity.tier, basis: activity.basis,
+        caveat: activity.caveat, level: activity.level || null, text: activityText, why: activity.why,
+        disagreement, n: (activity.n == null ? null : activity.n), spanDays: (activity.spanDays == null ? null : activity.spanDays),
+        source: activity.source },
       tdee: plan.tdee.kcal,
       tdeeNote: plan.tdee.note,
       floor: plan.target.floor,
@@ -226,7 +258,11 @@ const Nutrition = (() => {
         "<p class=\"small\">RMR <b>" + maintenance.rmr + "</b> kcal/day — " + esc(maintenance.equation) + ".</p>" +
         '<p class="small">' + esc(maintenance.why) + "</p>" +
         '<p class="small">Activity factor <b>' + maintenance.activity.pal + "</b> (" +
-          esc(maintenance.activity.method) + "): " + esc(maintenance.activity.basis) + ".</p>" +
+          esc(maintenance.activity.text) + ").</p>" +
+        '<p class="muted small">' + esc(maintenance.activity.basis) + ".</p>" +
+        (maintenance.activity.disagreement
+          ? '<p class="small n-disagree" id="n-activity-disagree">' + esc(maintenance.activity.disagreement) + "</p>"
+          : "") +
         '<p class="muted small">' + esc(maintenance.activity.caveat) + "</p>" +
         '<p class="small">Maintenance ≈ <b>' + maintenance.tdee + "</b> kcal/day — " + esc(maintenance.tdeeNote) + ".</p>" +
         '<p class="small">Intake floor <b>' + maintenance.floor + "</b> kcal/day (" + esc(maintenance.floorLabel) + "). " +

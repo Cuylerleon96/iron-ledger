@@ -578,7 +578,7 @@ const Engine = (() => {
     return {
       heightCm: pick("heightCm"), birthYear: pick("birthYear"), sex: pick("sex"),
       goalWeightKg: pick("goalWeightKg"), goalBodyFatPct: pick("goalBodyFatPct"),
-      weeklyTarget: pick("weeklyTarget"),
+      weeklyTarget: pick("weeklyTarget"), activityLevel: pick("activityLevel"),
       weightKg: w != null ? w : (p.weightKg != null ? p.weightKg : null),
       bodyFatPct: bf != null ? bf : (p.bodyFatPct != null ? p.bodyFatPct : null),
     };

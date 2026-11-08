@@ -27,6 +27,19 @@ const Macros = (() => {
   /* ---------- citations (verbatim from the brief; do not re-research) ---------- */
   const SOURCES = {
     mifflin:    "Mifflin MD et al., Am J Clin Nutr 1990;51(2):241-247, PMID 2305711",
+    cunningham: "Cunningham JJ, Am J Clin Nutr 1980;33(11):2372-2374 (RMR = 500 + 22 x lean mass)",
+    katch:      "Katch & McArdle, Exercise Physiology (textbook constant; 370 + 21.6 x lean mass)",
+    rmrCaveat:  "RMR regression equations — Mifflin, Cunningham, Katch-McArdle — each explain only " +
+                "about R^2 = 0.71 of the variance in measured resting energy. Choosing the better " +
+                "default removes a known BIAS; it does NOT turn the number into a measurement.",
+    activityLevel: "The conventional FAO/WHO/UNU PAL bands (1.2 sedentary / 1.375 light / 1.55 " +
+                "moderate / 1.725 very active), used only as a STARTING value; a self-selected PAL " +
+                "overestimates TDEE by ~200-300 kcal/day (PMC4383286) and individual self-reported " +
+                "activity error runs -25% to +42% (PubMed 10023727).",
+    observed:   "Energy-balance identity solved from LOGGED intake and a WEIGHED trend: " +
+                "TDEE = mean daily intake - (weight trend kg/day x 7700). It holds only once intake " +
+                "AND weight are logged — the 'two unknowns, one equation' limit of intake-unlogged " +
+                "data no longer applies.",
     rmrFloor:   "ISSN position stand; Harvard Health",
     pal:        "Self-selected PAL overestimates TDEE by ~200-300 kcal/day (PMC4383286); " +
                 "individual self-reported activity error runs -25% to +42% (PubMed 10023727)",
@@ -110,23 +123,40 @@ const Macros = (() => {
   const rmrMifflin = ({ sex, weightKg, heightCm, ageY }) => {
     const base = 10 * weightKg + 6.25 * heightCm - 5 * ageY;
     const kcal = base + (sex === "F" ? -161 : 5);
-    return { kcal, method: "mifflin-weight", sex, source: SOURCES.mifflin };
+    return { kcal, method: "mifflin-weight", sex, source: SOURCES.mifflin,
+      basis: "Mifflin-St Jeor weight form (10 x weight + 6.25 x height - 5 x age, +5 / -161)" };
   };
 
   /* ---------- STEP 1b: RMR, body fat KNOWN (FFM path) ----------
-     LBM = kg*(1 - bf/100). Default regression is Mifflin's own peer-reviewed FFM
-     form: 19.7*FFM + 413 — NOT Katch-McArdle (a textbook constant). */
+     LBM = kg*(1 - bf/100). DEFAULT regression is CUNNINGHAM: 500 + 22*LBM.
+     It REPLACED Mifflin's own FFM form (19.7*FFM + 413) because that form, for a
+     lean person, returned a LOWER RMR than the plain weight equation — the exact
+     opposite of the reason the FFM path is preferred for lean/muscular people
+     (a lean profile). Cunningham is peer-reviewed and behaves
+     as the literature describes for lean individuals. HONEST CAVEAT: both are
+     peer-reviewed with R^2 ~0.71, so this removes a known BIAS — it does not make
+     the number a measurement. */
   const rmrFFM = ({ weightKg, bodyFatPct }) => {
     const lbmKg = weightKg * (1 - bodyFatPct / 100);
-    const kcal = 19.7 * lbmKg + 413;
-    return { kcal, lbmKg, method: "ffm-mifflin", source: SOURCES.mifflin };
+    const kcal = 500 + 22 * lbmKg;
+    return { kcal, lbmKg, method: "ffm-cunningham", source: SOURCES.cunningham,
+      basis: "Cunningham fat-free-mass form (500 + 22 x lean mass) — the DEFAULT FFM path; " +
+             "changed from Mifflin-FFM (19.7 x lean mass + 413), which under-stated RMR for lean people" };
   };
 
-  /* Named alternative, exposed but never the default. */
-  const rmrCunningham = ({ weightKg, bodyFatPct }) => {
+  /* Named alternatives, exposed but NEVER the default. */
+  const rmrMifflinFFM = ({ weightKg, bodyFatPct }) => {
     const lbmKg = weightKg * (1 - bodyFatPct / 100);
-    return { kcal: 500 + 22 * lbmKg, lbmKg, method: "ffm-cunningham", source: "Cunningham 1980 (alternative)" };
+    return { kcal: 19.7 * lbmKg + 413, lbmKg, method: "ffm-mifflin", source: SOURCES.mifflin,
+      basis: "Mifflin fat-free-mass form (19.7 x lean mass + 413) — named alternative, not the default" };
   };
+  const rmrKatch = ({ weightKg, bodyFatPct }) => {
+    const lbmKg = weightKg * (1 - bodyFatPct / 100);
+    return { kcal: 370 + 21.6 * lbmKg, lbmKg, method: "ffm-katch", source: SOURCES.katch,
+      basis: "Katch-McArdle (370 + 21.6 x lean mass) — named alternative, not the default" };
+  };
+  /* The default FFM path, kept under its own name for callers that used it. */
+  const rmrCunningham = rmrFFM;
 
   const bfKnown = (inputs) => inputs.bodyFatPct != null && isFinite(inputs.bodyFatPct);
   const rmr = (inputs) => (bfKnown(inputs) ? rmrFFM(inputs) : rmrMifflin(inputs));
@@ -322,7 +352,8 @@ const Macros = (() => {
     return {
       refused: false, ok: true,
       profile: { sex, weightKg, heightCm, ageY, bodyFatPct: inputs.bodyFatPct ?? null, goal, pace: paceKey },
-      bmr: { kcal: Math.round(bmr.kcal), method: bmr.method, lbmKg: bmr.lbmKg ?? null, source: bmr.source },
+      bmr: { kcal: Math.round(bmr.kcal), method: bmr.method, lbmKg: bmr.lbmKg ?? null, source: bmr.source,
+             basis: bmr.basis ?? null },
       tdee: { kcal: Math.round(tdee.kcal), pal: tdee.pal, method: "fallback",
               note: "temporary start value; the controller is preferred once weigh-ins exist", source: tdee.source },
       pace: { key: pace.key, label: pace.label, pctPerWeek: pace.pctPerWeek,
@@ -469,39 +500,153 @@ const Macros = (() => {
       source: src };
   };
 
-  /* ---------- 3. TRAINING-INFORMED STARTING ACTIVITY FACTOR ----------
-     Use the user's OWN LOGGED training to choose between the two CONVENTIONAL LOW
-     factors only. This is a WEAK signal, so it never becomes a continuous formula
-     and there is never a user-selected dropdown (self-selected PAL overestimates
-     TDEE by ~200-300 kcal/day). */
+  /* ---------- 3. ACTIVITY FACTOR: declared level, then observed, then training ----------
+     PRECEDENCE (report which one was used, and why, every time):
+       (1) OBSERVED factor        — when the gate in observedTdee() passes (see below).
+       (2) DECLARED level         — the user's own starting level (a Profile fact).
+       (3) TRAINING-derived value — the existing weak, low-range estimate.
+       (4) the 1.2 PAL fallback   — when there is no level and no training logged.
+
+     AMENDMENT (2026-11-08): the earlier rule was "ship NO activity dropdown"
+     because a self-selected PAL overestimates TDEE (PMC4383286; error -25% to
+     +42%, PubMed 10023727). That rule is AMENDED: a NEW user MAY set a starting
+     activity level. The guardrail is that the self-chosen value is only a STARTING
+     value and is REPLACED by an OBSERVED factor once intake AND weight are logged
+     (observedTdee below). The caveat is shown in the UI, not hidden. */
+  const ACTIVITY_LEVELS = [
+    { key: "sedentary",   label: "Sedentary",   factor: 1.2,   blurb: "desk job, little exercise" },
+    { key: "light",       label: "Light",       factor: 1.375, blurb: "light exercise 1-3 days a week" },
+    { key: "moderate",    label: "Moderate",    factor: 1.55,  blurb: "moderate exercise 3-5 days a week" },
+    { key: "very-active", label: "Very active", factor: 1.725, blurb: "hard exercise 6-7 days a week" },
+  ];
+  const activityLevelFor = (key) => {
+    const k = String(key == null ? "" : key);
+    return ACTIVITY_LEVELS.filter((l) => l.key === k)[0] || null;
+  };
+  const ACTIVITY_LEVEL_CAVEAT =
+    "A starting estimate you chose, not a measurement. After a couple of weeks your own logged " +
+    "intake and weigh-ins replace it with an observed value.";
+  const OBSERVED_CAVEAT =
+    "Observed from your own logs — closer to a measurement than any formula, but still an " +
+    "estimate: self-reported intake is UNDER-REPORTED by a large margin; 7700 kcal/kg is a FIRST " +
+    "APPROXIMATION (Hall & Chow 2013) and drifts as body composition changes; the window must be " +
+    "long enough that weight NOISE does not dominate; and this method CANNOT tell non-adherence " +
+    "from metabolic drift.";
+
   const TRAINING_CAVEAT =
     "Weak, low-range estimate: a PAL derived from logged training is systematically biased and " +
     "individual-level error runs ~50-60%. It only chooses between the two lowest conventional " +
     "factors (1.2 sedentary / 1.375 light). Once weigh-ins exist the closed-loop controller " +
     "supersedes this starting value.";
 
-  const activityFactor = (inputs = {}, training = {}) => {
+  /* ---------- 3b. OBSERVED ACTIVITY FACTOR (the real payload) ----------
+     Once the user LOGS INTAKE and WEIGHS IN, the energy-balance identity can be
+     solved for TDEE — the "two unknowns, one equation" problem the research flagged
+     only holds while intake is unlogged. PURE: every input is an argument; the
+     window end is derived from the DATA (the latest dated entry), never from the
+     clock. Returns null below the gate — an observation is NEVER invented from
+     thin data.
+        TDEE(kcal/day) = mean daily logged intake - (weight trend kg/day x 7700) */
+  const OBS_MIN_WEIGHINS = 2, OBS_MIN_WEIGHIN_SPAN_DAYS = 5, OBS_MIN_INTAKE_DAYS = 10, OBS_WINDOW_DAYS = 14;
+
+  function observedTdee(opts = {}) {
+    const intakes = opts.intakes || [];
+    const bodylog = opts.bodylog || [];
+    const windowDays = (opts.windowDays == null || !isFinite(opts.windowDays)) ? OBS_WINDOW_DAYS : Number(opts.windowDays);
+    const rmrKcal = (opts.rmrKcal == null || !isFinite(opts.rmrKcal)) ? null : Number(opts.rmrKcal);
+
+    const di = intakes
+      .map((e) => ({ date: e && e.date, t: Date.parse(e && e.date),
+                     kcal: e && e.macros && e.macros.kcal }))
+      .filter((r) => isFinite(r.t) && r.kcal != null && isFinite(Number(r.kcal)))
+      .map((r) => ({ date: String(r.date).slice(0, 10), t: r.t, kcal: Number(r.kcal) }));
+    const dw = bodylog
+      .map((b) => ({ date: b && b.date, t: Date.parse(b && b.date), w: b && b.weightKg }))
+      .filter((r) => isFinite(r.t) && r.w != null && isFinite(Number(r.w)) && Number(r.w) > 0)
+      .map((r) => ({ date: String(r.date).slice(0, 10), t: r.t, w: Number(r.w) }));
+    if (!di.length || !dw.length) return null;
+
+    /* Window end = the latest DATED entry of any kind (pure: derived from data). */
+    const end = Math.max.apply(null, di.map((r) => r.t).concat(dw.map((r) => r.t)));
+    const start = end - windowDays * 86400000;
+    const inWin = (r) => r.t >= start && r.t <= end;
+
+    const iw = di.filter(inWin);
+    const ww = dw.filter(inWin).sort((a, b) => a.t - b.t);
+    const n = new Set(iw.map((r) => r.date)).size;            // distinct days with intake logged
+    const nW = ww.length;
+    const spanDays = nW >= 2 ? (ww[nW - 1].t - ww[0].t) / 86400000 : 0;
+
+    /* THE GATE — below it, return null and let the declared/training value stand. */
+    if (nW < OBS_MIN_WEIGHINS || spanDays < OBS_MIN_WEIGHIN_SPAN_DAYS || n < OBS_MIN_INTAKE_DAYS) return null;
+
+    const meanDailyIntake = iw.reduce((a, r) => a + r.kcal, 0) / n;
+    const t0 = ww[0].t;
+    const xs = ww.map((r) => (r.t - t0) / 86400000), ys = ww.map((r) => r.w);
+    const mx = xs.reduce((a, b) => a + b, 0) / nW, my = ys.reduce((a, b) => a + b, 0) / nW;
+    let num = 0, den = 0;
+    for (let i = 0; i < nW; i++) { num += (xs[i] - mx) * (ys[i] - my); den += Math.pow(xs[i] - mx, 2); }
+    const slopePerDay = den === 0 ? 0 : num / den;            // kg/day (least squares over weigh-ins)
+    const trendKgPerWeek = slopePerDay * 7;
+    const kcalPerDay = meanDailyIntake - slopePerDay * KCAL_PER_KG;
+    const factor = rmrKcal ? kcalPerDay / rmrKcal : null;
+
+    return {
+      kcalPerDay, factor, n, spanDays: Math.round(spanDays), weighIns: nW, windowDays,
+      meanDailyIntake, trendKgPerWeek,
+      basis: `Observed from ${n} days of logged intake and ${nW} weigh-ins over ${Math.round(spanDays)} days ` +
+             `(mean intake ${Math.round(meanDailyIntake)} kcal/day, weight trend ${trendKgPerWeek.toFixed(2)} kg/week)`,
+      caveat: OBSERVED_CAVEAT,
+      approximation: { kcalPerKg: KCAL_PER_KG, label: "7700 kcal/kg is a FIRST APPROXIMATION (Hall & Chow 2013)" },
+      source: SOURCES.observed,
+    };
+  }
+
+  const activityFactor = (inputs = {}, training = {}, observed = null) => {
+    /* (1) OBSERVED — wins whenever the gate passed. */
+    if (observed && observed.factor != null && isFinite(observed.factor)) {
+      return {
+        pal: observed.factor, method: "observed", tier: 1,
+        basis: observed.basis, source: SOURCES.observed,
+        caveat: observed.caveat || OBSERVED_CAVEAT,
+        n: observed.n, spanDays: observed.spanDays, weighIns: observed.weighIns,
+        why: "observed: your own logged intake and weigh-ins passed the gate, so the formula is replaced",
+      };
+    }
+    /* (2) DECLARED — the user's own starting level (a Profile fact). */
+    const lvl = activityLevelFor(inputs && inputs.activityLevel);
+    if (lvl) {
+      return {
+        pal: lvl.factor, method: "declared", tier: 2, level: lvl.key, label: lvl.label,
+        basis: `you set your activity level to "${lvl.label}" (${lvl.blurb}) — a starting estimate`,
+        source: SOURCES.activityLevel, caveat: ACTIVITY_LEVEL_CAVEAT,
+        why: "you set this level; it is a starting estimate until logs replace it",
+      };
+    }
+    /* (3) TRAINING-derived — the existing weak, low-range estimate. */
     const t = training || {};
     const s = (t.sessionsPerWeek == null || !isFinite(t.sessionsPerWeek)) ? 0 : Number(t.sessionsPerWeek);
     const c = (t.cardioMinutesPerWeek == null || !isFinite(t.cardioMinutesPerWeek)) ? 0 : Number(t.cardioMinutesPerWeek);
-    const hasTraining = s > 0 || c > 0;
-    const active = s >= 3 || c >= 150;          // 3 sessions, or the WHO 150 min/wk
-    const pal = active ? 1.375 : 1.2;
-
-    let basis;
-    if (!hasTraining) {
-      basis = "no training logged";
-    } else {
+    if (s > 0 || c > 0) {
+      const active = s >= 3 || c >= 150;          // 3 sessions, or the WHO 150 min/wk
+      const pal = active ? 1.375 : 1.2;
       const parts = [];
       if (s > 0) parts.push(`${s} training session${s === 1 ? "" : "s"}/week logged`);
       if (c > 0) parts.push(`${c} min/week cardio logged`);
-      basis = parts.join("; ");
+      let basis = parts.join("; ");
       if (!active) basis += " — below the 3-session / 150-min thresholds, so the sedentary factor is used";
+      return {
+        pal, method: active ? "logged-training-light" : "logged-training-sedentary", tier: 3,
+        basis, thresholds: { sessionsPerWeek: 3, cardioMinutesPerWeek: 150 },
+        source: SOURCES.training, caveat: TRAINING_CAVEAT,
+        why: "derived from the training you logged; no activity level set and no observation yet",
+      };
     }
+    /* (4) FALLBACK — no declared level and no training logged. */
     return {
-      pal, method: active ? "logged-training-light" : "logged-training-sedentary",
-      basis, thresholds: { sessionsPerWeek: 3, cardioMinutesPerWeek: 150 },
-      source: SOURCES.training, caveat: TRAINING_CAVEAT,
+      pal: PAL_FALLBACK.value, method: "fallback", tier: 4, basis: "no training logged",
+      source: SOURCES.pal, caveat: TRAINING_CAVEAT,
+      why: "no activity level set and no training logged, so the low conventional 1.2 start value is used",
     };
   };
 
@@ -514,7 +659,7 @@ const Macros = (() => {
     /* rounding */
     roundKcal, round5, ceil5, clampRound5,
     /* rmr */
-    rmr, rmrMifflin, rmrFFM, rmrCunningham,
+    rmr, rmrMifflin, rmrFFM, rmrCunningham, rmrMifflinFFM, rmrKatch,
     /* tdee / pace / controller */
     tdeeFallback, paceRate, energyAdjustment, controller,
     /* macros */
@@ -525,6 +670,8 @@ const Macros = (() => {
     PHASES, phaseFor, recommendedPhase, resolvePhase,
     goalConflict, LARGE_LEAN_CHANGE_KG, LARGE_LEAN_CHANGE_SOURCE,
     activityFactor, TRAINING_CAVEAT,
+    ACTIVITY_LEVELS, activityLevelFor, ACTIVITY_LEVEL_CAVEAT, OBSERVED_CAVEAT,
+    observedTdee, OBS_MIN_WEIGHINS, OBS_MIN_WEIGHIN_SPAN_DAYS, OBS_MIN_INTAKE_DAYS, OBS_WINDOW_DAYS,
   };
 })();
 if (typeof module !== "undefined") module.exports = Macros;

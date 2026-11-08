@@ -1829,6 +1829,8 @@
       phase: (S.nutrition && S.nutrition.phase) || null,
       year: new Date().getFullYear(),
       training,
+      intake: S.intakelog || [],
+      bodylog: S.bodylog || [],
     });
     _nutriView = v;
     const c = el("section", { class: "card", id: "nutrition" });
@@ -1867,6 +1869,8 @@
         <p class="muted small grid-note">These two are read from your <b>bodyweight log</b> — editing them here records a check-in for today.</p>
         <label>Goal weight (${U.label()})<input class="inp" id="p-gw" type="number" step="0.1" value="${p.goalWeightKg ? U.w(p.goalWeightKg).toFixed(1) : ""}"></label>
         <label>Goal body fat %<input class="inp" id="p-gbf" type="number" step="0.1" min="3" max="60" value="${p.goalBodyFatPct ?? ""}"></label>
+        <label>Activity level<select class="inp" id="p-act"><option value="" ${!p.activityLevel ? "selected" : ""}>Not set</option>${((typeof Macros !== "undefined" && Macros.ACTIVITY_LEVELS) || []).map((l) => `<option value="${l.key}" ${p.activityLevel === l.key ? "selected" : ""}>${l.label} — ${l.blurb}</option>`).join("")}</select></label>
+        <p class="muted small grid-note">A starting estimate. After a couple of weeks your own logs replace it.</p>
         <label>Weekly session target<input class="inp" id="p-wt" type="number" value="${p.weeklyTarget ?? 4}"></label>
         <label>Units<select class="inp" id="p-u"><option value="kg" ${U.kg ? "selected" : ""}>Kilograms</option><option value="lb" ${!U.kg ? "selected" : ""}>Pounds</option></select></label>
       </div>
@@ -1994,6 +1998,10 @@
       p.goalWeightKg = g("#p-gw") ? U.wi(parseFloat(g("#p-gw"))) : null;
       const gbf = parseFloat(g("#p-gbf"));
       p.goalBodyFatPct = isFinite(gbf) && gbf > 0 ? Math.max(1, Math.min(70, gbf)) : null;
+      // The declared activity level: a starting estimate only, so "Not set" is a
+      // valid value and falls through to the observed/training/fallback precedence.
+      const act = g("#p-act");
+      p.activityLevel = (typeof Macros !== "undefined" && Macros.activityLevelFor(act)) ? act : null;
       p.weeklyTarget = parseInt(g("#p-wt"), 10) || 4;
       p.units = g("#p-u");
       // Snapshot the dated profile fields (height/age/sex/goals/weekly target)

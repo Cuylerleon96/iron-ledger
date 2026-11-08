@@ -12,6 +12,10 @@ const Store = (() => {
       name: "", sex: "M", heightCm: null,
       weightKg: null, bodyFatPct: null, goalWeightKg: null, goalBodyFatPct: null,
       birthYear: null, weeklyTarget: 4, units: "kg",
+      // The user's DECLARED activity level (sedentary/light/moderate/very-active).
+      // A starting estimate only — the Nutrition tab replaces it with an OBSERVED
+      // factor once intake and weigh-ins exist. Unset (null) is allowed.
+      activityLevel: null,
     },
     // The chosen training phase for the Nutrition tab. A user choice, not a
     // measurement, so it lives on the state — and it round-trips through export.
@@ -50,7 +54,7 @@ const Store = (() => {
 
   /* The profile fields captured in the dated profilelog — the ones with no dated
      home of their own. weightKg/bodyFatPct are NOT here: they belong to bodylog. */
-  const TRACKED = ["heightCm", "birthYear", "sex", "goalWeightKg", "goalBodyFatPct", "weeklyTarget"];
+  const TRACKED = ["heightCm", "birthYear", "sex", "goalWeightKg", "goalBodyFatPct", "weeklyTarget", "activityLevel"];
   const profileSnap = (p) => {
     const o = {};
     for (const k of TRACKED) o[k] = (p && p[k] != null) ? p[k] : null;
