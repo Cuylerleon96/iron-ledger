@@ -6,13 +6,13 @@ better or worse, where your weak points are, and turns it into a character sheet
 
 Local-first. No account, no server, no telemetry — everything lives on the device.
 
-<p align="center"><em>Android app · 930-exercise library · GBA-styled stat hexagon</em></p>
+<p align="center"><em>Android app · 954-exercise library · GBA-styled stat hexagon</em></p>
 
 ---
 
 ## What it does
 
-**Logging** — pick an exercise from 930 movements, type your sets. The quick-add
+**Logging** — pick an exercise from 954 movements, type your sets. The quick-add
 box understands the shorthand you already use: `100x10`, `80x8@9`, `60s`, `1:30`,
 `5km 24:00`. Sets pre-fill from your last session for that exercise.
 

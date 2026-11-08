@@ -1,11 +1,11 @@
 {
-  "versionCode": 52,
-  "versionName": "1.0.51",
+  "versionCode": 53,
+  "versionName": "1.0.52",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "97f6dd9cf0ffa5dfa3a60cae54e9ab02ae8dc3f88559fa38ffb7be297fa207fc",
-  "sizeBytes": 3845340,
+  "sha256": "9998d854f211906aa75387714c23b6ce6458220b482034ba64abb3ee0a6b70a4",
+  "sizeBytes": 3847770,
   "published": "2026-11-08",
   "notes": [
-    "Nutrition tab: calorie and macro targets with the reason for each, a pace picker, and a birth year in Profile."
+    "Past months now keep the height, age and goals you had at the time, so changing your profile no longer rewrites your old stats."
   ]
 }

@@ -18,6 +18,12 @@ const Store = (() => {
     nutrition: { phase: null },
     workouts: [],
     bodylog: [],
+    // Dated snapshots of the profile fields that have NO dated home elsewhere:
+    // {date, heightCm, birthYear, sex, goalWeightKg, goalBodyFatPct, weeklyTarget}.
+    // weightKg and bodyFatPct are deliberately ABSENT — they live in bodylog, the
+    // single source of truth for body composition. A second dated copy of them is
+    // exactly the "two homes for one measurement" bug this codebase already fought.
+    profilelog: [],
     overrides: {},     // exId -> {mode?, weight?, g?} — only fields the engine
                        // actually reads. 'n' was declared here but exName never
                        // consulted it (renames of user-created exercises live on
@@ -28,6 +34,35 @@ const Store = (() => {
     targets: {},       // exId -> { value, set } — a goal for one exercise
     settings: { seeded: false },
   });
+
+  /* Local calendar date. toISOString() is UTC and rolls over at 19:00 EST. */
+  const dstrToday = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  /* The profile fields captured in the dated profilelog — the ones with no dated
+     home of their own. weightKg/bodyFatPct are NOT here: they belong to bodylog. */
+  const TRACKED = ["heightCm", "birthYear", "sex", "goalWeightKg", "goalBodyFatPct", "weeklyTarget"];
+  const profileSnap = (p) => {
+    const o = {};
+    for (const k of TRACKED) o[k] = (p && p[k] != null) ? p[k] : null;
+    return o;
+  };
+  const sameTracked = (a, b) => TRACKED.every((k) =>
+    ((a && a[k] != null) ? a[k] : null) === ((b && b[k] != null) ? b[k] : null));
+
+  /* A state written before profilelog existed has none: seed EXACTLY ONE snapshot
+     from the current profile, dated at the state's birth (createdAt, or the first
+     workout when that is missing). Idempotent — an existing row means no add — and
+     it never backfills invented history. Returns the count seeded (0 or 1). */
+  function seedProfileLog(s, born) {
+    if (Array.isArray(s.profilelog) && s.profilelog.length) return 0;
+    const first = (s.workouts || []).map((w) => w && w.date).filter(Boolean).sort()[0];
+    const date = born || first || dstrToday();
+    s.profilelog = [Object.assign({ date }, profileSnap(s.profile || {}))];
+    return 1;
+  }
 
   const migrate = (s) => {
     const d = DEFAULT();
@@ -49,6 +84,20 @@ const Store = (() => {
     out.overrides = out.overrides || {};
     out.achievements = out.achievements || {};
     out.targets = out.targets || {};
+    // The dated profile log, sorted at the same single point every load passes
+    // through. A state written before this field existed has none — seed exactly
+    // one row from the current profile (see seedProfileLog) so a past month still
+    // has something at or before it to read. Idempotent on a second load.
+    out.profilelog = (Array.isArray(out.profilelog) ? out.profilelog : [])
+      .filter((r) => r && r.date).sort(byDate);
+    // Read the birth date from the INCOMING state, not the defaulted copy: a
+    // legacy state with no createdAt must fall back to its first workout, even
+    // though DEFAULT() stamps a fresh createdAt onto every migrated state.
+    const born = (s && s.createdAt) ? String(s.createdAt).slice(0, 10) : null;
+    const seeded = seedProfileLog(out, born);
+    // A probe hook: how many rows this migration seeded (0 once it has run).
+    // Non-enumerable, so it never reaches JSON.stringify / export.
+    Object.defineProperty(out, "__profilelogSeeded", { value: seeded, enumerable: false });
     return out;
   };
 
@@ -127,12 +176,6 @@ const Store = (() => {
     clearTimeout(saveTimer); saveTimer = setTimeout(doIt, 250);
   }
 
-  /* Local calendar date. toISOString() is UTC and rolls over at 19:00 EST. */
-  const dstrToday = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
-
   const uid = () => "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   function upsertWorkout(w) {
@@ -180,6 +223,32 @@ const Store = (() => {
     syncProfileFromLog();
     save(true);
     allowShrink = false;
+  }
+
+  /* Snapshot the profile ONLY when one of the tracked fields actually changed,
+     compared against the newest row. Two identical saves leave ONE row; a real
+     change appends a second. Returns true when a row was written. weightKg and
+     bodyFatPct are never snapshotted — they are dated by bodylog instead. */
+  function recordProfileLog() {
+    if (!Array.isArray(state.profilelog)) state.profilelog = [];
+    const snap = profileSnap(state.profile || {});
+    const newest = state.profilelog.length ? state.profilelog[state.profilelog.length - 1] : null;
+    if (newest && sameTracked(newest, snap)) return false;
+    state.profilelog.push(Object.assign({ date: dstrToday() }, snap));
+    state.profilelog.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    return true;
+  }
+
+  /* The profile in effect at `date`: the tracked fields from the newest profilelog
+     row at or before it (falling back to the current profile when there is none),
+     and weightKg/bodyFatPct from the body log's newest reading at or before it —
+     never from a second dated copy of body composition. Pure-ish: reads the live
+     state. The engine uses Engine.profileAsOf(state, date) for arbitrary states. */
+  function profileAsOf(date) {
+    if (typeof Engine !== "undefined" && typeof Engine.profileAsOf === "function") {
+      return Engine.profileAsOf(state, date);
+    }
+    return Object.assign({}, state.profile);   // engine is always present in practice
   }
 
   function addCustom(ex) {
@@ -263,6 +332,11 @@ const Store = (() => {
       incoming.custom.forEach((c) => { if (!cids.has(c.id)) state.custom.push(c); });
       const bdates = new Set(state.bodylog.map((b) => b.date));
       incoming.bodylog.forEach((b) => { if (!bdates.has(b.date)) state.bodylog.push(b); });
+      // Profile snapshots union by date, the same "only add what is not already
+      // here" rule the other dated arrays use — an import can never overwrite a
+      // snapshot the user already has locally.
+      const pldates = new Set((state.profilelog || []).map((r) => r.date));
+      (incoming.profilelog || []).forEach((r) => { if (r && r.date && !pldates.has(r.date)) state.profilelog.push(r); });
       state.achievements = Object.assign({}, incoming.achievements, state.achievements);
       // The profile and per-exercise overrides were being dropped, so importing a
       // backup onto a fresh install left the user with sessions but no name,
@@ -283,6 +357,7 @@ const Store = (() => {
       });
       state.workouts.sort((a, b) => a.date.localeCompare(b.date));
       state.bodylog.sort((a, b) => a.date.localeCompare(b.date));
+      state.profilelog.sort((a, b) => a.date.localeCompare(b.date));
     }
     save(true);
     return state;
@@ -431,6 +506,7 @@ const Store = (() => {
     bootstrapNative, recover, snapshotPreUpdate, recoverFromSnapshot, richness,
     setSaveErrorHandler: (fn) => { onSaveError = fn; },
     setTarget, clearTarget, autoBackup, recoverFromBackup,
+    recordProfileLog, profileAsOf,
   };
 })();
 if (typeof module !== "undefined") module.exports = Store;

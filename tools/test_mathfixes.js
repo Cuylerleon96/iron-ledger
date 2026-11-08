@@ -519,6 +519,11 @@ console.log("\n=== 19. first run: nothing may be invented or imposed ===");
   const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
   eq("boot() no longer auto-seeds a session", /!S\.settings\.seeded && !S\.workouts\.length/.test(appSrc), false);
   truthy("the Profile button still offers it deliberately", /d-seed/.test(appSrc));
+  // The profile save must snapshot the dated profile fields (height/age/sex/
+  // goals/weekly target) so a past month reads the values that were in effect
+  // then. The recording logic itself is proven in tools/test_bodylog.js.
+  truthy("the profile save snapshots the dated profile fields", /Store\.recordProfileLog\(\)/.test(appSrc));
+  truthy("...and the save handler is the one that calls it", /p\.units = g\("#p-u"\);\s*(?:\/\/[^\n]*\n\s*)*Store\.recordProfileLog\(\);/.test(appSrc));
   // The "Strength is a ratio… add your bodyweight" explanation MOVED to the one
   // shared source (js/glossary.js) as part of the glossary unification, so this
   // now proves the explanation still exists AND that the UI renders it from there.

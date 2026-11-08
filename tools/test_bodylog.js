@@ -71,5 +71,115 @@ eq("...while the earlier one keeps its measurements", Store.state.bodylog.find((
 eq("the engine series reads the measurements oldest-first", Engine.bodyMeasureSeries(Store.state, "waistCm").map((p) => p.value), [84]);
 eq("the latest reading is reported", Engine.bodyMeasureLatest(Store.state, "armCm").value, 36.5);
 
+const truthy = (label, v) => eq(label, !!v, true);
+const iso = (off) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - off);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+console.log("--- the dated profile log: snapshot only on a real change ---");
+{
+  // weight/body fat are NOT in the log — bodylog is their single dated home.
+  const r0 = Store.state.profilelog.length;
+  Store.state.profile.heightCm = 180; Store.state.profile.sex = "M";
+  Store.state.profile.goalWeightKg = 70; Store.state.profile.weeklyTarget = 4;
+  const w1 = Store.recordProfileLog();
+  const after1 = Store.state.profilelog.length;
+  const w2 = Store.recordProfileLog();              // identical — must write nothing
+  const after2 = Store.state.profilelog.length;
+  Store.state.profile.heightCm = 181;               // a real change
+  const w3 = Store.recordProfileLog();
+  const after3 = Store.state.profilelog.length;
+  eq("a save that changes a tracked field writes ONE row", after1 - r0, 1);
+  eq("...and reports that it wrote", w1, true);
+  eq("an identical re-save writes NO row (no duplicates)", after2 - after1, 0);
+  eq("...and reports no change", w2, false);
+  eq("a later change writes the SECOND row", after3 - after2, 1);
+  eq("...and reports that it wrote", w3, true);
+  const newest = Store.state.profilelog[Store.state.profilelog.length - 1];
+  eq("the newest row carries the changed value", newest.heightCm, 181);
+  eq("...and never carries weightKg", "weightKg" in newest, false);
+  eq("...nor bodyFatPct", "bodyFatPct" in newest, false);
+  console.log(`        rows after change+no-op+change: ${JSON.stringify(Store.state.profilelog)}`);
+}
+
+console.log("--- profileAsOf(): the profile in effect at a date ---");
+{
+  const ps = {
+    profile: { heightCm: 170, sex: "M", goalWeightKg: 80, goalBodyFatPct: 12, weeklyTarget: 5, birthYear: 1990, weightKg: 70, bodyFatPct: 18 },
+    profilelog: [
+      { date: "2026-01-01", heightCm: 180, birthYear: 1990, sex: "M", goalWeightKg: 75, goalBodyFatPct: 15, weeklyTarget: 4 },
+      { date: "2026-06-01", heightCm: 170, birthYear: 1990, sex: "M", goalWeightKg: 80, goalBodyFatPct: 12, weeklyTarget: 5 },
+    ],
+    bodylog: [{ date: "2026-02-01", weightKg: 90, bodyFatPct: 25 }],
+  };
+  eq("OLD height for a past date", Engine.profileAsOf(ps, "2026-03-01").heightCm, 180);
+  eq("OLD goal for a past date", Engine.profileAsOf(ps, "2026-03-01").goalWeightKg, 75);
+  eq("NEW height after the change date", Engine.profileAsOf(ps, "2026-07-01").heightCm, 170);
+  eq("NEW goal after the change date", Engine.profileAsOf(ps, "2026-07-01").goalWeightKg, 80);
+  eq("weight comes from the dated BODY LOG, not a profile copy", Engine.profileAsOf(ps, "2026-03-01").weightKg, 90);
+  eq("body fat likewise from the body log", Engine.profileAsOf(ps, "2026-03-01").bodyFatPct, 25);
+  eq("current profile when no snapshot exists", Engine.profileAsOf({ profile: { heightCm: 172 } }, "2026-03-01").heightCm, 172);
+  // the Store accessor reads the live state
+  Store.state.profile.heightCm = 175;
+  Store.state.profilelog = [{ date: "2026-01-01", heightCm: 190, sex: "M", goalWeightKg: null, goalBodyFatPct: null, weeklyTarget: 4, birthYear: null }];
+  eq("Store.profileAsOf reads the snapshot too", Store.profileAsOf("2026-02-01").heightCm, 190);
+}
+
+console.log("--- attributeHistory re-evaluates a past month at the THEN profile ---");
+{
+  // A real height change mid-history: was 205 cm, changed to 170 cm 60 days ago.
+  const mk = (profilelog) => ({
+    profile: { sex: "M", heightCm: 170, weightKg: 70, goalWeightKg: null, goalBodyFatPct: null, birthYear: null, weeklyTarget: 4, units: "kg" },
+    profilelog,
+    bodylog: [{ date: iso(310), weightKg: 70 }],
+    workouts: [0, 30, 60, 90, 120, 150, 180].map((o, i) => ({ id: "w" + i, date: iso(o), note: "",
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] })),
+  });
+  const log = [
+    { date: iso(300), heightCm: 205, birthYear: null, sex: "M", goalWeightKg: null, goalBodyFatPct: null, weeklyTarget: 4 },
+    { date: iso(60), heightCm: 170, birthYear: null, sex: "M", goalWeightKg: null, goalBodyFatPct: null, weeklyTarget: 4 },
+  ];
+  const h = Engine.attributeHistory(mk(log), 12);
+  const early = h.find((p) => p.date < iso(60));     // a month before the height change
+  const late = h[h.length - 1];                      // the current month
+  // 70 kg at 205 cm = BMI 16.66 -> vitality floors BMI-only reads there (78);
+  // at today's 170 cm it is BMI 24.2 -> 100, capped at 85.
+  eq("a past month reads the OLD height (BMI 78)", early.scores.VIT, 78);
+  eq("a month after the change reads the NEW height (BMI 85)", late.scores.VIT, 85);
+  // and prove it WOULD differ under today's height: with no snapshot at all the
+  // engine falls back to the current profile, and the same month reads 85.
+  const hNow = Engine.attributeHistory(mk([]), 12);
+  const earlyNow = hNow.find((p) => p.date < iso(60));
+  eq("...where today's height would have read 85", earlyNow.scores.VIT, 85);
+  truthy("so the past month actually moved (78 vs 85)", earlyNow.scores.VIT !== early.scores.VIT);
+}
+
+console.log("--- migration: a legacy state seeds exactly one snapshot, idempotently ---");
+{
+  const legacy = Store.migrate({ version: 1, createdAt: "2026-01-01T08:00:00.000Z",
+    profile: { name: "L", sex: "M", heightCm: 180, weightKg: 80, bodyFatPct: 15, goalWeightKg: 75, goalBodyFatPct: 12, weeklyTarget: 4, units: "kg", birthYear: 1990 },
+    workouts: [], bodylog: [], overrides: {}, custom: [], achievements: {}, targets: {}, settings: { seeded: true } });
+  eq("seeds EXACTLY ONE row", legacy.profilelog.length, 1);
+  eq("...reports the count a probe can assert", legacy.__profilelogSeeded, 1);
+  eq("...dated at state.createdAt", legacy.profilelog[0].date, "2026-01-01");
+  eq("...carrying the current tracked fields", [legacy.profilelog[0].heightCm, legacy.profilelog[0].goalWeightKg, legacy.profilelog[0].birthYear], [180, 75, 1990]);
+  eq("...and NOT weightKg (single-sourced to the body log)", "weightKg" in legacy.profilelog[0], false);
+  eq("...nor bodyFatPct", "bodyFatPct" in legacy.profilelog[0], false);
+  const legacy2 = Store.migrate(legacy);
+  eq("a SECOND load adds no second row", legacy2.profilelog.length, 1);
+  eq("...and reports nothing seeded", legacy2.__profilelogSeeded, 0);
+  const noCreated = Store.migrate({ profile: { heightCm: 170 }, workouts: [{ id: "x", date: "2026-03-05", entries: [] }] });
+  eq("with no createdAt the seed is dated at the first workout", noCreated.profilelog[0].date, "2026-03-05");
+}
+
+console.log("--- export -> import round-trips the profile log ---");
+{
+  const before = JSON.stringify(Store.state.profilelog);
+  const dump = Store.exportJSON();
+  Store.reset();
+  eq("reset clears the profile log", Store.state.profilelog.length, 0);
+  Store.importJSON(dump, "replace");
+  eq("export -> import round-trips the profile log", JSON.stringify(Store.state.profilelog), before);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

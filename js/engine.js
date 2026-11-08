@@ -546,6 +546,44 @@ const Engine = (() => {
     return last;
   }
 
+  /* ---------- the profile as of a date ---------- */
+  /* The engine reads height, age, sex, weekly target and goals through this so a
+     PAST month is re-evaluated at the values that were in effect THEN. The tracked
+     fields come from the dated profilelog (state.profilelog); weight and body fat
+     come from their ONE dated home, state.bodylog — they are never duplicated into
+     the profilelog. With no snapshot at or before the date it falls back to the
+     current profile (so a state predating the field, or a live read, is unchanged). */
+  function profileAsOf(state, date) {
+    const p = (state && state.profile) || {};
+    const log = (state && state.profilelog) || [];
+    let snap = null;
+    if (date) {
+      for (const r of log) {
+        if (!r || !r.date || r.date > date) continue;
+        if (!snap || r.date >= snap.date) snap = r;   // newest row <= date, order-agnostic
+      }
+    }
+    const pick = (k) => {
+      const v = snap ? snap[k] : p[k];
+      return v === undefined ? p[k] : v;
+    };
+    const lastBody = (k) => {
+      const rows = ((state && state.bodylog) || [])
+        .filter((b) => b && num(b[k]) > 0 && (!date || b.date <= date));
+      if (!rows.length) return null;
+      rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      return num(rows[rows.length - 1][k]) || null;
+    };
+    const w = lastBody("weightKg"), bf = lastBody("bodyFatPct");
+    return {
+      heightCm: pick("heightCm"), birthYear: pick("birthYear"), sex: pick("sex"),
+      goalWeightKg: pick("goalWeightKg"), goalBodyFatPct: pick("goalBodyFatPct"),
+      weeklyTarget: pick("weeklyTarget"),
+      weightKg: w != null ? w : (p.weightKg != null ? p.weightKg : null),
+      bodyFatPct: bf != null ? bf : (p.bodyFatPct != null ? p.bodyFatPct : null),
+    };
+  }
+
   /* ---------- PR / bests per exercise ---------- */
   function bestFor(state, exId) {
     const mode = exMode(state, exId);
@@ -1037,20 +1075,31 @@ const Engine = (() => {
     const cur = windowWorkouts(state, days, offsetDays);
     const prev = windowWorkouts(state, days, days + offsetDays);
     const asOf = offsetDays > 0 ? dstr(Date.now() - offsetDays * DAY) : null;
+    /* A HISTORICAL re-evaluation (offsetDays > 0) must read the profile that was
+       in effect THEN — the height, sex, weekly target and goals at that date, not
+       today's. Without this a past month silently borrowed today's values, so a
+       later height/age/goal edit rewrote what the old months measured against.
+       Only the dated profile fields move; the live read (offsetDays 0) is byte-for
+       -byte unchanged. Bodyweight is already dated through vitalityScore's asOfDate
+       scan, and profileAsOf sources weight/body fat from that same body log, so the
+       clone carries no second copy of body composition. */
+    const S = asOf
+      ? Object.assign({}, state, { profile: profileAsOf(state, asOf) })
+      : state;
     const now = {
-      STR: strengthScore(state, cur),
-      END: staminaScore(state, cur),
-      POW: powerScore(state, cur),
-      MOB: mobilityScore(state, cur),
-      CON: consistencyScore(state, cur),
-      VIT: vitalityScore(state, asOf),
+      STR: strengthScore(S, cur),
+      END: staminaScore(S, cur),
+      POW: powerScore(S, cur),
+      MOB: mobilityScore(S, cur),
+      CON: consistencyScore(S, cur),
+      VIT: vitalityScore(S, asOf),
     };
     const was = {
-      STR: strengthScore(state, prev).score,
-      END: staminaScore(state, prev).score,
-      POW: powerScore(state, prev).score,
-      MOB: mobilityScore(state, prev).score,
-      CON: consistencyScore(state, prev).score,
+      STR: strengthScore(S, prev).score,
+      END: staminaScore(S, prev).score,
+      POW: powerScore(S, prev).score,
+      MOB: mobilityScore(S, prev).score,
+      CON: consistencyScore(S, prev).score,
       VIT: now.VIT.score,
     };
     // (VIT has no meaningful "previous window" of its own — it is a body-
@@ -2159,7 +2208,7 @@ const Engine = (() => {
     DAY, ATTRIBUTES, GROUP_ORDER, LANDMARKS, STANDARDS, TIERS, ACHIEVEMENTS,
     clamp, num, interp, tierOf, est1RM, setVolume, entryStats, liftKey, isCoreLift,
     SET_TYPES, setType, setTypeLabel, setEffort,
-    exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, bestFor, seriesFor, compareLast,
+    exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, profileAsOf, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,

@@ -756,7 +756,7 @@
 
     const add = el("section", { class: "card add-card" });
     add.innerHTML = `<button class="btn big" id="btn-add">+ Add exercise</button>`;
-    add.append(el("p", { class: "muted small" }, "Search 930 movements, or create your own. Sets pre-fill from your last session."));
+    add.append(el("p", { class: "muted small" }, `Search ${EXERCISE_LIB.length} movements, or create your own. Sets pre-fill from your last session.`));
     host.append(add);
 
     const save = el("section", { class: "save-bar" });
@@ -1175,7 +1175,7 @@
     const box = el("div", { class: "picker" });
     box.innerHTML = `
       <div class="picker-head">
-        <input class="inp" id="pk-q" placeholder="Search 930 exercises…" autofocus>
+        <input class="inp" id="pk-q" placeholder="Search ${EXERCISE_LIB.length} exercises…" autofocus>
         <div class="row">
           <select class="mini" id="pk-cat"><option value="">All categories</option>
             ${["Chest", "Back", "Shoulders", "Arms", "Legs", "Calves", "Abs", "Cardio"].map((c) => `<option>${c}</option>`).join("")}</select>
@@ -1799,6 +1799,10 @@
       p.goalBodyFatPct = isFinite(gbf) && gbf > 0 ? Math.max(1, Math.min(70, gbf)) : null;
       p.weeklyTarget = parseInt(g("#p-wt"), 10) || 4;
       p.units = g("#p-u");
+      // Snapshot the dated profile fields (height/age/sex/goals/weekly target)
+      // ONLY if one of them actually changed, so a past month can still be read
+      // at the values that were in effect then. No change writes no row.
+      Store.recordProfileLog();
       Store.save(true);
       // Factual, and only when it applies: a body-fat target under the essential
       // floor is not a target anyone can hold, so say so rather than accept it.
