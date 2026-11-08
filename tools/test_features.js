@@ -135,6 +135,65 @@ console.log("=== notes-shorthand export ===");
   truthy("weight_time exports weight x seconds", /Row:\n1:50x45s/.test(t2));
 }
 
+console.log("=== history filter (exercise name and date range) ===");
+{
+  const e = env({});
+  e.S.upsertWorkout({ id: "h1", date: "2026-11-01", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] });
+  e.S.upsertWorkout({ id: "h2", date: "2026-11-05", entries: [{ id: 5, name: "Back Squat", mode: "weight_reps", sets: [{ w: 120, r: 5 }] }] });
+  e.S.upsertWorkout({ id: "h3", date: "2026-11-09", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 105, r: 3 }] }] });
+  const ids = (o) => e.E.filterSessions(e.S.state, o).map((w) => w.id);
+  eq("no filter returns every session", ids({}).length, 3);
+  eq("...newest first, as the list reads", ids({}), ["h3", "h2", "h1"]);
+  eq("filtering by exercise name keeps only its sessions", ids({ q: "bench" }), ["h3", "h1"]);
+  eq("the name match ignores case and hits substrings", ids({ q: "SQUAT" }), ["h2"]);
+  eq("a date range narrows to that window", ids({ from: "2026-11-05", to: "2026-11-09" }), ["h3", "h2"]);
+  eq("name AND date combine", ids({ q: "bench", from: "2026-11-08" }), ["h3"]);
+  eq("an unmatched filter yields nothing, not everything", ids({ q: "deadlift" }).length, 0);
+  eq("clearing every field restores the full list", ids({ q: "", from: "", to: "" }).length, 3);
+}
+
+console.log("=== bulk notes-shorthand export (all sessions / a chosen range) ===");
+{
+  const e = env({});
+  e.S.upsertWorkout({ id: "b1", date: "2026-11-01", note: "felt strong", entries: [{ id: 73, name: "Bench press machine", mode: "weight_reps", restDefault: 120, sets: [{ w: 100, r: 10 }] }] });
+  e.S.upsertWorkout({ id: "b2", date: "2026-11-05", entries: [{ id: 5, name: "Back Squat", mode: "weight_reps", sets: [{ w: 120, r: 5 }, { w: 125, r: 3 }] }] });
+  e.S.upsertWorkout({ id: "b3", date: "2026-11-09", entries: [{ id: 73, name: "Bench press machine", mode: "weight_reps", sets: [{ w: 105, r: 3 }] }] });
+
+  const all = e.E.exportNotesShorthand(e.S.state);
+  console.log("        ----\n" + all.split("\n").map((l) => "        " + l).join("\n") + "\n        ----");
+  truthy("every session appears, oldest first",
+    all.indexOf("2026-11-01") > -1 && all.indexOf("2026-11-01") < all.indexOf("2026-11-05")
+    && all.indexOf("2026-11-05") < all.indexOf("2026-11-09"));
+
+  // NO divergence from the per-session exporter: each session's block is present
+  // byte-for-byte, because both go through the ONE encoder (noteShorthandBlock).
+  ["b1", "b2", "b3"].forEach((id) => {
+    const one = e.E.exportNoteShorthand(e.S.state, id);
+    truthy(`the bulk output contains the single-session export of ${id} verbatim`, all.includes(one));
+  });
+
+  const win = e.E.exportNotesShorthand(e.S.state, { from: "2026-11-05", to: "2026-11-09" });
+  truthy("a date range drops the earlier session",
+    !win.includes("2026-11-01") && win.includes("2026-11-05") && win.includes("2026-11-09"));
+  eq("a range matching nothing exports nothing", e.E.exportNotesShorthand(e.S.state, { from: "2030-01-01" }), "");
+  eq("an empty log exports nothing", e.E.exportNotesShorthand(env({}).S.state), "");
+}
+
+console.log("=== the History screen wires the filter and the bulk export (no dead control) ===");
+{
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("renderHistory filters through Engine.filterSessions", /Engine\.filterSessions\(S, f\)/.test(app));
+  truthy("the name filter input is bound", /\$\("#hist-q", head\)\.addEventListener\("input", paint\)/.test(app));
+  truthy("both date inputs are bound",
+    /\$\("#hist-from", head\)\.addEventListener\("change", paint\)/.test(app)
+    && /\$\("#hist-to", head\)\.addEventListener\("change", paint\)/.test(app));
+  truthy("Clear is bound and empties every control",
+    /\$\("#hist-clear", head\)\.addEventListener\("click"/.test(app)
+    && /\.value = ""; \$\("#hist-from", head\)\.value = ""; \$\("#hist-to", head\)\.value = "";/.test(app));
+  truthy("Copy notes exports exactly what is shown, through the same filter",
+    /Engine\.exportNotesShorthand\(S, readFilter\(\)\)/.test(app));
+}
+
 console.log("=== consistency calendar ===");
 {
   const e = trained(10, { perWeek: 2 });

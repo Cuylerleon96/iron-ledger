@@ -226,5 +226,23 @@ console.log("=== clearing a weight clears it, it does not store NaN ===");
   console.log(`        (undefined / ${LB} = ${cleared})`);
 }
 
+console.log("=== the bulk notes export round-trips through the real importer ===");
+{
+  // The whole point of exporting is to lift the log back into a notes app and
+  // paste it in again — so the bulk output must survive parseNotes unchanged,
+  // including the per-session date header.
+  const e = load("kg");
+  e.A.buildIndex();
+  e.S.upsertWorkout({ id: "r1", date: "2026-11-01", entries: [{ id: 73, name: "Bench press machine", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] });
+  e.S.upsertWorkout({ id: "r2", date: "2026-11-05", entries: [{ id: 5, name: "Back Squat", mode: "weight_reps", sets: [{ w: 120, r: 5 }] }] });
+  const bulk = e.E.exportNotesShorthand(e.S.state);
+  const parsed = e.A.parseNotes(bulk);
+  eq("every session came back through the importer", parsed.length, 2);
+  eq("each exercise kept its set", parsed.map((p) => p.sets.length), [1, 1]);
+  eq("the weights survived", parsed.map((p) => p.sets[0].w), [100, 120]);
+  truthy("the date header was NOT mistaken for an exercise",
+    !parsed.some((p) => /##/.test(p.name)) && !parsed.some((p) => /2026-11-0/.test(p.name)));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

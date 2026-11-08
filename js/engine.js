@@ -1138,6 +1138,27 @@ const Engine = (() => {
              remaining: Math.max(0, target - current) };
   }
 
+  /* ---------- history filtering ---------- */
+  /* One pure selector shared by the History screen and the bulk notes export, so
+     what a filter shows is exactly what gets exported. `q` matches an exercise
+     name (case-insensitive substring); `from`/`to` are inclusive YYYY-MM-DD
+     bounds. Empty values mean "no bound". Returns newest-first, matching how the
+     history list reads; callers that want chronological order sort themselves. */
+  function filterSessions(state, opts = {}) {
+    const q = String(opts.q == null ? "" : opts.q).trim().toLowerCase();
+    const from = opts.from || "";
+    const to = opts.to || "";
+    return (state.workouts || [])
+      .filter((w) => {
+        if (!w || !w.date) return false;
+        if (from && w.date < from) return false;
+        if (to && w.date > to) return false;
+        if (q && !(w.entries || []).some((en) => String(en.name || "").toLowerCase().includes(q))) return false;
+        return true;
+      })
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  }
+
   /* ---------- the user's own notes-app shorthand ---------- */
   /* Exactly the format he started with, so an export can be pasted straight back
      into his notes:
@@ -1147,9 +1168,12 @@ const Engine = (() => {
        2:100x10
 
      RPE and rest are appended only when they were actually logged — dropping
-     them would lose real entries, inventing them would be worse. */
-  function exportNoteShorthand(state, workoutId) {
-    const w = (state.workouts || []).find((x) => x.id === workoutId);
+     them would lose real entries, inventing them would be worse.
+
+     ONE encoder: noteShorthandBlock turns a single session into its block, and
+     BOTH the per-session export and the bulk export below go through it, so the
+     two can never drift in how a set is written. */
+  function noteShorthandBlock(state, w) {
     if (!w) return "";
     // Plain numbers only. Unit conversion and repeated addition produce values
     // like 120.80000000000001, and that noise would land straight in the user's
@@ -1178,6 +1202,28 @@ const Engine = (() => {
       lines.push("");
     }
     return lines.join("\n").trim();
+  }
+
+  function exportNoteShorthand(state, workoutId) {
+    return noteShorthandBlock(state, (state.workouts || []).find((x) => x.id === workoutId));
+  }
+
+  /* Bulk: lift the WHOLE log (or a chosen window) back into a notes app in one
+     go. Selection is the SAME filter the History screen uses, and the set lines
+     come from the SAME encoder — this is a wrapper, not a second exporter, so a
+     change to the format can never make the two disagree. Sessions are written
+     oldest-first with a date header per session; the header carries no colon and
+     starts with "#", so the notes importer (which keys exercises off "name:")
+     reads it as neither an exercise nor a set. */
+  function exportNotesShorthand(state, opts = {}) {
+    const list = filterSessions(state, opts)
+      .slice()
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    return list
+      .map((w) => "## " + w.date + "\n" + noteShorthandBlock(state, w))
+      .filter((s) => s.trim())
+      .join("\n\n")
+      .trim();
   }
 
   /* Progress toward the body-fat goal, mirroring how the weight goal reads.
@@ -1743,7 +1789,7 @@ const Engine = (() => {
     nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
     BW_FACTOR, BW_NAME, SUPPLIES_LOAD, hasBwFactor,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
-    exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
+    exportNoteShorthand, exportNotesShorthand, filterSessions, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };
 })();
 if (typeof module !== "undefined") module.exports = Engine;

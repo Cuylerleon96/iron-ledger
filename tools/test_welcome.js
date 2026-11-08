@@ -12,13 +12,14 @@
 
    Asserted here:
      * a state with no flag shows the tour;
-     * after it is dismissed/skipped the state carries the version and it does
-       NOT show again;
-     * bumping the app version (stored value no longer matches) shows it again;
+     * after it is dismissed/skipped the state carries the tour's CONTENT
+       revision (WELCOME_VERSION) and it does NOT show again;
+     * a new RELEASE (a different injected APP_VERSION) does NOT re-arm it, while
+       a WELCOME_VERSION bump does — this is the user's "exactly once" requirement;
      * the flag persists to storage and survives a reload;
      * migrate() does NOT invent the flag (no backfill);
      * every control is wired — Skip dismisses+persists, Next advances, the dots
-       jump, and a backdrop tap also records the version.
+       jump, and a backdrop tap also records the revision.
 */
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const B = path.join(__dirname, "..");
@@ -68,7 +69,11 @@ const fakeCtx = (state, store, cap = {}) => ({
 });
 
 /* ---- load store.js + welcome.js against a given persisted state ---- */
-function load(initial) {
+/* `opts.appVersion` simulates the build-time injection: build_www.py overwrites
+   welcome.js's APP_VERSION with the release versionName. A test can pin a
+   DIFFERENT one to model a new release, without touching the tour's own content
+   revision — which is exactly the distinction this suite now pins down. */
+function load(initial, opts = {}) {
   const storage = new Map();
   if (initial !== undefined) storage.set("fitness-app-v1", JSON.stringify(initial));
   const sandbox = {
@@ -85,8 +90,11 @@ function load(initial) {
   };
   sandbox.window = sandbox; sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  const src = ["js/store.js", "js/welcome.js"]
+  let src = ["js/store.js", "js/welcome.js"]
     .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+  if (opts.appVersion) {
+    src = src.replace(/const APP_VERSION = "[^"]*"/, `const APP_VERSION = "${opts.appVersion}"`);
+  }
   vm.runInContext(src + "\n;globalThis.__X={Store,Welcome};", sandbox, { filename: "bundle.js" });
   const X = sandbox.__X;
   return { Store: X.Store, Welcome: X.Welcome, storage, sandbox };
@@ -129,7 +137,7 @@ console.log("=== after dismissal it records the version, and does NOT show again
   e.Welcome.open(ctx);
   truthy("the tour is active after open()", e.Welcome.isActive());
   e.Welcome.dismiss();                       // exactly what Skip / Done / back do
-  eq("the version was recorded on the live state", e.Store.state.settings.welcomeSeenVersion, e.Welcome.APP_VERSION);
+  eq("the version was recorded on the live state", e.Store.state.settings.welcomeSeenVersion, e.Welcome.WELCOME_VERSION);
   eq("shouldShow() is now false", e.Welcome.shouldShow(e.Store.state.settings), false);
   truthy("the modal was closed", ctx.cap.closed);
   eq("maybeOpen() is now a no-op", e.Welcome.maybeOpen(fakeCtx(e.Store.state, e.Store, {})), false);
@@ -140,19 +148,50 @@ console.log("=== the flag persists to storage and survives a reload ===");
   const e = load(EXISTING);
   e.Welcome.markSeen(e.Store.state, e.Store);
   const raw = JSON.parse(e.storage.get("fitness-app-v1"));
-  eq("the persisted JSON carries the flag", raw.settings.welcomeSeenVersion, e.Welcome.APP_VERSION);
+  eq("the persisted JSON carries the flag", raw.settings.welcomeSeenVersion, e.Welcome.WELCOME_VERSION);
   const again = load(raw);                    // fresh boot from the same bytes
-  eq("a reloaded store still has the flag", again.Store.state.settings.welcomeSeenVersion, e.Welcome.APP_VERSION);
+  eq("a reloaded store still has the flag", again.Store.state.settings.welcomeSeenVersion, e.Welcome.WELCOME_VERSION);
   eq("...and does not re-show", again.Welcome.shouldShow(again.Store.state.settings), false);
 }
 
-console.log("=== bumping the version makes it show again ===");
+console.log("=== arming is keyed on the TOUR content revision, not the app version ===");
 {
   const e = load(EXISTING);
-  eq("seen for 1.0.0, still 1.0.0 -> hidden", e.Welcome.shouldShow({ welcomeSeenVersion: "1.0.0" }, "1.0.0"), false);
-  eq("seen for 1.0.0, app is now 1.0.1 -> shows", e.Welcome.shouldShow({ welcomeSeenVersion: "1.0.0" }, "1.0.1"), true);
-  eq("seen for an older 0.9.0, app 1.0.0 -> shows", e.Welcome.shouldShow({ welcomeSeenVersion: "0.9.0" }, "1.0.0"), true);
-  eq("no flag at all -> shows", e.Welcome.shouldShow({}, "1.0.0"), true);
+  eq("seen for this tour revision, still this revision -> hidden",
+     e.Welcome.shouldShow({ welcomeSeenVersion: "1" }, "1"), false);
+  eq("seen for an older tour revision -> shows",
+     e.Welcome.shouldShow({ welcomeSeenVersion: "0" }, "1"), true);
+  eq("no flag at all -> shows", e.Welcome.shouldShow({}, "1"), true);
+}
+
+console.log("=== THE REQUIREMENT: a new RELEASE must NOT re-arm the tour ===");
+{
+  // A state that has already seen WELCOME_VERSION "1".
+  const seen = {
+    version: 1, createdAt: "2026-01-01T00:00:00.000Z",
+    profile: { name: "the owner", units: "kg" }, workouts: [], bodylog: [], overrides: {},
+    custom: [], achievements: {}, targets: {}, settings: { seeded: true, welcomeSeenVersion: "1" },
+  };
+
+  // A NEW RELEASE is built: build_www.py injects a different app version. Prove
+  // the injection really landed, so this is a genuine app-version change and not
+  // a test that silently checked nothing.
+  const e = load(seen, { appVersion: "9.9.9" });
+  eq("the injected APP_VERSION really changed (a new release)", e.Welcome.APP_VERSION, "9.9.9");
+  eq("WELCOME_VERSION is unchanged by the release", e.Welcome.WELCOME_VERSION, "1");
+  eq("...yet shouldShow() stays FALSE — the release does NOT re-arm the tour",
+     e.Welcome.shouldShow(e.Store.state.settings), false);
+  eq("...and maybeOpen() is a no-op after the release",
+     e.Welcome.maybeOpen(fakeCtx(e.Store.state, e.Store, {})), false);
+
+  // Bumping the TOUR's own content revision DOES re-arm it — the only way.
+  eq("bumping WELCOME_VERSION re-arms the tour",
+     e.Welcome.shouldShow(e.Store.state.settings, "2"), true);
+
+  // sanity: the same release with NO seen flag still shows (missing = show)
+  const fresh = load({ version: 1, settings: { seeded: true } }, { appVersion: "9.9.9" });
+  eq("a no-flag state still shows after any release",
+     fresh.Welcome.shouldShow(fresh.Store.state.settings), true);
 }
 
 console.log("=== a brand-new install (default state) also sees it once ===");
@@ -191,7 +230,7 @@ console.log("=== every control is wired (Skip, Next, dots) ===");
 
   // the Skip button dismisses and persists
   ctx.cap.node.querySelector(".welcome-skip")._lis.click[0]();
-  eq("Skip recorded the version", e.Store.state.settings.welcomeSeenVersion, e.Welcome.APP_VERSION);
+  eq("Skip recorded the version", e.Store.state.settings.welcomeSeenVersion, e.Welcome.WELCOME_VERSION);
   truthy("Skip closed the modal", ctx.cap.closed);
   truthy("Skip toasted the user", ctx.cap.toasted);
 }
@@ -205,7 +244,7 @@ console.log("=== a backdrop tap also records the version (no leak of 'exactly on
   e.Welcome.open(ctx);
   truthy("a backdrop click listener was bound", (modal._lis.click || []).length > 0);
   modal._lis.click[0]({ target: modal });      // tap the dim area
-  eq("backdrop tap recorded the version", e.Store.state.settings.welcomeSeenVersion, e.Welcome.APP_VERSION);
+  eq("backdrop tap recorded the version", e.Store.state.settings.welcomeSeenVersion, e.Welcome.WELCOME_VERSION);
   eq("...and it will not show again", e.Welcome.shouldShow(e.Store.state.settings), false);
 }
 
@@ -240,6 +279,16 @@ console.log("=== wiring: boot, index.html and the escape routes ===");
   truthy("Next/Done is bound", /welcome-next"\)\.addEventListener\("click"/.test(w));
   truthy("dots are bound", /forEach\.call\(root\.querySelectorAll\("\.welcome-dot"\)/.test(w));
   truthy("the version-flag key is welcomeSeenVersion", /welcomeSeenVersion/.test(w) && /welcomeSeenVersion/.test(app + w));
+  // the copy must be honest now that a release no longer re-shows the tour
+  truthy("the skip toast no longer promises a re-show after the next update",
+    !/shows again after the next update/.test(w));
+  truthy("the skip toast says the tour returns only if the tour itself changes",
+    /only comes back if the tour itself is ever updated/.test(w));
+  // the build-injection anchor survives, and the content revision is separate
+  truthy("APP_VERSION is still the injectable build-time anchor",
+    /const APP_VERSION = "[^"]*"/.test(w));
+  truthy("WELCOME_VERSION is a separate content revision, not injected",
+    /const WELCOME_VERSION = "1"/.test(w));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

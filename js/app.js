@@ -1014,66 +1014,113 @@
   }
 
   /* ================= history ================= */
-  function renderHistory(host) {
-    const ws = [...S.workouts].reverse();
-    const head = el("section", { class: "card" });
-    head.innerHTML = `<div class="card-head"><h3>History</h3><span class="muted">${ws.length} sessions</span></div>`;
-    host.append(head);
-    if (!ws.length) { host.append(el("p", { class: "muted pad" }, "No sessions logged yet.")); return; }
-    ws.forEach((w) => {
-      let tonnage = 0, sets = 0, rpeSum = 0, rpeN = 0;
-      (w.entries || []).forEach((en) => {
-        const s = Engine.entryStats(en);
-        tonnage += s.tonnage; sets += s.sets;
-        if (s.avgRPE) { rpeSum += s.avgRPE * s.sets; rpeN += s.sets; }
-      });
-      const sessionRpe = rpeN ? (rpeSum / rpeN) : null;
-      let restSum2 = 0, restN2 = 0;
-      (w.entries || []).forEach((en) => { const s = Engine.entryStats(en); restSum2 += s.totalRest; restN2 += s.restN; });
-      const sessionRest = restN2 ? restSum2 / restN2 : null;
-      const card = el("section", { class: "card hist" });
-      card.innerHTML = `
-        <div class="hist-head">
-          <div><b>${w.date}</b> <span class="muted">· ${(w.entries || []).length} ${pl((w.entries || []).length, "exercise")} · ${sets} ${pl(sets, "set")} · ${fmt(U.w(tonnage))} ${U.label()}${sessionRpe ? ` · avg RPE ${sessionRpe.toFixed(1)}` : ""}${sessionRest ? ` · rest ${fmtRest(sessionRest)}` : ""}</span>
-          ${w.note ? `<div class="muted small">${esc(w.note)}</div>` : ""}</div>
-          <div class="row"><button class="btn ghost tiny nt">Note</button><button class="btn ghost tiny ed">Edit</button><button class="btn ghost tiny cp">Repeat</button></div>
-        </div>
-        <div class="hist-body">
-          ${(w.entries || []).map((en) => {
-            const s = Engine.entryStats(en);
-            const setsTxt = (en.sets || []).map((x) => setText(x, en.mode)).join("  ·  ");
-            const restTxt = s.avgRest ? `  ·  rest ${fmtRest(s.avgRest)}` : "";
-            return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt + restTxt)}</span></div>`;
-          }).join("")}
-        </div>`;
-      $(".ed", card).addEventListener("click", () => {
-        draft = JSON.parse(JSON.stringify(w));
-        draft.dateTouched = true;          // editing keeps the workout's own date
-        setView("log");
-      });
-      $(".cp", card).addEventListener("click", () => {
-        draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
-        setView("log"); toast("Loaded into a new session");
-      });
-      $(".nt", card).addEventListener("click", async () => {
-        const txt = Engine.exportNoteShorthand(S, w.id);
-        try {
-          await navigator.clipboard.writeText(txt);
-          toast("Copied in your notes format — paste it anywhere", "good", 4200);
-        } catch (e) {
-          // clipboard can be refused; never leave the button doing nothing
-          const box = el("div", { class: "import-box" });
-          box.innerHTML = `<h3>Copy to your notes</h3>
-            <p class="muted small">Select all and copy.</p>
-            <textarea id="nt-ta" rows="12">${esc(txt)}</textarea>
-            <div class="row end"><button class="btn primary" id="nt-x">Done</button></div>`;
-          openModal(box, "wide");
-          const ta = $("#nt-ta", box); ta.focus(); ta.select();
-          $("#nt-x", box).addEventListener("click", closeModal);
-        }
-      });
-      host.append(card);
+  /* The history list was a plain wall of cards with no way to find anything. A
+     filter bar (exercise name + an inclusive date window) narrows it live, and
+     "Copy notes" lifts exactly what is shown back into a notes app in the user's
+     own shorthand. Both go through Engine.filterSessions / Engine.exportNotes-
+     Shorthand, so nothing is re-implemented here and no control is left unwired. */
+  function copyNoteText(txt, okMsg) {
+    // clipboard can be refused (or absent on a non-secure context); never leave
+    // the control doing nothing — offer a select-all box instead.
+    const fallback = () => {
+      const box = el("div", { class: "import-box" });
+      box.innerHTML = `<h3>Copy to your notes</h3>
+        <p class="muted small">Select all and copy.</p>
+        <textarea id="nt-ta" rows="14">${esc(txt)}</textarea>
+        <div class="row end"><button class="btn primary" id="nt-x">Done</button></div>`;
+      openModal(box, "wide");
+      const ta = $("#nt-ta", box); ta.focus(); ta.select();
+      $("#nt-x", box).addEventListener("click", closeModal);
+    };
+    if (!txt) { toast("Nothing to copy", ""); return; }
+    if (!navigator.clipboard || !navigator.clipboard.writeText) { fallback(); return; }
+    navigator.clipboard.writeText(txt).then(() => toast(okMsg, "good", 4200), fallback);
+  }
+
+  function sessionCard(w) {
+    let tonnage = 0, sets = 0, rpeSum = 0, rpeN = 0;
+    (w.entries || []).forEach((en) => {
+      const s = Engine.entryStats(en);
+      tonnage += s.tonnage; sets += s.sets;
+      if (s.avgRPE) { rpeSum += s.avgRPE * s.sets; rpeN += s.sets; }
     });
+    const sessionRpe = rpeN ? (rpeSum / rpeN) : null;
+    let restSum2 = 0, restN2 = 0;
+    (w.entries || []).forEach((en) => { const s = Engine.entryStats(en); restSum2 += s.totalRest; restN2 += s.restN; });
+    const sessionRest = restN2 ? restSum2 / restN2 : null;
+    const card = el("section", { class: "card hist" });
+    card.innerHTML = `
+      <div class="hist-head">
+        <div><b>${w.date}</b> <span class="muted">· ${(w.entries || []).length} ${pl((w.entries || []).length, "exercise")} · ${sets} ${pl(sets, "set")} · ${fmt(U.w(tonnage))} ${U.label()}${sessionRpe ? ` · avg RPE ${sessionRpe.toFixed(1)}` : ""}${sessionRest ? ` · rest ${fmtRest(sessionRest)}` : ""}</span>
+        ${w.note ? `<div class="muted small">${esc(w.note)}</div>` : ""}</div>
+        <div class="row"><button class="btn ghost tiny nt">Note</button><button class="btn ghost tiny ed">Edit</button><button class="btn ghost tiny cp">Repeat</button></div>
+      </div>
+      <div class="hist-body">
+        ${(w.entries || []).map((en) => {
+          const s = Engine.entryStats(en);
+          const setsTxt = (en.sets || []).map((x) => setText(x, en.mode)).join("  ·  ");
+          const restTxt = s.avgRest ? `  ·  rest ${fmtRest(s.avgRest)}` : "";
+          return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt + restTxt)}</span></div>`;
+        }).join("")}
+      </div>`;
+    $(".ed", card).addEventListener("click", () => {
+      draft = JSON.parse(JSON.stringify(w));
+      draft.dateTouched = true;          // editing keeps the workout's own date
+      setView("log");
+    });
+    $(".cp", card).addEventListener("click", () => {
+      draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
+      setView("log"); toast("Loaded into a new session");
+    });
+    $(".nt", card).addEventListener("click", () =>
+      copyNoteText(Engine.exportNoteShorthand(S, w.id), "Copied in your notes format — paste it anywhere"));
+    return card;
+  }
+
+  function renderHistory(host) {
+    const total = (S.workouts || []).length;
+    const head = el("section", { class: "card" });
+    head.innerHTML = `
+      <div class="card-head"><h3>History</h3><span class="muted" id="hist-count">${total} ${pl(total, "session")}</span></div>
+      <div class="row">
+        <input class="inp" id="hist-q" placeholder="Filter by exercise…" aria-label="Filter history by exercise name">
+        <input class="inp" type="date" id="hist-from" aria-label="Filter history from this date">
+        <input class="inp" type="date" id="hist-to" aria-label="Filter history to this date">
+        <button class="btn ghost tiny" id="hist-clear">Clear</button>
+        <button class="btn ghost tiny" id="hist-notes" title="Copy every session shown, in your notes shorthand">Copy notes</button>
+      </div>`;
+    host.append(head);
+    const list = el("div", {});
+    host.append(list);
+
+    const readFilter = () => ({ q: $("#hist-q", head).value, from: $("#hist-from", head).value, to: $("#hist-to", head).value });
+
+    const paint = () => {
+      const f = readFilter();
+      const ws = Engine.filterSessions(S, f);
+      const active = !!(String(f.q).trim() || f.from || f.to);
+      $("#hist-count", head).textContent = active ? `${ws.length} of ${total} sessions` : `${total} ${pl(total, "session")}`;
+      list.innerHTML = "";
+      if (!ws.length) {
+        list.append(el("p", { class: "muted pad" }, total ? "No sessions match the filter." : "No sessions logged yet."));
+        return;
+      }
+      ws.forEach((w) => list.append(sessionCard(w)));
+    };
+
+    // every control does something; emptying them restores the full list
+    $("#hist-q", head).addEventListener("input", paint);
+    $("#hist-from", head).addEventListener("change", paint);
+    $("#hist-to", head).addEventListener("change", paint);
+    $("#hist-clear", head).addEventListener("click", () => {
+      $("#hist-q", head).value = ""; $("#hist-from", head).value = ""; $("#hist-to", head).value = "";
+      paint();
+    });
+    $("#hist-notes", head).addEventListener("click", () => {
+      // exactly what is shown: the same filter drives the export
+      copyNoteText(Engine.exportNotesShorthand(S, readFilter()), "Copied every session shown, in your notes format");
+    });
+    paint();
   }
 
   function setText(s, mode) {

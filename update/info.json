@@ -1,17 +1,13 @@
 {
-  "versionCode": 38,
-  "versionName": "1.0.37",
+  "versionCode": 39,
+  "versionName": "1.0.38",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "14f073a5794fea90828f657f7d1d24abf0fb53db25c5962c933037900e9f94b9",
-  "sizeBytes": 3279874,
+  "sha256": "9b37acf98685a769d4ceea738352d7c6952db7c27fc808f89f836d1aed7992a4",
+  "sizeBytes": 3281579,
   "published": "2026-11-08",
   "notes": [
-    "Seed affordance: re-confirmed the Profile 'Load my 7 Nov session' button is reachable (its guard keys on whether the session is already in the log, not on the flag boot() sets before first paint)",
-    "Override schema: removed the dead 'rename override' field \u2014 exName never read overrides.n (renames live on custom exercises)",
-    "Work time %: the dashboard chip and the Stamina explainer now name their window (all-time vs the last 28 days) so two different numbers no longer share one label",
-    "Volume & recovery: a Sets / Tonnage / Reps toggle now plots the weekly tonnage and reps the engine already computes \u2014 no second tonnage calculation",
-    "Docs: the vault note no longer claims a rest timer, plate/warm-up calculators, super/drop/failure set types or routines \u2014 none exist in the app (the README was already accurate)",
-    "The first-run tour version is now injected from android/version.properties at build time (loud failure if the anchor is missing), so it can no longer silently stop re-showing",
-    "Accessibility: visible keyboard focus ring, modal role=dialog + aria-modal + background scroll lock, toasts are an aria-live region, and set-row inputs are labelled for screen readers"
+    "The first-run tour now runs exactly once: it is armed by its own content revision (WELCOME_VERSION), not the app version, so a new release no longer re-shows it, and the skip message is honest about that",
+    "History now has a search and filter: narrow sessions by exercise name and by an inclusive date range, with a Clear button that restores the full list",
+    "Your whole log can now be copied back into a notes app in one go: a Copy notes button exports every session shown - all of them, or the date range you filter to - in your own shorthand"
   ]
 }

@@ -5,10 +5,14 @@ Only runtime files are copied. Source tooling, the raw wger dump, tests and
 node_modules deliberately stay out of the bundle.
 
 The app version is INJECTED into the copied js/welcome.js from
-android/version.properties (versionName). The walkthrough shows once per version,
-and a hand-kept constant silently drifts: it sat at "1.0.0" for many releases, so
-the tour stopped re-showing. Injecting the real versionName ties the constant to
-the release, and the build fails loudly if the anchor line is gone.
+android/version.properties (versionName). It is DISPLAY ONLY: the walkthrough's
+once-only arming is keyed on a separate, hand-kept content revision
+(welcome.js's WELCOME_VERSION), not on the release version, so shipping a new
+release does not re-show the tour. The injection still matters because a
+hand-kept APP_VERSION constant drifts (it sat at "1.0.0" for many releases, so
+the number the tour showed stopped matching the build); the build fails loudly
+if the anchor line is gone. WELCOME_VERSION is deliberately NOT injected — it is
+bumped by hand, and only when the tour's own pages/copy change.
 """
 import re
 import shutil

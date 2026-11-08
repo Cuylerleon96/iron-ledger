@@ -5,20 +5,23 @@
 
    ONCE-ONLY CONTRACT (the whole point of this file):
      * The flag lives in the persisted state: S.settings.welcomeSeenVersion.
-     * It shows when the stored value does NOT equal the current app version.
+     * It shows when the stored value does NOT equal the CURRENT TOUR CONTENT
+       revision, WELCOME_VERSION — NOT the app version. The user asked for a
+       walkthrough that runs EXACTLY ONCE; keying the flag on the app version made
+       it re-arm on every release. That was a regression and this is the fix.
      * A MISSING flag means "show it" — so an existing install that predates this
        feature sees the tour exactly once, and a fresh install sees it once too.
      * There is deliberately NO migration that backfills the flag. Backfilling it
-       for existing users would set it to the current version and the tour would
+       for existing users would set it to the current revision and the tour would
        never appear for them. Do not add one.
-     * The only way to see it again is a deliberate version bump.
-   APP_VERSION below is the single source of truth for "which version has the
-   user seen it for". It is NOT hand-kept: tools/build_www.py OVERWRITES this
-   constant in the built bundle with android/version.properties' versionName, so
-   it can never drift (a hand-kept constant silently stops re-showing the tour).
-   The "0.0.0" here is only a placeholder for the raw source / browser dev build;
-   the shipped bundle always carries the real release versionName. The build fails
-   loudly if this anchor line is missing, rather than shipping a stale version.
+     * The only way to see it again is to bump WELCOME_VERSION, and only when the
+       tour's own pages or copy actually change. A release version bump alone must
+       NOT re-show it.
+   APP_VERSION (below) is the build's own version, kept for display. It is NOT
+   hand-kept: tools/build_www.py OVERWRITES it in the built bundle with
+   android/version.properties' versionName (the build fails loudly if the anchor
+   line is missing). It plays NO part in arming the tour. WELCOME_VERSION is a
+   separate, hand-kept CONTENT revision — bump it only when the pages change.
 
    It never blocks the app: it is a modal overlay opened AFTER the first paint.
    Every control does something — Skip dismisses and persists, the dots jump to a
@@ -29,9 +32,14 @@ const Welcome = (() => {
 
   /* The app version this build is. INJECTED at build time from
      android/version.properties (versionName) by tools/build_www.py. "0.0.0" is
-     only the un-built placeholder. The shipped bundle always carries the real
-     versionName, so the tour re-shows exactly once per release. */
+     only the un-built placeholder. DISPLAY ONLY — the tour's arming does NOT
+     depend on it, so shipping a new release does not re-show the walkthrough. */
   const APP_VERSION = "0.0.0";
+
+  /* The CONTENT revision of the tour itself. The seen-flag is armed by THIS, not
+     by APP_VERSION: bump it ONLY when these pages or their copy change, so the
+     walkthrough runs exactly once across any number of releases. */
+  const WELCOME_VERSION = "1";
 
   /* In order: what the app is; shorthand logging; the six attributes; muscle
      balance & weak points; where data lives / backups; the self-update path. */
@@ -91,18 +99,21 @@ const Welcome = (() => {
     },
   ];
 
-  /* Should the tour show? A missing flag is NOT "already seen" \u2014 it is "show it".
-     `version` is overridable only so a test can model a version bump. */
-  function shouldShow(settings, version) {
-    const v = version || APP_VERSION;
+  /* Should the tour show? A missing flag is NOT "already seen" — it is "show it".
+     Armed by WELCOME_VERSION (the tour's content revision), NOT the app version:
+     a state that has seen this revision stays hidden across any number of
+     releases. `welcomeVersion` is overridable only so a test can model a tour
+     content bump. */
+  function shouldShow(settings, welcomeVersion) {
+    const v = welcomeVersion || WELCOME_VERSION;
     const seen = settings && settings.welcomeSeenVersion;
     return seen !== v;
   }
 
-  /* Persist that this version's tour has been shown. Called on finish OR skip. */
-  function markSeen(state, Store, version) {
+  /* Persist that this tour revision has been shown. Called on finish OR skip. */
+  function markSeen(state, Store, welcomeVersion) {
     if (!state.settings) state.settings = {};
-    state.settings.welcomeSeenVersion = version || APP_VERSION;
+    state.settings.welcomeSeenVersion = welcomeVersion || WELCOME_VERSION;
     if (Store && Store.save) Store.save(true);
     return state.settings.welcomeSeenVersion;
   }
@@ -133,7 +144,7 @@ const Welcome = (() => {
       if (modalEl && modalEl.removeEventListener) modalEl.removeEventListener("click", onBackdrop);
       markSeen(ctx.state, ctx.store);
       ctx.close();
-      if (why === "skip" && ctx.toast) ctx.toast("Tour skipped \u2014 it shows again after the next update", "");
+      if (why === "skip" && ctx.toast) ctx.toast("Tour skipped \u2014 it only comes back if the tour itself is ever updated", "");
     }
 
     /* A tap on the dim backdrop already closes the modal; treat it as a skip so
@@ -178,6 +189,6 @@ const Welcome = (() => {
     return true;
   }
 
-  return { APP_VERSION, PAGES, shouldShow, markSeen, maybeOpen, open, isActive, dismiss, pageCount: PAGES.length };
+  return { APP_VERSION, WELCOME_VERSION, PAGES, shouldShow, markSeen, maybeOpen, open, isActive, dismiss, pageCount: PAGES.length };
 })();
 if (typeof module !== "undefined") module.exports = Welcome;
