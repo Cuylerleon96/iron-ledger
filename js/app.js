@@ -134,6 +134,24 @@
   };
   $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
 
+  /* ================= glossary wiring ================= */
+  /* Every explanatory term in the UI is a tappable `data-term` control that opens
+     the ONE explanation in js/glossary.js. This is the single click handler, so a
+     term cannot be added as a dead button: glossary.link() only emits the hook
+     when an entry exists, and Glossary.open() refuses an unknown id. */
+  const GLOSS = (typeof Glossary !== "undefined") ? Glossary : { link: (id, t) => esc(t), has: () => false, open: () => false, openAll: () => false };
+  const term = (id, text, cls) => GLOSS.link(id, text, cls);
+  const attrTermId = (key) => (GLOSS.attrId ? GLOSS.attrId(key) : null);
+  const glossCtx = () => ({ el, open: openModal, close: closeModal });
+  document.addEventListener("click", (e) => {
+    const t = e.target && e.target.closest ? e.target.closest("[data-term]") : null;
+    if (!t) return;
+    e.preventDefault();
+    // A term inside the open glossary list opens in place; anything else opens
+    // over the current screen. Either way the entry is the same one object.
+    GLOSS.open(glossCtx(), t.dataset.term);
+  });
+
   /* ================= library index ================= */
   function allExercises() { return [...EXERCISE_LIB, ...(S.custom || [])]; }
   function buildIndex() {
@@ -345,10 +363,10 @@
           <p class="muted">${S.profile.name ? esc(s.title) + " · " : ""}${fmt(s.level.into)} / ${fmt(s.level.need)} XP → next LV · ${fmt(s.xp)} total</p>
           <div class="chips">
             <span class="chip">${s.sessions} ${pl(s.sessions, "session")}</span>
-            <span class="chip">${fmt(s.tonnage / 1000, 1)} t lifted</span>
-            ${s.density ? `<span class="chip" title="Share of all logged session time spent working rather than resting — all-time">${s.density}% work time (all-time)</span>` : ""}
+            <span class="chip">${term("tonnage", `${fmt(s.tonnage / 1000, 1)} t lifted`)}</span>
+            ${s.density ? `<span class="chip" title="Share of all logged session time spent working rather than resting — all-time">${term("density", `${s.density}% work time (all-time)`)}</span>` : ""}
             <span class="chip">${s.streak.days}d streak</span>
-            <span class="chip">${s.prs} ${pl(s.prs, "PR")} this month</span>
+            <span class="chip">${term("pr", `${s.prs} ${pl(s.prs, "PR")} this month`)}</span>
           </div>
         </div>
       </div>`;
@@ -365,8 +383,8 @@
       const arrow = d.delta > 0 ? `<span class="up">▲${d.delta}</span>` : d.delta < 0 ? `<span class="down">▼${Math.abs(d.delta)}</span>` : `<span class="flat">—</span>`;
       legend.append(el("div", { class: "attr-row" },
         `<span class="dot" style="background:${a.color}"></span>
-         <span class="attr-name">${a.label}</span>
-         <span class="attr-tier">${d.tier}</span>
+         ${term(attrTermId(a.key), `<span class="attr-name">${a.label}</span>`, "bare")}
+         ${term("tiers", `<span class="attr-tier">${d.tier}</span>`, "bare")}
          <span class="attr-score">${d.score}</span>${arrow}`));
     });
     chartCard.append(legend);
@@ -382,14 +400,15 @@
     dashConsistency(host);
     dashVolume(host);
 
-    /* attribute detail */
+    /* attribute detail — the definition itself lives in js/glossary.js (the one
+       source), so this block and the glossary screen cannot drift apart. */
     const det = el("section", { class: "card" });
-    det.innerHTML = `<div class="card-head"><h3>What the numbers mean</h3></div>`;
+    det.innerHTML = `<div class="card-head"><h3>What the numbers mean</h3><span class="muted">tap a word to see what it means</span></div>`;
     const dl = el("div", { class: "detail-grid" });
     Engine.ATTRIBUTES.forEach((a) => {
       const d = attrs[a.key];
       dl.append(el("div", { class: "detail" },
-        `<h4 style="color:${a.color}">${a.label} <span class="muted">${d.score}</span></h4>
+        `<h4 style="color:${a.color}">${term(attrTermId(a.key), a.label, "bare")} <span class="muted">${d.score}</span></h4>
          <p>${attrExplain(a.key, d)}</p>`));
     });
     det.append(dl);
@@ -397,15 +416,17 @@
 
     /* muscle balance */
     const mb = el("section", { class: "card chart-card" });
-    mb.innerHTML = `<div class="card-head"><h3>Muscle balance</h3><span class="muted">effort sets / raw sets</span></div>`;
+    mb.innerHTML = `<div class="card-head"><h3>Muscle balance</h3><span class="muted">${term("effort-set", "effort sets / raw sets")}</span></div>`;
     const mbHost = el("div", { class: "radar-host" });
     mb.append(mbHost);
     const mlist = el("div", { class: "attr-legend" });
     Engine.GROUP_ORDER.forEach((g) => {
       const m = mg[g];
+      const cls = m.status.replace(/[^a-z]/gi, "");
+      const sid = GLOSS.statusId ? GLOSS.statusId(m.status) : null;
       mlist.append(el("div", { class: "attr-row mrow" },
         `<span class="attr-name">${g}</span>
-         <span class="attr-tier status-${m.status.replace(/[^a-z]/gi, "")}">${m.status}</span>
+         ${term(sid, `<span class="attr-tier status-${cls}">${m.status}</span>`, "bare")}
          <span class="attr-score">${m.effPerWk}/wk</span>
          <span class="muted mraw">${m.setsPerWk} raw sets</span>`));
     });
@@ -428,7 +449,7 @@
     if (!weak.length) wp.append(el("p", { class: "muted" }, "Nothing flagged — balance looks good. Keep progressing the big lifts."));
     weak.forEach((w) => {
       wp.append(el("div", { class: "weak " + w.severity },
-        `<div class="weak-h"><span class="sev ${w.severity}">${w.severity === "high" ? "!" : w.severity === "med" ? "•" : "·"}</span> ${esc(w.title)}</div>
+        `<div class="weak-h"><span class="sev ${w.severity}">${w.severity === "high" ? "!" : w.severity === "med" ? "•" : "·"}</span> ${esc(w.title)}${w.kind === "stagnant" ? ` ${term("plateau", "what does plateaued mean?")}` : ""}</div>
          <p class="muted">${esc(w.detail)}</p>
          <p class="fix">→ ${esc(w.fix)}</p>`));
     });
@@ -527,7 +548,7 @@
     const fresh = Engine.freshness(S);
     const card = el("section", { class: "card" });
     card.innerHTML = `<div class="card-head"><h3>Volume &amp; recovery</h3>
-      <span class="muted" id="vol-cap">sets per week, last 12 weeks</span></div>
+      <span class="muted" id="vol-cap"></span></div>
       <div class="seg" id="vol-seg" role="group" aria-label="Volume metric">
         <button type="button" class="on" data-met="sets" aria-pressed="true">Sets</button>
         <button type="button" data-met="tonnage" aria-pressed="false">Tonnage</button>
@@ -536,7 +557,8 @@
     const ch = el("div", { class: "chart-host" });
     card.append(ch);
     card.append(el("p", { class: "deload " + (del.suggest ? "warn" : "ok") },
-      del.suggest ? `<b>Consider a lighter week.</b> ${esc(del.why)} ${esc(del.fix || "")}` : esc(del.why)));
+      (del.suggest ? `<b>Consider a lighter week.</b> ${esc(del.why)} ${esc(del.fix || "")}` : esc(del.why))
+      + ` ${term("deload", "what is a deload?")}`));
 
     const fr = el("div", { class: "fresh-row" });
     Engine.GROUP_ORDER.forEach((g) => {
@@ -548,24 +570,26 @@
         `${esc(g)} <b>${txt}</b>`));
     });
     card.append(fr);
-    card.append(el("p", { class: "muted small" }, "Days since each group was last trained — recency, not a measurement of recovery."));
+    card.append(el("p", { class: "muted small" }, term("freshness", "Days since each group was last trained") + " — recency, not a measurement of recovery."));
     host.append(card);
 
     /* Volume, tonnage and reps are ALL already computed per week by
        Engine.volumeWeeks — this only chooses which of those columns to plot.
        There is no second tonnage calculation here; it is the same load × reps
-       the engine (and the PR/strength paths) already use. */
+       the engine (and the PR/strength paths) already use. Tonnage is stored in
+       kg, so it is shown through U.w() like every other weight. */
     const METRICS = {
-      sets:    { color: "#f8d030", unit: " sets", cap: "sets per week, last 12 weeks" },
-      tonnage: { color: "#58c8f8", unit: " kg",   cap: "tonnage per week (kg), last 12 weeks" },
-      reps:    { color: "#a8e878", unit: " reps", cap: "reps per week, last 12 weeks" },
+      sets:    { term: "volume",  color: "#f8d030", label: () => " sets",        cap: () => "sets per week, last 12 weeks" },
+      tonnage: { term: "tonnage", color: "#58c8f8", label: () => " " + U.label(), cap: () => `tonnage per week (${U.label()}), last 12 weeks` },
+      reps:    { term: "reps",    color: "#a8e878", label: () => " reps",        cap: () => "reps per week, last 12 weeks" },
     };
     const draw = (met) => {
       const m = METRICS[met];
-      const cap = $("#vol-cap", card); if (cap) cap.textContent = m.cap;
+      const cap = $("#vol-cap", card); if (cap) cap.innerHTML = term(m.term, m.cap());
       Chart.line(ch, {
-        fillArea: true, color: m.color, unit: m.unit,
-        points: weeks.map((w) => ({ x: Engine.dstr(Date.now() - w.weeksAgo * 7 * 86400000), y: w[met] })),
+        fillArea: true, color: m.color, unit: m.label(),
+        points: weeks.map((w) => ({ x: Engine.dstr(Date.now() - w.weeksAgo * 7 * 86400000),
+                                    y: met === "tonnage" ? U.w(w.tonnage) : w[met] })),
       });
     };
     const seg = $("#vol-seg", card);
@@ -590,16 +614,19 @@
     return "—";
   }
 
+  /* The live readout for one attribute. The DEFINITION ("what this measures") is
+     not written here — it is read from js/glossary.js, the single source shared
+     with the glossary screen, so the same term cannot be explained two ways. */
   function attrExplain(key, d) {
+    const head = GLOSS.attrPlain ? GLOSS.attrPlain(key) : "";
+    const lead = head ? esc(head) + " " : "";
     const x = d.detail;
-    switch (key) {
-      case "STR": return x.basis === "no weight"
-        ? "Strength is a ratio — how much you lift relative to how much you weigh. Add your bodyweight in Profile and this becomes a real score."
-        : x.basis === "standards"
+    const live = (() => { switch (key) {
+      case "STR": return x.basis === "standards"
         ? `Estimated 1RM on ${x.n} core lift${x.n > 1 ? "s" : ""} vs published bodyweight standards (bodyweight ${fmtW(U.w(x.bw))} ${U.label()}).`
         : x.basis === "estimated"
           ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.`
-          : "Log a loaded lift to start measuring strength.";
+          : "Add your bodyweight in Profile and this becomes a real score.";
       case "END": return `Cardio ${Math.round(x.cardioMinPerWk)} min/wk`
         + (x.distKmPerWk > 0 ? ` · ${Math.round(x.distKmPerWk * 10) / 10} km/wk (${x.distMod || "other"})` : "")
         + (x.paceKmh ? ` · average pace ${x.paceKmh.toFixed(1)} km/h` : "")
@@ -618,7 +645,8 @@
         ? `Scored from ${x.basis}${x.log ? ` · ${x.log} bodyweight check-in${x.log > 1 ? "s" : ""}` : ""}.`
         : "Add bodyweight, body-fat and height in Profile to score vitality.";
       default: return "";
-    }
+    } })();
+    return lead + live;
   }
 
   /* ================= log ================= */
@@ -725,7 +753,7 @@
       };
       const lastTxt = tgt.last.w > 0 ? `${fmtW(U.w(tgt.last.w))}×${tgt.last.r}` : `${tgt.last.r} reps`;
       const opts = tgt.options.map(showOpt).map((x) => `<b>${x}</b>`).join(`<span class="muted"> or </span>`);
-      return `<div class="target"><span class="t-lab">NEXT</span> ${opts}`
+      return `<div class="target"><span class="t-lab">${term("next-target", "NEXT")}</span> ${opts}`
         + `<span class="muted"> · from ${lastTxt}, ${tgt.date}</span></div>`;
     })() : "";
 
@@ -740,7 +768,7 @@
       // one saved session is not "first time" — say what is actually true
       const n = Engine.seriesFor(S, en.id).length;
       return `<div class="cmp flat">${n === 1
-        ? "One session logged — this one becomes your baseline to compare against"
+        ? `One session logged — ${term("baseline", "this one becomes your baseline")} to compare against`
         : "First time logging this — no comparison yet"}</div>`;
     })();
 
@@ -770,9 +798,9 @@
       <div class="entry-foot">
         <span>${st.sets} ${pl(st.sets, "set")}</span>
         ${st.tonnage ? `<span>${fmt(U.w(st.tonnage) / 1, 0)} ${U.label()} tonnage</span>` : ""}
-        ${st.est1RM ? `<span>best e1RM <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
+        ${st.est1RM ? `<span>${term("e1rm", "best e1RM")} <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
         ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
-        ${st.avgRPE ? `<span>avg RPE ${st.avgRPE.toFixed(1)}</span>` : ""}
+        ${st.avgRPE ? `<span>${term("rpe", "avg RPE")} ${st.avgRPE.toFixed(1)}</span>` : ""}
         ${st.avgRest ? `<span>rest ${fmtRest(st.avgRest)}</span>` : ""}
         <span class="muted">${prev.date ? "all-time best " + bestLabel({ best: prev, mode: en.mode }) : "first time logging this"}</span>
       </div>`;
@@ -1402,6 +1430,16 @@
       </div>
       <button class="btn primary" id="p-save">Save profile</button>`;
     host.append(c);
+
+    /* The glossary, reachable from Profile — not a sixth tab. It is the same
+       js/glossary.js the terms on the dashboard open, so the wording matches. */
+    const glossCard = el("section", { class: "card" });
+    glossCard.innerHTML = `
+      <div class="card-head"><h3>What the words mean</h3><span class="muted">plain English</span></div>
+      <p class="muted small">Every term the app uses — MEV, e1RM, RPE, tonnage, deload and the rest — in plain words, with the real definition underneath for when you want it. The same explanation opens if you tap the word itself on any card.</p>
+      <button class="btn" id="p-gloss">Open the glossary</button>`;
+    host.append(glossCard);
+    $("#p-gloss", glossCard).addEventListener("click", () => GLOSS.openAll(glossCtx()));
 
     const bw = el("section", { class: "card" });
     const log = [...(S.bodylog || [])].reverse().slice(0, 30);

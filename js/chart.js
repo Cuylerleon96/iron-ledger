@@ -226,7 +226,7 @@ const Chart = (() => {
       row.innerHTML =
         `<span class="bar-lab">${esc(it.label)}</span>` +
         `<span class="bar-track"><i class="bar-fill${it.status === "below MEV" || it.status === "untrained" ? " low" : ""}" style="width:${pct}%"></i>` +
-        (it.marker !== undefined ? `<i class="bar-mark" style="left:${Math.round((it.marker / top) * 100)}%" title="MEV target"></i>` : "") + `</span>` +
+        (it.marker !== undefined ? `<i class="bar-mark" data-term="mev-mav-mrv" style="left:${Math.round((it.marker / top) * 100)}%" title="MEV target"></i>` : "") + `</span>` +
         `<span class="bar-val">${it.value}${unit}</span>`;
       wrap.append(row);
     });

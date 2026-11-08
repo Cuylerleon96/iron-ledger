@@ -428,5 +428,106 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
   truthy("the remove-set button has an aria-label", /aria-label="Remove \$\{sl\.toLowerCase\(\)\}"/.test(app));
 }
 
+
+console.log("=== glossary: every term the UI shows has ONE entry, and every entry is shown ===");
+{
+  const G = require(path.join(B, "js", "glossary.js"));
+  const e = env({});
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const chart = fs.readFileSync(path.join(B, "js", "chart.js"), "utf8");
+  const welcome = fs.readFileSync(path.join(B, "js", "welcome.js"), "utf8");
+  const engine = fs.readFileSync(path.join(B, "js", "engine.js"), "utf8");
+  const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
+  const ui = [app, chart, welcome, engine, html].join("\n");
+
+  // 1. no duplicate ids, and every entry carries both halves
+  const ids = G.TERMS.map((t) => t.id);
+  eq("glossary ids are unique", ids.length, new Set(ids).size);
+  truthy("every entry has a plain explanation", G.TERMS.every((t) => t.plain && t.plain.length > 20));
+  truthy("every entry has the real definition underneath", G.TERMS.every((t) => t.real && t.real.length > 20));
+
+  // 2. the pinned list from the brief: at minimum these terms are covered
+  const REQUIRED = [
+    "volume", "tonnage", "reps", "effort-set", "rpe", "e1rm",
+    "mev-mav-mrv", "below-mev", "mev-mav", "optimal", "over-mrv", "untrained",
+    "deload", "plateau", "density", "freshness", "baseline", "pr", "next-target", "tiers",
+    "attr-STR", "attr-END", "attr-POW", "attr-MOB", "attr-CON", "attr-VIT",
+  ];
+  eq("every required term has an entry", REQUIRED.filter((id) => !G.has(id)), []);
+
+  // 3. every muscle-balance status word the engine can emit maps to an entry
+  const STATUSES = ["below MEV", "MEV→MAV", "optimal", "over MRV", "untrained"];
+  truthy("the engine really emits these status words",
+    STATUSES.every((s) => engine.includes(s)));
+  eq("every status word maps to a glossary entry", STATUSES.map(G.statusId).filter(Boolean).length, STATUSES.length);
+  eq("...and each is a distinct entry",
+    new Set(STATUSES.map(G.statusId)).size, STATUSES.length);
+
+  // 4. every attribute has an entry, reachable by the engine's own key
+  const keys = e.E.ATTRIBUTES.map((a) => a.key);
+  eq("all six attribute keys resolve to an entry", keys.map((k) => G.attrId(k)).filter(Boolean).length, 6);
+  truthy("attrPlain/attrReal return text for each attribute",
+    keys.every((k) => G.attrPlain(k).length > 10 && G.attrReal(k).length > 10));
+
+  // 5. the scope test — both directions
+  //    (a) no entry exists for a term the UI never shows
+  const unshown = G.TERMS.filter((t) => {
+    const words = [t.term].concat(t.aliases || []);
+    return !words.some((w) => ui.includes(w));
+  }).map((t) => t.id);
+  eq("no entry exists for a term the UI never displays", unshown, []);
+
+  //    (b) no hook points at a term that has no entry (no dead control).
+  //    app.js wires terms through term("<id>", ...); chart.js uses a literal
+  //    data-term attribute. Collect both.
+  const hookSrc = app + "\n" + chart;
+  const hooks = new Set(
+    (hookSrc.match(/data-term="([^"]+)"/g) || []).map((m) => m.slice(11, -1))
+      .concat((hookSrc.match(/(?:^|[^\w.])term\("([a-z0-9-]+)"/g) || []).map((m) => m.match(/"([a-z0-9-]+)"/)[1]))
+  );
+  eq("every static term hook resolves to an entry", [...hooks].filter((id) => !G.has(id)), []);
+  truthy("...and there are real hooks on the cards (>10)", hooks.size > 10);
+  // The status words and attribute names are wired through the glossary's own
+  // mappers, so they are hooks too — proven by the code path, not a literal.
+  truthy("the muscle-status words are wired through Glossary.statusId (as controls)",
+    /GLOSS\.statusId \? GLOSS\.statusId\(m\.status\)/.test(app) && /term\(sid,/.test(app));
+  truthy("each attribute name is wired through Glossary.attrId (as a control)",
+    /term\(attrTermId\(a\.key\)/.test(app) && /const attrTermId = \(key\) => \(GLOSS\.attrId/.test(app));
+  truthy("every status word maps to an id the mappers can serve",
+    STATUSES.map(G.statusId).every((id) => G.has(id)));
+
+  // 6. Glossary.link: a real id is a control, a bogus id is plain text (never dead)
+  truthy("link() emits a button carrying data-term for a real entry",
+    /<button[^>]*data-term="rpe"[^>]*>/.test(G.link("rpe", "RPE")));
+  eq("link() with no entry renders plain text, not a dead button",
+     G.link("no-such-term", "x"), "x");
+
+  // 7. Glossary.open refuses an unknown id and serves a known one in the shared modal
+  const caps = [];
+  const ctx = { el: () => ({ innerHTML: "", querySelector: () => ({ addEventListener() {} }), querySelectorAll: () => [] }),
+                open: (n, c) => caps.push(c), close: () => {} };
+  eq("open() refuses an unknown id", G.open(ctx, "no-such-term"), false);
+  eq("...and opens nothing for it", caps.length, 0);
+  eq("open() serves a known id", G.open(ctx, "tonnage"), true);
+  eq("...in a wide modal", caps[0], "wide");
+
+  // 8. the Profile entry point exists and lists every term
+  truthy("Profile carries the glossary button", /id="p-gloss"/.test(app) && /Open the glossary/.test(app));
+  truthy("the button opens the whole list", /GLOSS\.openAll\(glossCtx\(\)\)/.test(app));
+  truthy("index.html loads glossary.js before app.js",
+    html.indexOf("js/glossary.js") > -1 && html.indexOf("js/glossary.js") < html.indexOf("js/app.js"));
+
+  // 9. UNIFICATION: the dashboard's per-attribute explanation reads the shared
+  //    source, so the two places cannot explain the same attribute differently.
+  truthy("the dashboard reads its attribute definitions from the glossary",
+    /GLOSS\.attrPlain/.test(app));
+  truthy("the 'What the numbers mean' block is still there (extended, not replaced)",
+    /What the numbers mean/.test(app));
+  truthy("a single delegated handler serves every term click",
+    /closest\("\[data-term\]"\)/.test(app));
+  truthy("the stylesheet gives the tappable term its GBA look",
+    /\.term-link\s*\{/.test(fs.readFileSync(path.join(B, "css", "style.css"), "utf8")));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

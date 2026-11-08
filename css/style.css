@@ -632,3 +632,34 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   .card { padding: .7rem .65rem; }
   .radar { max-width: 100%; }
 }
+
+/* ---------------- glossary ---------------- */
+/* A term is a control, styled so it reads as the text it replaces but is
+   obviously tappable: a dotted underline in the app's gold, no box of its own. */
+.term-link {
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: inherit; text-shadow: inherit;
+  cursor: pointer; border-bottom: 1px dotted var(--gold);
+}
+.term-link:active { transform: translateY(1px); }
+.term-link.bare { color: inherit; border-bottom-color: rgba(248, 208, 48, .7); }
+.glossary { display: grid; gap: .5rem; }
+.glossary h3 { font-family: var(--pxd); font-size: .66rem; color: var(--gold); text-shadow: var(--outline); }
+.gloss-plain { font-size: .84rem; line-height: 1.55; color: #e6f0f4; }
+.gloss-real {
+  font-size: .72rem; line-height: 1.5; color: #cfe0e8;
+  background: rgba(0, 0, 0, .28); border: 2px solid rgba(255, 255, 255, .28);
+  border-radius: 7px; padding: .45rem .55rem;
+}
+.gloss-lab {
+  font-family: var(--px); font-size: .56rem; color: var(--gold);
+  text-transform: uppercase; letter-spacing: .05em; margin-right: .3rem;
+}
+.gloss-list { display: grid; gap: .3rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.gloss-item {
+  font-family: var(--px); font-size: .6rem; text-align: left;
+  background: rgba(0, 0, 0, .32); color: var(--cream);
+  border: 2px solid rgba(255, 255, 255, .3); border-radius: 6px;
+  padding: .4rem .5rem; cursor: pointer;
+}
+.gloss-item:active { transform: translateY(1px); }

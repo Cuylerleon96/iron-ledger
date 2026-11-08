@@ -11,9 +11,16 @@
        it re-arm on every release. That was a regression and this is the fix.
      * A MISSING flag means "show it" — so an existing install that predates this
        feature sees the tour exactly once, and a fresh install sees it once too.
-     * There is deliberately NO migration that backfills the flag. Backfilling it
-       for existing users would set it to the current revision and the tour would
-       never appear for them. Do not add one.
+     * There is deliberately NO migration that INVENTS the flag: a state with no
+       welcomeSeenVersion is left exactly as it is, so the tour still shows for it.
+       Do not add one. What reconcileSeen() does add is the OPPOSITE of a backfill:
+       a state that ALREADY carries a value that is not a valid WELCOME_VERSION —
+       which can only be an APP-version string ("1.0.37") written by the build
+       before the arming moved onto WELCOME_VERSION — is treated as seen and
+       rewritten to the current revision. Present means seen; the flag is written
+       only when the tour was dismissed, never by merely opening it. Without this,
+       such a state can never equal "1" and its owner would see the tour one more
+       time on the very update that was supposed to stop that.
      * The only way to see it again is to bump WELCOME_VERSION, and only when the
        tour's own pages or copy actually change. A release version bump alone must
        NOT re-show it.
@@ -103,7 +110,10 @@ const Welcome = (() => {
      Armed by WELCOME_VERSION (the tour's content revision), NOT the app version:
      a state that has seen this revision stays hidden across any number of
      releases. `welcomeVersion` is overridable only so a test can model a tour
-     content bump. */
+     content bump.
+
+     This is a pure read: callers must run reconcileSeen() first (maybeOpen does),
+     which converts a legacy app-version string into the current revision. */
   function shouldShow(settings, welcomeVersion) {
     const v = welcomeVersion || WELCOME_VERSION;
     const seen = settings && settings.welcomeSeenVersion;
@@ -116,6 +126,30 @@ const Welcome = (() => {
     state.settings.welcomeSeenVersion = welcomeVersion || WELCOME_VERSION;
     if (Store && Store.save) Store.save(true);
     return state.settings.welcomeSeenVersion;
+  }
+
+  /* Read "absent" the same way everywhere: never written, or written empty.
+     An empty string is not a value the flag is ever set to, so it cannot mean
+     "seen" — it is treated as no flag at all. */
+  const isAbsent = (v) => v === undefined || v === null || v === "";
+
+  /* THE TRANSITION GUARD. A saved state from before the arming moved off the app
+     version holds an APP-version string in this flag ("1.0.37", "1.0.38"), which
+     can never equal WELCOME_VERSION ("1"). Left alone, shouldShow() returns true
+     and its owner sees the tour one more time on the very update meant to stop
+     that. The flag is only ever written when the tour was dismissed, so a PRESENT
+     value means seen: rewrite it to the current revision and the tour stays away.
+     A state with NO flag is untouched — that is the genuine new-user path and it
+     must still see the tour once. Returns true when it rewrote the value. */
+  function reconcileSeen(state, Store, welcomeVersion) {
+    if (!state || !state.settings) return false;
+    const v = welcomeVersion || WELCOME_VERSION;
+    const seen = state.settings.welcomeSeenVersion;
+    if (isAbsent(seen)) return false;   // no flag: leave it, so the tour shows
+    if (seen === v) return false;       // already the current revision: nothing to do
+    state.settings.welcomeSeenVersion = v;
+    if (Store && Store.save) Store.save(true);
+    return true;
   }
 
   /* The live tour, if one is open \u2014 so the hardware back button can dismiss it
@@ -182,13 +216,17 @@ const Welcome = (() => {
     ctx.open(root, "wide");
   }
 
-  /* The boot entry point. Returns true when the tour was opened. */
+  /* The boot entry point. Returns true when the tour was opened.
+     reconcileSeen() runs FIRST: it folds any legacy app-version string in the
+     saved flag into the current WELCOME_VERSION, so only a genuine no-flag state
+     reaches shouldShow() and opens the tour. */
   function maybeOpen(ctx) {
+    reconcileSeen(ctx.state, ctx.store);
     if (!shouldShow(ctx.state && ctx.state.settings)) return false;
     open(ctx);
     return true;
   }
 
-  return { APP_VERSION, WELCOME_VERSION, PAGES, shouldShow, markSeen, maybeOpen, open, isActive, dismiss, pageCount: PAGES.length };
+  return { APP_VERSION, WELCOME_VERSION, PAGES, shouldShow, reconcileSeen, markSeen, maybeOpen, open, isActive, dismiss, pageCount: PAGES.length };
 })();
 if (typeof module !== "undefined") module.exports = Welcome;

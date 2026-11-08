@@ -1,13 +1,13 @@
 {
-  "versionCode": 39,
-  "versionName": "1.0.38",
+  "versionCode": 40,
+  "versionName": "1.0.39",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "9b37acf98685a769d4ceea738352d7c6952db7c27fc808f89f836d1aed7992a4",
-  "sizeBytes": 3281579,
+  "sha256": "4b858c0c5646e8dd510cc90512a8f35b1f3791bd70cbe50ce1093dd5b1ebf5c9",
+  "sizeBytes": 3290855,
   "published": "2026-11-08",
   "notes": [
-    "The first-run tour now runs exactly once: it is armed by its own content revision (WELCOME_VERSION), not the app version, so a new release no longer re-shows it, and the skip message is honest about that",
-    "History now has a search and filter: narrow sessions by exercise name and by an inclusive date range, with a Clear button that restores the full list",
-    "Your whole log can now be copied back into a notes app in one go: a Copy notes button exports every session shown - all of them, or the date range you filter to - in your own shorthand"
+    "No more surprise tour: if you had already seen the walkthrough, it now stays away after this update instead of showing a second time.",
+    "New glossary in plain English: every term the app uses \u2014 MEV, e1RM, RPE, tonnage, deload and the rest \u2014 open it from Profile, or just tap the word on any card.",
+    "The volume chart's Tonnage and Reps views now follow your kg/lb setting; they always read kg before."
   ]
 }

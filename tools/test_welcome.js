@@ -130,6 +130,63 @@ console.log("=== the flag is NOT backfilled by migrate() (no backfill, on purpos
   eq("the live Store agrees", e.Welcome.shouldShow(e.Store.state.settings), true);
 }
 
+console.log("=== THE TRANSITION GUARD: a legacy APP-version string means SEEN (reconcileSeen) ===");
+{
+  // The four cases the user asked to see observed, plus the empty-string edge.
+  const migrateThenShow = (settings) => {
+    const e = load({ version: 1, settings: Object.assign({ seeded: true }, settings) });
+    const rewrote = e.Welcome.reconcileSeen(e.Store.state, e.Store);
+    return { rewrote, stored: e.Store.state.settings.welcomeSeenVersion,
+             shown: e.Welcome.shouldShow(e.Store.state.settings) };
+  };
+
+  // (a) an old app-version string, present -> treated as SEEN, rewritten to "1"
+  const a = migrateThenShow({ welcomeSeenVersion: "1.0.37" });
+  eq("(a) '1.0.37' -> reconcileSeen rewrote it", a.rewrote, true);
+  eq("(a) ...stored value becomes the current WELCOME_VERSION", a.stored, "1");
+  eq("(a) ...and shouldShow() resolves to NOT SHOWN", a.shown, false);
+
+  // (b) the newest app-version string, likewise
+  const b = migrateThenShow({ welcomeSeenVersion: "1.0.38" });
+  eq("(b) '1.0.38' -> rewritten", b.rewrote, true);
+  eq("(b) ...stored value becomes the current WELCOME_VERSION", b.stored, "1");
+  eq("(b) ...and shouldShow() resolves to NOT SHOWN", b.shown, false);
+
+  // (c) NO flag at all -> the tour must still SHOW (genuine new-user path)
+  const c = migrateThenShow({});
+  eq("(c) no flag -> nothing to reconcile", c.rewrote, false);
+  eq("(c) ...no flag is invented", c.stored, undefined);
+  eq("(c) ...and shouldShow() resolves to SHOWN", c.shown, true);
+
+  // (d) already the current revision -> stays hidden, and is not rewritten
+  const d = migrateThenShow({ welcomeSeenVersion: "1" });
+  eq("(d) '1' -> nothing to reconcile", d.rewrote, false);
+  eq("(d) ...stored value stays '1'", d.stored, "1");
+  eq("(d) ...and shouldShow() resolves to NOT SHOWN", d.shown, false);
+
+  // an empty string is not a value the flag is ever set to -> treated as absent
+  const z = migrateThenShow({ welcomeSeenVersion: "" });
+  eq("an empty flag is treated as absent, so the tour still shows", z.shown, true);
+
+  // the migration is real persistence, not just an in-memory change
+  const e = load({ version: 1, settings: { seeded: true, welcomeSeenVersion: "1.0.38" } });
+  e.Welcome.reconcileSeen(e.Store.state, e.Store);
+  eq("the rewritten revision was persisted to storage",
+     JSON.parse(e.storage.get("fitness-app-v1")).settings.welcomeSeenVersion, "1");
+
+  // and the guard runs BEFORE the tour can open: maybeOpen() is a no-op for it
+  const g = load({ version: 1, settings: { seeded: true, welcomeSeenVersion: "1.0.37" } });
+  eq("maybeOpen() is a no-op on a legacy app-version flag",
+     g.Welcome.maybeOpen(fakeCtx(g.Store.state, g.Store, {})), false);
+  eq("...having folded the flag forward in the same pass",
+     g.Store.state.settings.welcomeSeenVersion, "1");
+  // while a no-flag state still opens it
+  const nf = load({ version: 1, settings: { seeded: true } });
+  eq("a no-flag state still opens the tour through maybeOpen()",
+     nf.Welcome.maybeOpen(fakeCtx(nf.Store.state, nf.Store, {})), true);
+}
+
+
 console.log("=== after dismissal it records the version, and does NOT show again ===");
 {
   const e = load(EXISTING);
