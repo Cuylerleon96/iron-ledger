@@ -426,21 +426,26 @@ input[type="date"] { color-scheme: light; }
 .cmp.flat { color: #b8d0d8; }
 .sets { display: grid; gap: .32rem; margin: .5rem 0; }
 .set-row {
-  display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
+  display: flex; align-items: center; gap: .3rem; flex-wrap: wrap;
   background: rgba(0, 0, 0, .28); border: 2px solid rgba(255, 255, 255, .3);
   border-radius: 6px; padding: .32rem .42rem;
 }
 .set-n { width: 16px; text-align: center; font-size: .6rem; color: var(--gold); font-weight: 700; }
-.set-row .x, .set-row .unit { color: #cfe0e8; font-size: .66rem; }
+.set-row .times, .set-row .unit { color: #cfe0e8; font-size: .66rem; }
 .set-row .e1 { margin-left: auto; color: var(--gold); font-size: .6rem; text-shadow: var(--outline-sm); }
-.set-row .inp { padding: .3rem .34rem; }
+.set-row .inp { padding: .3rem .28rem; min-width: 0; }
+/* keep the row on one line: the delete button used to wrap onto its own line
+   because the fields added up to more than the card is wide on a phone */
+.set-row .x { flex: 0 0 auto; padding: .26rem .4rem; }
+.set-row .set-n, .set-row .times, .set-row .unit, .set-row .e1 { flex: 0 0 auto; }
 .entry-rest {
   display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
   margin: .5rem 0 .15rem; font-size: .64rem;
 }
 .entry-rest label { display: inline-flex; align-items: center; gap: .3rem; text-shadow: var(--outline-sm); }
 .quick { display: flex; gap: .45rem; margin-top: .25rem; }
-.quick .inp { flex: 1; }
+.quick .inp { flex: 1; min-width: 0; }
+.quick .qadd { flex: 0 0 auto; white-space: nowrap; font-size: .66rem; padding: .42rem .62rem; }
 .entry-foot { display: flex; gap: .7rem; flex-wrap: wrap; font-size: .62rem; margin-top: .45rem; padding-top: .4rem; border-top: 2px solid rgba(255, 255, 255, .2); text-shadow: var(--outline-sm); }
 .entry-foot .muted { margin-left: auto; }
 .add-card { text-align: center; }

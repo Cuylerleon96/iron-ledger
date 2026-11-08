@@ -102,6 +102,14 @@
     const clockM = body.match(/(\d+):(\d{2})/);
     const secs = (m) => m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : undefined;
     const num = (m) => (m ? parseFloat(m[1]) : undefined);
+    /* Every weight entering the app must come out in kg, because that is what
+       s.w means everywhere else (the manual row inputs convert through U.wi, the
+       engine reads kg, the footer converts once for display). This parser used to
+       return the raw typed number, so a set added here was stored in POUNDS while
+       the model treated it as kg: every tonnage and e1RM from that path was
+       inflated by 2.2046x for anyone on lb. The notes importer shares this
+       function, so imported notes were wrong the same way. */
+    const wIn = (v) => (v === undefined || v === null ? v : U.wi(v));
 
     if (mode === "time") {
       const s = clockM ? secs(clockM) : num(body.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|secs)?\s*$/));
@@ -121,18 +129,18 @@
     if (mode === "weight_time") {
       const w = num(body.match(/^(\d+(?:\.\d+)?)/));
       const s = clockM ? secs(clockM) : num(body.match(/[x*]\s*(\d+(?:\.\d+)?)/)) ?? num(body.match(/(\d+(?:\.\d+)?)\s*(?:s|sec)/));
-      return w ? { w, t: s, rpe, rest } : null;
+      return w ? { w: wIn(w), t: s, rpe, rest } : null;
     }
     if (mode === "weight_distance") {
       const w = num(body.match(/^(\d+(?:\.\d+)?)/));
       const d = num(body.match(/[x*]\s*(\d+(?:\.\d+)?)/)) ?? num(body.match(/(\d+(?:\.\d+)?)\s*m/));
-      return w ? { w, d, rpe, rest } : null;
+      return w ? { w: wIn(w), d, rpe, rest } : null;
     }
     // weight_reps
     const m = body.match(/^(\d+(?:\.\d+)?)\s*(?:kg|lb|#)?\s*[x*\/\s]\s*(\d+(?:\.\d+)?)/);
-    if (m) return { w: parseFloat(m[1]), r: parseFloat(m[2]), rpe, rest };
+    if (m) return { w: wIn(parseFloat(m[1])), r: parseFloat(m[2]), rpe, rest };
     const one = body.match(/^(\d+(?:\.\d+)?)/);
-    if (one) return { w: parseFloat(one[1]), r: undefined, rpe, rest };
+    if (one) return { w: wIn(parseFloat(one[1])), r: undefined, rpe, rest };
     return null;
   }
 
@@ -621,7 +629,10 @@
         <label>Rest between sets <input class="inp num rest-default" type="number" inputmode="numeric" min="0" step="5" placeholder="secs" value="${en.restDefault ?? ""}" style="width:72px"> sec</label>
         <span class="muted small">Applies to every set — blank sets fall back to it.</span>
       </div>
-      <div class="quick"><input class="inp" placeholder="${quickHint(en.mode)}" data-idx="${idx}"><button class="btn ghost tiny qadd" data-idx="${idx}">Add set</button></div>
+      <div class="quick">
+        <input class="inp" placeholder="${quickHint(en.mode)}" data-idx="${idx}">
+        <button class="btn qadd" data-idx="${idx}" title="Add a set — with the box filled it reads your shorthand, empty it just adds a line">+ Add set</button>
+      </div>
       <div class="entry-foot">
         <span>${st.sets} ${pl(st.sets, "set")}</span>
         ${st.tonnage ? `<span>${fmt(U.w(st.tonnage) / 1, 0)} ${U.label()} tonnage</span>` : ""}
@@ -642,7 +653,13 @@
     });
     $(".rm", card).addEventListener("click", () => { draft.entries.splice(idx, 1); render(); });
     const qi = $(".quick .inp", card);
+    /* One button, two obvious uses: text in the box -> parse the shorthand and
+       add it; box empty -> add a blank line you fill in yourself. It used to
+       refuse outright when the box was empty, which left no way to add a set by
+       hand and no + to tap. A blank set is dropped on save, so an accidental tap
+       costs nothing. */
     const doAdd = () => {
+      if (!qi.value.trim()) { en.sets.push({}); render(); return; }
       const p = parseSet(qi.value, en.mode);
       if (!p) { toast("Couldn't read that — try 100x10", "warn"); return; }
       en.sets.push(p); render();
@@ -668,17 +685,26 @@
 
   function setRow(en, s, si, idx) {
     const row = el("div", { class: "set-row" });
-    const f = (k, ph, w = 64) => `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${s[k] ?? ""}" style="width:${w}px">`;
+    /* A field shows DISPLAY units; storage stays canonical kg — the same rule the
+       engine, the footer and the target line follow. This used to print s.w
+       straight out, so the moment anything re-rendered, a set the user had typed
+       as 180 lb came back as 81.64662740915384 in his own input box. Typing hid
+       it (the DOM keeps what you type), which is why it survived this long. */
+    const f = (k, ph, w = 56) => {
+      let v = s[k];
+      if (k === "w" && v !== undefined && v !== null && v !== "") v = fmtW(U.w(Engine.num(v)));
+      return `<input class="inp num" data-k="${k}" type="number" inputmode="decimal" step="any" placeholder="${ph}" value="${v ?? ""}" style="width:${w}px">`;
+    };
     let inner = `<span class="set-n">${si + 1}</span>`;
-    if (en.mode === "weight_reps") inner += f("w", U.label()) + `<span class="x">×</span>` + f("r", "reps");
-    else if (en.mode === "reps") inner += f("r", "reps");
-    else if (en.mode === "time") inner += f("t", "secs", 84) + `<span class="unit">s</span>`;
-    else if (en.mode === "weight_time") inner += f("w", U.label()) + `<span class="x">×</span>` + f("t", "secs") + `<span class="unit">s</span>`;
-    else if (en.mode === "distance_time") inner += f("d", "metres", 88) + `<span class="unit">${U.dlab()}</span>` + f("t", "secs", 88) + `<span class="unit">s</span>`;
-    else if (en.mode === "weight_distance") inner += f("w", U.label()) + `<span class="x">×</span>` + f("d", "metres") + `<span class="unit">${U.dlab()}</span>`;
-    inner += `<span class="rpe-wrap"><input class="inp num" data-k="rpe" type="number" min="1" max="10" step="0.5" placeholder="RPE" value="${s.rpe ?? ""}" style="width:52px"></span>`;
+    if (en.mode === "weight_reps") inner += f("w", U.label()) + `<span class="times">×</span>` + f("r", "reps", 48);
+    else if (en.mode === "reps") inner += f("r", "reps", 48);
+    else if (en.mode === "time") inner += f("t", "secs", 64) + `<span class="unit">s</span>`;
+    else if (en.mode === "weight_time") inner += f("w", U.label()) + `<span class="times">×</span>` + f("t", "secs", 48) + `<span class="unit">s</span>`;
+    else if (en.mode === "distance_time") inner += f("d", "metres", 62) + `<span class="unit">m</span>` + f("t", "secs", 48) + `<span class="unit">s</span>`;
+    else if (en.mode === "weight_distance") inner += f("w", U.label()) + `<span class="times">×</span>` + f("d", "metres", 56) + `<span class="unit">m</span>`;
+    inner += `<span class="rpe-wrap"><input class="inp num" data-k="rpe" type="number" min="1" max="10" step="0.5" placeholder="RPE" value="${s.rpe ?? ""}" style="width:44px"></span>`;
     const restPh = en.restDefault ? String(en.restDefault) : "rest";
-    inner += `<span class="rest-wrap"><input class="inp num" data-k="rest" type="number" inputmode="numeric" min="0" step="5" placeholder="${restPh}" value="${s.rest ?? ""}" style="width:56px" title="Rest after this set, in seconds. Leave blank to use the exercise default."></span>`;
+    inner += `<span class="rest-wrap"><input class="inp num" data-k="rest" type="number" inputmode="numeric" min="0" step="5" placeholder="${restPh}" value="${s.rest ?? ""}" style="width:48px" title="Rest after this set, in seconds. Leave blank to use the exercise default."></span>`;
     if (en.mode === "weight_reps") {
       const e1 = Engine.est1RM(Engine.num(s.w), Engine.num(s.r));
       inner += `<span class="e1">${e1 ? fmtW(U.w(e1)) + " e1RM" : ""}</span>`;
@@ -689,14 +715,22 @@
       const k = e.target.dataset.k;
       const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
       s[k] = v;
-      if (k === "w" && !U.kg) s.w = v; // raw stored in display units below
-      if (k === "w" && U.kg) s.w = v;
-      if (k === "w") s.w = U.wi(v);
+      /* Exactly one rule for the weight: the field shows display units, the
+         model stores kg. The three contradictory assignments that used to sit
+         here all wrote s.w, and the last one ran even when the field was cleared
+         — so emptying the box stored NaN (undefined / 2.2046) instead of
+         clearing it. Clearing now clears. */
+      if (k === "w") s.w = v === undefined ? undefined : U.wi(v);
       const e1 = $(".e1", row);
       if (e1) { const val = Engine.est1RM(Engine.num(s.w), Engine.num(s.r)); e1.textContent = val ? fmtW(U.w(val)) + " e1RM" : ""; }
       updateEntryFoot(idx);
     }));
-    $(".x", row).addEventListener("click", () => { en.sets.splice(si, 1); render(); });
+    /* button.x, not .x: the multiplication sign used to share that class, and
+       querySelector returns the FIRST match in document order — so this delete
+       handler was bound to the "×" between weight and reps. Tapping the times
+       sign silently deleted the set, while the visible ✕ delete button did
+       nothing at all. The multiplier is .times now and this is unambiguous. */
+    $("button.x", row).addEventListener("click", () => { en.sets.splice(si, 1); render(); });
     return row;
   }
 
@@ -1361,5 +1395,7 @@
     if (view !== "dash") { setView("dash"); return true; }
     return false;
   };
-  window.App = { render, setView, Store, Engine, seedData };
+  // parseSet/parseNotes are exposed so the test suite can exercise the real
+  // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
+  window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex };
 })();
