@@ -12,6 +12,10 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const today = () => Engine.dstr(new Date());
   const pl = (n, s, p) => (n === 1 ? s : (p || s + "s"));
+  /* Weights keep their decimals. A 102.5 kg set shown as "103" is not a rounding
+     nicety, it is wrong — plates are loaded in 1.25 kg / 5 lb steps, so the
+     fraction is meaningful. Aggregates (tonnage) still use fmt() at 0 dp. */
+  const fmtW = (v) => { const n = Math.round(Number(v) * 100) / 100; return isFinite(n) ? String(n) : "0"; };
   const fmtRest = (sec) => { const s = Math.round(sec); return s < 60 ? s + "s" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
   const fmt = (n, d = 0) => (isFinite(n) ? Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
 
@@ -366,7 +370,7 @@
   function bestLabel(r) {
     const b = r.best;
     if (!b || !b.date) return "—";
-    if (b.mode === "weight_reps") return `${fmt(U.w(b.est1RM))} ${U.label()} e1RM`;
+    if (b.mode === "weight_reps") return `${fmtW(U.w(b.est1RM))} ${U.label()} e1RM`;
     if (b.mode === "reps") return `${b.reps} reps`;
     if (b.mode === "time") return `${b.time}s hold`;
     if (b.mode === "distance_time") return `${fmt(b.dist / 1000, 2)} km`;
@@ -377,7 +381,7 @@
     const x = d.detail;
     switch (key) {
       case "STR": return x.basis === "standards"
-        ? `Estimated 1RM on ${x.n} core lift${x.n > 1 ? "s" : ""} vs published bodyweight standards (bodyweight ${fmt(U.w(x.bw))} ${U.label()}).`
+        ? `Estimated 1RM on ${x.n} core lift${x.n > 1 ? "s" : ""} vs published bodyweight standards (bodyweight ${fmtW(U.w(x.bw))} ${U.label()}).`
         : x.basis === "estimated"
           ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.`
           : "Log a loaded lift to start measuring strength.";
@@ -465,14 +469,38 @@
     const prev = Engine.bestFor(S, en.id);
     const card = el("section", { class: "card entry" });
 
+    // Progressive-overload target from the user's own last session. Only shown
+    // when this exercise has history — no history, no noise.
+    const tgt = Engine.nextTarget(S, en.id);
+    const targetLine = tgt ? (() => {
+      // unit-aware: a 2.5 kg step is 5.5 lb, so show the converted value rather
+      // than a nonsensical 2.5 lb jump
+      const showOpt = (o) => {
+        if (o.w <= 0) return `${o.r} reps`;
+        let v = U.w(o.w);
+        if (!U.kg) v = Math.round(v / 5) * 5;   // pound plates come in 5s
+        return `${fmtW(v)}×${o.r}`;
+      };
+      const lastTxt = tgt.last.w > 0 ? `${fmtW(U.w(tgt.last.w))}×${tgt.last.r}` : `${tgt.last.r} reps`;
+      const opts = tgt.options.map(showOpt).map((x) => `<b>${x}</b>`).join(`<span class="muted"> or </span>`);
+      return `<div class="target"><span class="t-lab">NEXT</span> ${opts}`
+        + `<span class="muted"> · from ${lastTxt}, ${tgt.date}</span></div>`;
+    })() : "";
+
     const cmpBanner = cmp ? (() => {
       const p = cmp.est1RM.pct;
       const cls = p > 0.5 ? "up" : p < -0.5 ? "down" : "flat";
       const txt = en.mode === "weight_reps"
-        ? `e1RM ${fmt(U.w(cmp.est1RM.cur))} ${U.label()} vs ${fmt(U.w(cmp.est1RM.prev))} (${p >= 0 ? "+" : ""}${p.toFixed(1)}%)`
+        ? `e1RM ${fmtW(U.w(cmp.est1RM.cur))} ${U.label()} vs ${fmtW(U.w(cmp.est1RM.prev))} (${p >= 0 ? "+" : ""}${p.toFixed(1)}%)`
         : `volume ${fmt(cmp.volume.cur)} vs ${fmt(cmp.volume.prev)}`;
       return `<div class="cmp ${cls}">${cls === "up" ? "▲" : cls === "down" ? "▼" : "–"} ${txt} <span class="muted">· last: ${cmp.prevDate}</span></div>`;
-    })() : `<div class="cmp flat">First time logging this — no comparison yet</div>`;
+    })() : (() => {
+      // one saved session is not "first time" — say what is actually true
+      const n = Engine.seriesFor(S, en.id).length;
+      return `<div class="cmp flat">${n === 1
+        ? "One session logged — this one becomes your baseline to compare against"
+        : "First time logging this — no comparison yet"}</div>`;
+    })();
 
     card.innerHTML = `
       <div class="entry-head">
@@ -487,6 +515,7 @@
         </div>
       </div>
       ${cmpBanner}
+      ${targetLine}
       <div class="sets" id="sets-${idx}"></div>
       <div class="entry-rest">
         <label>Rest between sets <input class="inp num rest-default" type="number" inputmode="numeric" min="0" step="5" placeholder="secs" value="${en.restDefault ?? ""}" style="width:72px"> sec</label>
@@ -496,7 +525,7 @@
       <div class="entry-foot">
         <span>${st.sets} ${pl(st.sets, "set")}</span>
         ${st.tonnage ? `<span>${fmt(U.w(st.tonnage) / 1, 0)} ${U.label()} tonnage</span>` : ""}
-        ${st.est1RM ? `<span>best e1RM <b>${fmt(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
+        ${st.est1RM ? `<span>best e1RM <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
         ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
         ${st.avgRPE ? `<span>avg RPE ${st.avgRPE.toFixed(1)}</span>` : ""}
         ${st.avgRest ? `<span>rest ${fmtRest(st.avgRest)}</span>` : ""}
@@ -552,7 +581,7 @@
     inner += `<span class="rest-wrap"><input class="inp num" data-k="rest" type="number" inputmode="numeric" min="0" step="5" placeholder="${restPh}" value="${s.rest ?? ""}" style="width:56px" title="Rest after this set, in seconds. Leave blank to use the exercise default."></span>`;
     if (en.mode === "weight_reps") {
       const e1 = Engine.est1RM(Engine.num(s.w), Engine.num(s.r));
-      inner += `<span class="e1">${e1 ? fmt(U.w(e1)) + " e1RM" : ""}</span>`;
+      inner += `<span class="e1">${e1 ? fmtW(U.w(e1)) + " e1RM" : ""}</span>`;
     }
     inner += `<button class="btn ghost tiny x" title="remove">✕</button>`;
     row.innerHTML = inner;
@@ -564,7 +593,7 @@
       if (k === "w" && U.kg) s.w = v;
       if (k === "w") s.w = U.wi(v);
       const e1 = $(".e1", row);
-      if (e1) { const val = Engine.est1RM(Engine.num(s.w), Engine.num(s.r)); e1.textContent = val ? fmt(U.w(val)) + " e1RM" : ""; }
+      if (e1) { const val = Engine.est1RM(Engine.num(s.w), Engine.num(s.r)); e1.textContent = val ? fmtW(U.w(val)) + " e1RM" : ""; }
       updateEntryFoot(idx);
     }));
     $(".x", row).addEventListener("click", () => { en.sets.splice(si, 1); render(); });
@@ -578,7 +607,7 @@
     if (!foot) return;
     foot.innerHTML = `<span>${st.sets} ${pl(st.sets, "set")}</span>
       ${st.tonnage ? `<span>${fmt(U.w(st.tonnage))} ${U.label()} tonnage</span>` : ""}
-      ${st.est1RM ? `<span>best e1RM <b>${fmt(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
+      ${st.est1RM ? `<span>best e1RM <b>${fmtW(U.w(st.est1RM))} ${U.label()}</b></span>` : ""}
       ${st.reps ? `<span>${st.reps} ${pl(st.reps, "rep")}</span>` : ""}
       ${st.avgRPE ? `<span>avg RPE ${st.avgRPE.toFixed(1)}</span>` : ""}
       ${st.avgRest ? `<span>rest ${fmtRest(st.avgRest)}</span>` : ""}`;
@@ -745,12 +774,12 @@
 
   function setText(s, mode) {
     const rpe = s.rpe ? `@${s.rpe}` : "";
-    if (mode === "weight_reps") return `${fmt(U.w(Engine.num(s.w)))}×${s.r ?? "?"}${rpe}`;
+    if (mode === "weight_reps") return `${fmtW(U.w(Engine.num(s.w)))}×${s.r ?? "?"}${rpe}`;
     if (mode === "reps") return `${s.r ?? "?"} reps${rpe}`;
     if (mode === "time") return `${s.t ?? "?"}s${rpe}`;
-    if (mode === "weight_time") return `${fmt(U.w(Engine.num(s.w)))}×${s.t ?? "?"}s${rpe}`;
+    if (mode === "weight_time") return `${fmtW(U.w(Engine.num(s.w)))}×${s.t ?? "?"}s${rpe}`;
     if (mode === "distance_time") return `${fmt(Engine.num(s.d))}m ${s.t ? s.t + "s" : ""}${rpe}`;
-    if (mode === "weight_distance") return `${fmt(U.w(Engine.num(s.w)))}×${fmt(Engine.num(s.d))}m${rpe}`;
+    if (mode === "weight_distance") return `${fmtW(U.w(Engine.num(s.w)))}×${fmt(Engine.num(s.d))}m${rpe}`;
     return "";
   }
 
@@ -918,7 +947,7 @@
         <input class="inp" id="b-bf" type="number" step="0.1" placeholder="Body fat %" style="max-width:130px">
         <button class="btn" id="b-add">Log</button></div>
       <div class="chart-host" id="bw-chart"></div>
-      <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmt(U.w(b.weightKg), 1)} ${U.label()}</span><span class="muted">${b.bodyFatPct ? b.bodyFatPct + "%" : ""}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
+      <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmtW(U.w(b.weightKg))} ${U.label()}</span><span class="muted">${b.bodyFatPct ? b.bodyFatPct + "%" : ""}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
     host.append(bw);
     Chart.line($("#bw-chart", bw), { points: (S.bodylog || []).map((b) => ({ x: b.date, y: U.w(b.weightKg) })), color: "#a878f8", unit: " " + U.label() });
 

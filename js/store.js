@@ -26,8 +26,15 @@ const Store = (() => {
     const out = Object.assign({}, d, s || {});
     out.profile = Object.assign({}, d.profile, (s && s.profile) || {});
     out.settings = Object.assign({}, d.settings, (s && s.settings) || {});
-    out.workouts = Array.isArray(out.workouts) ? out.workouts : [];
-    out.bodylog = Array.isArray(out.bodylog) ? out.bodylog : [];
+    // Date-order both logs HERE, the single point every load passes through.
+    // upsertWorkout/addBodyLog already sort on write, but an imported or
+    // restored state (or one written by an older build) can arrive unsorted —
+    // and compareLast, the prefill scan and syncProfileFromLog all read these
+    // arrays positionally, so an out-of-order array silently reports the wrong
+    // session as "last time".
+    const byDate = (a, b) => String(a.date).localeCompare(String(b.date));
+    out.workouts = (Array.isArray(out.workouts) ? out.workouts : []).filter((w) => w && w.date).sort(byDate);
+    out.bodylog = (Array.isArray(out.bodylog) ? out.bodylog : []).filter((b) => b && b.date).sort(byDate);
     out.custom = Array.isArray(out.custom) ? out.custom : [];
     out.overrides = out.overrides || {};
     out.achievements = out.achievements || {};

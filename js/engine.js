@@ -283,6 +283,62 @@ const Engine = (() => {
     };
   }
 
+  /* ---------- next-session target (progressive overload) ---------- */
+  /* The smallest practical load step. Plates come in 1.25/2.5/5 kg pairs, so
+     ~2.5% of the working load snapped to a multiple of 1.25 kg (the step a
+     fractional plate pair actually gives you — 3 kg is not loadable), floored at
+     1.25 kg. Deliberately conservative: a jump you cannot make is not a target,
+     it is a missed session. */
+  const kgStep = (w) => Math.max(1.25, Math.round((w * 0.025) / 1.25) * 1.25);
+
+  /* A target derived from the user's OWN last session, by double progression —
+     the standard approach: add reps at the same load until the top of the rep
+     range, then add load and reset the reps. Both options are offered because
+     either is a legitimate way to progress; neither is mandated. */
+  function nextTarget(state, exId) {
+    const mode = exMode(state, exId);
+    if (mode !== "weight_reps" && mode !== "reps") return null;
+
+    const sessions = [];
+    for (const w of (state.workouts || []).slice().sort((a, b) => a.date.localeCompare(b.date))) {
+      for (const en of w.entries || []) {
+        if (en.id !== exId) continue;
+        const st = entryStats(en);
+        if (st.sets) sessions.push({ date: w.date, st, sets: en.sets || [] });
+      }
+    }
+    if (!sessions.length) return null;
+    const last = sessions[sessions.length - 1];
+    const prev = sessions.length > 1 ? sessions[sessions.length - 2] : null;
+
+    if (mode === "reps") {
+      const best = Math.max(0, ...last.sets.map((s) => num(s.r)));
+      if (!best) return null;
+      return {
+        mode, date: last.date, sessions: sessions.length, step: 0,
+        last: { w: 0, r: best },
+        options: [{ w: 0, r: best + 1 }],
+        trend: prev ? last.st.reps - prev.st.reps : null,
+      };
+    }
+
+    // reference set = the one that produced the best estimated 1RM, i.e. the
+    // user's actual best effort last time (a warmup triple will not win)
+    let ref = null, refE = 0;
+    for (const s of last.sets) {
+      const e = est1RM(num(s.w), num(s.r));
+      if (e > refE) { refE = e; ref = s; }
+    }
+    if (!ref || !num(ref.w) || !num(ref.r)) return null;
+
+    const w = num(ref.w), r = num(ref.r);
+    const step = kgStep(w);
+    const options = [{ w, r: r + 1 }];                       // +1 rep at the same load
+    options.push({ w: w + step, r: r >= 12 ? Math.max(5, r - 4) : r });  // +load
+    return { mode, date: last.date, sessions: sessions.length, step,
+             last: { w, r }, options, trend: prev ? last.st.est1RM - prev.st.est1RM : null };
+  }
+
   /* ---------- the six attributes ---------- */
   function bestLifts(state, ws) {
     const out = {};
@@ -852,6 +908,7 @@ const Engine = (() => {
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
+    nextTarget, kgStep,
   };
 })();
 if (typeof module !== "undefined") module.exports = Engine;

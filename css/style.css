@@ -345,6 +345,20 @@ input[type="date"] { color-scheme: light; }
 .btn.big { width: 100%; padding: .7rem; font-size: .74rem; }
 .btn.primary.big { font-size: .8rem; }
 
+/* ---------------- next-session target ---------------- */
+/* One quiet line, deliberately NOT a panel: it should inform the next set
+   without competing with the set rows for attention. */
+.target {
+  display: flex; align-items: center; gap: .3rem; flex-wrap: wrap;
+  margin: .05rem 0 .5rem; font-size: .66rem; text-shadow: var(--outline-sm);
+}
+.target .t-lab {
+  font-family: var(--pxd); font-size: .48rem; color: var(--ink);
+  background: var(--gold); border: 2px solid var(--cream); border-radius: 4px;
+  padding: .06rem .26rem; box-shadow: 0 0 0 1px var(--ink); text-shadow: none;
+}
+.target b { color: var(--gold-l); }
+
 /* ---------------- log ---------------- */
 .entry-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; flex-wrap: wrap; }
 .entry-head h3 { font-size: .72rem; color: var(--gold-l); text-shadow: var(--outline-sm); }

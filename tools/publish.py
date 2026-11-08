@@ -137,10 +137,25 @@ def main():
     # fail loudly here instead of publishing something nobody can install.
     if not args.dry_run and not (args.replace_release or args.no_bump):
         try:
-            with urllib.request.urlopen(
+            # Read the RELEASE-ASSET feed first: the raw.githubusercontent copy lags
+            # by up to 5 minutes, and a stale reading weakens this guard (it would
+            # compare against an older versionCode and let a non-advancing publish
+            # through). Fall back to the repo copy only if the asset is unreachable.
+            live = None
+            for _src in (
+                f"https://github.com/{OWNER}/{REPO}/releases/latest/download/info.json",
                 f"https://raw.githubusercontent.com/{OWNER}/{REPO}/{BRANCH}"
-                f"/update/info.json?t={int(time.time())}", timeout=30) as r:
-                live = json.load(r)
+                f"/update/info.json?t={int(time.time())}",
+            ):
+                try:
+                    with urllib.request.urlopen(_src, timeout=30) as r:
+                        live = json.load(r)
+                    if live:
+                        break
+                except Exception:                               # noqa: BLE001
+                    continue
+            if live is None:
+                raise RuntimeError("no feed reachable")
             live_code = int(live.get("versionCode", 0))
             if live_code >= code:
                 sys.exit(f"refusing to publish: the live feed is already at "
