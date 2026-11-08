@@ -1,11 +1,11 @@
 {
-  "versionCode": 51,
-  "versionName": "1.0.50",
+  "versionCode": 52,
+  "versionName": "1.0.51",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "1e70845b9c57ed56d066895bd59123f887bec28d46b4c1adfb1fc7b1889d0492",
-  "sizeBytes": 3836027,
+  "sha256": "97f6dd9cf0ffa5dfa3a60cae54e9ab02ae8dc3f88559fa38ffb7be297fa207fc",
+  "sizeBytes": 3845340,
   "published": "2026-11-08",
   "notes": [
-    "Exercise pages now show a proper step-by-step 'How to do it': full instructions with no cut-off text, and thin cues filled in from a public-domain database."
+    "Nutrition tab: calorie and macro targets with the reason for each, a pace picker, and a birth year in Profile."
   ]
 }

@@ -115,8 +115,11 @@ b, strong { font-weight: 700; }
 .hud-item { font-size: .68rem; text-shadow: var(--outline-sm); }
 
 /* ---------------- tabs ---------------- */
+/* Six tabs (Lock: Nutrition is the 6th). Tightened so all six fit a 412px phone
+   without scrolling; overflow-x:auto stays as the fallback for narrower screens
+   or a longer label, so nothing is ever clipped. */
 .tabs {
-  display: flex; gap: .3rem; padding: .45rem .6rem; overflow-x: auto;
+  display: flex; gap: .22rem; padding: .4rem .45rem; overflow-x: auto;
   position: sticky; top: 46px; z-index: 35;
   background: linear-gradient(180deg, #0f2e2c, #0b2422);
   border-bottom: 3px solid var(--cream); box-shadow: 0 3px 0 #041414;
@@ -124,8 +127,8 @@ b, strong { font-weight: 700; }
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button {
-  flex: 0 0 auto; cursor: pointer; font-family: var(--px); font-size: .66rem;
-  padding: .38rem .62rem; border-radius: 6px; letter-spacing: .03em;
+  flex: 0 0 auto; cursor: pointer; font-family: var(--px); font-size: .6rem;
+  padding: .34rem .5rem; border-radius: 6px; letter-spacing: .02em;
   color: var(--cream); text-shadow: var(--outline-sm);
   background: linear-gradient(180deg, var(--blue-3) 0%, var(--blue-2) 50%, var(--blue-1) 100%);
   border: 2px solid var(--cream); box-shadow: 0 0 0 1px var(--ink), 0 2px 0 var(--ink);
@@ -731,3 +734,30 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   border-radius: 6px; padding: .3rem .45rem;
 }
 .xp-row b { color: var(--gold); font-family: var(--px); font-size: .62rem; }
+
+/* ---- Nutrition tab ---- */
+/* Each target is its number, with the one-line reason directly beneath it — a
+   number is never shown without its reason. */
+.n-pace { display: block; font-size: .68rem; margin: .3rem 0 .1rem; }
+.n-blurb { margin: .1rem 0 .55rem; }
+.n-targets { display: grid; gap: .4rem; margin: .5rem 0; }
+.n-target {
+  border: 2px solid var(--cream); border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--ink); background: rgba(28, 60, 120, .38);
+  padding: .38rem .55rem;
+}
+.n-t-head { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
+.n-t-label { font-family: var(--pxd); font-size: .58rem; color: var(--cream); text-shadow: var(--outline-sm); }
+.n-t-val { font-family: var(--pxd); font-size: .82rem; color: var(--gold); text-shadow: var(--outline-sm); }
+.n-t-unit { font-size: .58rem; color: var(--cream-dim); }
+.n-t-reason { margin: .18rem 0 0; }
+.n-conflict {
+  border: 2px solid var(--red); border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--ink), 0 0 14px rgba(224, 80, 80, .35);
+  background: rgba(120, 40, 40, .38); padding: .5rem .6rem; margin: .5rem 0;
+}
+.n-conflict .card-head { margin-bottom: .35rem; }
+.n-hint, .n-refusal { font-size: .82rem; color: var(--gold-l); text-shadow: var(--outline-sm); margin: .2rem 0 .4rem; }
+.n-maint { margin-top: .55rem; }
+.n-maint p { margin: .16rem 0; line-height: 1.5; }
+.n-limits { margin-top: .55rem; line-height: 1.5; }

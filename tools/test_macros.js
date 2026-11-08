@@ -286,5 +286,117 @@ eq("activityFactor carries a source", typeof af4.source === "string" && af4.sour
 eq("tdeeFallback default pal still 1.2", M.tdeeFallback(2000).pal, 1.2);
 eq("tdeeFallback default kcal unchanged", M.tdeeFallback(2000).kcal, 2400);
 
+/* ============================================================
+   (14) THE NUTRITION TAB'S VIEW-MODEL (js/nutrition.js)
+   The tab is a pure view-model, so it is pinned here without a browser: load
+   the REAL macros.js + nutrition.js in one vm scope (nutrition reads Macros) and
+   assert on the model AND the html the user actually sees.
+   ============================================================ */
+console.log("\n--- (14) Nutrition tab view-model ---");
+{
+  const fs2 = require("fs");
+  const src = fs2.readFileSync(path.join(__dirname, "..", "js", "macros.js"), "utf8") + "\n;\n"
+    + fs2.readFileSync(path.join(__dirname, "..", "js", "nutrition.js"), "utf8");
+  const c2 = { console, module: { exports: {} }, Date, Math, JSON, Object, Array, Set, Map,
+    isFinite, parseFloat, parseInt, Number, String, Boolean, RegExp, Error, setTimeout, clearTimeout };
+  c2.globalThis = c2; vm.createContext(c2);
+  vm.runInContext(src + "\n;globalThis.__N={Macros:Macros,Nutrition:Nutrition};", c2, { filename: "nutrition-bundle.js" });
+  const N = c2.__N.Nutrition, MM = c2.__N.Macros;
+  const truthy = (label, got) => eq(label, !!got, true);   // this suite defines eq/near only
+  const YEAR = 2026;
+
+  /* a real, complete profile — the shape the owner's own export carries */
+  const FULL = { name: "the owner", sex: "M", heightCm: 178, weightKg: 70,
+    bodyFatPct: 12, goalWeightKg: 75, goalBodyFatPct: 10, birthYear: 1994 };
+  const training = { sessionsPerWeek: 4, cardioMinutesPerWeek: 0 };
+
+  /* ---- (a) a profile WITH a birth year renders all four targets ---- */
+  const v = N.view(FULL, { phase: null, year: YEAR, training });
+  eq("with a birth year the tab is in the 'ok' state", v.state, "ok");
+  eq("age is derived from the birth year", v.age, YEAR - 1994);
+  eq("the html shows Age N", v.html.includes("Age " + (YEAR - 1994)), true);
+  eq("exactly four targets, in order", v.targets.map((t) => t.key), ["kcal", "protein", "fat", "carbs"]);
+  truthy("every target carries a finite number", v.targets.every((t) => isFinite(t.value) && t.value > 0));
+  truthy("every target carries a one-line reason", v.targets.every((t) => typeof t.reason === "string" && t.reason.length > 10));
+  eq("the calorie target is on the page", v.html.includes(String(v.targets[0].value)), true);
+  eq("the protein target is on the page", v.html.includes(String(v.targets[1].value)), true);
+  eq("the fat target is on the page", v.html.includes(String(v.targets[2].value)), true);
+  eq("the carbs target is on the page", v.html.includes(String(v.targets[3].value)), true);
+  truthy("every reason is rendered next to its number", v.targets.every((t) => v.html.includes(t.reason)));
+  eq("the default phase is the engine's recommendation for a gaining goal", v.phase.key, "lean-gain");
+  eq("the recommended phase is exposed", v.recommended, MM.recommendedPhase({ goal: "gain" }).key);
+
+  /* ---- (e) the phase picker offers EXACTLY the PHASES keys ---- */
+  const offered = (v.html.match(/<option value="([^"]+)"/g) || []).map((s) => s.slice(15, -1));
+  eq("the picker offers exactly the PHASES keys", offered, MM.PHASES.map((p) => p.key));
+  eq("...in the engine's own order, all six named phases", offered.length, 6);
+  truthy("the selected phase's blurb is shown beneath the picker", v.html.includes(MM.phaseFor(v.phase.key).blurb));
+
+  /* ---- (c) the conflict note appears when goalConflict fires... ---- */
+  eq("the owner's profile fires a goal conflict", MM.goalConflict(FULL).conflict, true);
+  truthy("his conflict note is rendered prominently", v.html.includes("nutrition-conflict") && v.html.includes(MM.goalConflict(FULL).note));
+  eq("the conflict object carries the engine's kind", v.conflict && v.conflict.kind, MM.goalConflict(FULL).kind);
+  /* ...and NOT for a profile whose goals point the same way */
+  const NOCONF = Object.assign({}, FULL, { weightKg: 90, goalWeightKg: 82, bodyFatPct: 24, goalBodyFatPct: 18 });
+  const vnc = N.view(NOCONF, { phase: null, year: YEAR, training });
+  eq("a non-conflicting profile reports no conflict", vnc.conflict, null);
+  eq("...and NOTHING about a conflict is rendered", vnc.html.includes("nutrition-conflict"), false);
+  eq("...and it still shows its targets", vnc.state, "ok");
+
+  /* ---- (b) NO birth year -> no numbers, just the pointer ---- */
+  const MISSING = Object.assign({}, FULL, { birthYear: null });
+  const vm2 = N.view(MISSING, { phase: null, year: YEAR, training });
+  eq("missing birth year -> the 'no-birth-year' state", vm2.state, "no-birth-year");
+  eq("no target numbers are returned", vm2.targets, null);
+  eq("no age is invented", vm2.age, null);
+  eq("the pointer to Profile is shown verbatim", vm2.html.includes("Add your birth year in Profile to see your targets"), true);
+  // the VISIBLE text, with tags stripped — <h3> is markup, not a number on screen
+  const vm2text = vm2.html.replace(/<[^>]*>/g, " ");
+  eq("the tab shows NO numbers at all (visible text)", /[0-9]/.test(vm2text), false);
+  /* a nonsense year is treated the same as missing — no age is invented */
+  eq("1800 is rejected (not a plausible birth year)", N.validBirthYear(1800, YEAR), null);
+  eq("a future year is rejected", N.validBirthYear(YEAR + 1, YEAR), null);
+  eq("a 3-digit string is rejected", N.validBirthYear("180", YEAR), null);
+  eq("a plausible year is accepted", N.validBirthYear(1994, YEAR), 1994);
+  eq("1800 renders the same pointer, not an age", N.view(Object.assign({}, FULL, { birthYear: 1800 }), { year: YEAR }).state, "no-birth-year");
+
+  /* ---- (d) under-18 -> the engine's refusal, never a number ---- */
+  const TEEN = Object.assign({}, FULL, { birthYear: YEAR - 17 });
+  const vteen = N.view(TEEN, { phase: null, year: YEAR, training });
+  eq("an under-18 profile is 17", vteen.age, 17);
+  eq("under 18 -> the 'refused' state", vteen.state, "refused");
+  eq("no targets are returned", vteen.targets, null);
+  truthy("the engine's refusal message is shown", vteen.html.includes("Under 18") && vteen.html.includes(vteen.reason));
+  eq("no calorie target is shown", vteen.html.includes("Calories"), false);
+  eq("no maintenance estimate is shown either", vteen.html.includes("Maintenance"), false);
+  eq("the plan itself refused (engine is the source of the refusal)", N.view(TEEN, { year: YEAR, training }).state, "refused");
+
+  /* ---- the maintenance line: equation, WHY, the derived factor, the caveat ---- */
+  const m = v.maintenance;
+  eq("the FFM path is used because the profile has a body-fat %", m.method, "ffm-mifflin");
+  truthy("the equation is named", /fat-free-mass/.test(m.equation));
+  truthy("the WHY states lean mass is known", /lean mass/i.test(m.why));
+  eq("the activity factor is the DERIVED one (4 sessions/wk -> 1.375)", m.activity.pal, 1.375);
+  eq("the plan used that same factor (no dropdown, no second number)", v.plan.tdee.pal, 1.375);
+  truthy("the factor's basis is stated", /4 training sessions\/week/.test(m.activity.basis));
+  eq("the engine's caveat is shown verbatim", v.html.includes(MM.TRAINING_CAVEAT), true);
+  eq("the intake floor is shown", v.html.includes(String(MM.FLOORS.M)), true);
+  eq("the floor's own citation is the engine's", m.floor, MM.FLOORS.M);
+
+  /* ---- (f) the honest limits, and no completion date anywhere ---- */
+  truthy("the ~71% explained-variance limit is stated", /71%/.test(v.html));
+  truthy("the deliberate rounding is stated", /round/i.test(v.html));
+  truthy("no completion date is promised", /no completion date/i.test(v.html));
+  eq("the word 'date' never pairs with a target number", /\bby \w+ \d|\d+\s*(weeks|months) away/i.test(v.html), false);
+
+  /* ---- (f2) NO intake-logging control: logging is the next step, not this one ---- */
+  eq("no input field is rendered on the tab", /<input/i.test(v.html), false);
+  eq("no button is rendered on the tab", /<button/i.test(v.html), false);
+  eq("the ONLY control is the pace picker", (v.html.match(/<(select|input|button|textarea)\b/gi) || []).length, 1);
+  eq("...and it is a select", /<select/i.test(v.html), true);
+  eq("no food-log surface is rendered", /food|log it|add food|intake-log/i.test(v.html), false);
+  eq("no Vitality / logging opt-out is rendered", /vitality/i.test(v.html), false);
+}
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

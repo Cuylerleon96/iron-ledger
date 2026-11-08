@@ -386,6 +386,7 @@
     else if (view === "log") renderLog(host);
     else if (view === "history") renderHistory(host);
     else if (view === "library") renderLibrary(host);
+    else if (view === "nutrition") renderNutrition(host);
     else renderProfile(host);
     renderHUD();
   }
@@ -1623,6 +1624,36 @@
     updateCheck(false);
   }
 
+  /* ================= nutrition ================= */
+  /* The tab is a thin shell around the pure Nutrition view-model: everything the
+     user reads (targets and their reasons, the maintenance line, the conflict
+     note, the honest limits) is built in js/nutrition.js, so it is testable
+     without a browser and the tab cannot drift from the engine. The ONLY control
+     here is the pace (phase) picker — it persists the choice and re-renders.
+     Logging the food itself is the next step and is deliberately absent: there is
+     no food-log control until there is a database wired up to serve it. */
+  function renderNutrition(host) {
+    const training = Nutrition.trainingFor(S.workouts, today(), (id) => Engine.exMode(S, id));
+    const v = Nutrition.view(S.profile, {
+      phase: (S.nutrition && S.nutrition.phase) || null,
+      year: new Date().getFullYear(),
+      training,
+    });
+    const c = el("section", { class: "card", id: "nutrition" });
+    c.innerHTML = v.html;
+    host.append(c);
+
+    // The pace control. Changing it is the whole point of the picker: the chosen
+    // phase is the pace, stored on the state and reflected on the next paint.
+    const sel = $("#n-phase", c);
+    if (sel) sel.addEventListener("change", () => {
+      S.nutrition = S.nutrition || {};
+      S.nutrition.phase = sel.value;
+      Store.save(true);
+      render();
+    });
+  }
+
   /* ================= profile ================= */
   function renderProfile(host) {
     const p = S.profile;
@@ -1632,6 +1663,7 @@
       <div class="form-grid">
         <label>Name<input class="inp" id="p-name" value="${esc(p.name)}"></label>
         <label>Sex<select class="inp" id="p-sex"><option value="M" ${p.sex === "M" ? "selected" : ""}>Male</option><option value="F" ${p.sex === "F" ? "selected" : ""}>Female</option></select></label>
+        <label>Birth year<input class="inp" id="p-by" type="number" inputmode="numeric" min="1900" max="${new Date().getFullYear()}" placeholder="e.g. 1990" value="${p.birthYear ?? ""}"></label>
         <label>Height (cm)<input class="inp" id="p-h" type="number" value="${p.heightCm ?? ""}"></label>
         <label>Bodyweight (${U.label()})<input class="inp" id="p-w" type="number" step="0.1" value="${p.weightKg ? U.w(p.weightKg).toFixed(1) : ""}"></label>
         <label>Body fat %<input class="inp" id="p-bf" type="number" step="0.1" value="${p.bodyFatPct ?? ""}"></label>
@@ -1735,7 +1767,17 @@
 
     $("#p-save", c).addEventListener("click", () => {
       const g = (id) => $(id).value;
+      // Birth year is validated BEFORE anything is written: a nonsense value
+      // (1800, a future year, a non-4-digit string) must not half-save the rest
+      // of the form, and must never become an age the Nutrition tab would use.
+      const byRaw = g("#p-by").trim();
+      const by = Nutrition.validBirthYear(byRaw, new Date().getFullYear());
+      if (byRaw !== "" && by == null) {
+        toast("Birth year must be a 4-digit year, not in the future and within the last 120 years.", "warn", 8000);
+        return;
+      }
       const before = Engine.summary(S);      // level/title before this save, for the celebration
+      p.birthYear = by;
       p.name = g("#p-name"); p.sex = g("#p-sex");
       p.heightCm = parseFloat(g("#p-h")) || null;
       // Weight and body fat are not stored on the profile directly — they are

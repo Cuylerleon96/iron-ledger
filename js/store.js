@@ -11,8 +11,11 @@ const Store = (() => {
     profile: {
       name: "", sex: "M", heightCm: null,
       weightKg: null, bodyFatPct: null, goalWeightKg: null, goalBodyFatPct: null,
-      weeklyTarget: 4, units: "kg",
+      birthYear: null, weeklyTarget: 4, units: "kg",
     },
+    // The chosen training phase for the Nutrition tab. A user choice, not a
+    // measurement, so it lives on the state — and it round-trips through export.
+    nutrition: { phase: null },
     workouts: [],
     bodylog: [],
     overrides: {},     // exId -> {mode?, weight?, g?} — only fields the engine

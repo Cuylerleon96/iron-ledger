@@ -294,7 +294,11 @@ const Macros = (() => {
       return refuse('Sex must be "M" or "F" (Mifflin-St Jeor is sex-specific).', SOURCES.mifflin);
 
     const bmr = rmr(inputs);
-    const tdee = tdeeFallback(bmr.kcal);
+    /* `pal` is optional and additive: when the UI supplies the factor DERIVED
+       from logged training (see activityFactor), the plan uses it, so the number
+       shown on the maintenance line is the number the targets were built from.
+       Omitted, tdeeFallback keeps its own default — existing callers unchanged. */
+    const tdee = tdeeFallback(bmr.kcal, inputs.pal);
     const pace = paceRate(paceKey, weightKg);
     const targetRate = pace.recognized ? pace.kgPerWeek : 0;
     const adj = energyAdjustment(targetRate);
