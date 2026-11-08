@@ -490,9 +490,12 @@ const Engine = (() => {
     return { score: s, sessions, expected, rate, streakDays: st.days, streakWeeks: st.weeks };
   }
 
-  function vitalityScore(state) {
-    const log = (state.bodylog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
-    const bw = bodyweight(state);
+  function vitalityScore(state, asOfDate) {
+    // asOfDate re-evaluates an earlier month using the measurements that existed
+    // THEN. Without it a history point would silently borrow today's bodyweight.
+    const log = (state.bodylog || []).filter((b) => !asOfDate || b.date <= asOfDate)
+      .slice().sort((a, b) => a.date.localeCompare(b.date));
+    const bw = bodyweight(state, asOfDate);
     const goal = num(state.profile.goalWeightKg);
     const parts = [], used = [];
     if (log.length >= 2 && goal > 0) {
@@ -532,16 +535,17 @@ const Engine = (() => {
   }
 
   /* Full attribute readout for a window, with deltas vs the previous window. */
-  function attributes(state, days = 28) {
-    const cur = windowWorkouts(state, days, 0);
-    const prev = windowWorkouts(state, days, days);
+  function attributes(state, days = 28, offsetDays = 0) {
+    const cur = windowWorkouts(state, days, offsetDays);
+    const prev = windowWorkouts(state, days, days + offsetDays);
+    const asOf = offsetDays > 0 ? dstr(Date.now() - offsetDays * DAY) : null;
     const now = {
       STR: strengthScore(state, cur),
       END: staminaScore(state, cur),
       POW: powerScore(state, cur),
       MOB: mobilityScore(state, cur),
       CON: consistencyScore(state, cur),
-      VIT: vitalityScore(state),
+      VIT: vitalityScore(state, asOf),
     };
     const was = {
       STR: strengthScore(state, prev).score,
@@ -551,6 +555,8 @@ const Engine = (() => {
       CON: consistencyScore(state, prev).score,
       VIT: now.VIT.score,
     };
+    // (VIT has no meaningful "previous window" of its own — it is a body-
+    // composition read, not a training volume — so its delta stays 0.)
     const hasPrev = prev.length > 0;
     const out = {};
     for (const a of ATTRIBUTES) {
@@ -561,6 +567,199 @@ const Engine = (() => {
         prev: hasPrev ? prevScore : null,
         delta: hasPrev ? score - prevScore : null,
         detail: now[a.key],
+      };
+    }
+    return out;
+  }
+
+  /* ---------- history: the attributes, month by month ---------- */
+  /* One point per month, each an HONEST re-evaluation of the training that
+     preceded that month — not a projection and not a re-scaled number. A month
+     with no sessions reads 0, exactly as the live view would have read then. */
+  function attributeHistory(state, months = 12) {
+    const out = [];
+    const anchor = new Date(); anchor.setHours(12, 0, 0, 0);
+    for (let i = months - 1; i >= 0; i--) {
+      const end = new Date(anchor);
+      end.setMonth(end.getMonth() - i);
+      const offsetDays = Math.max(0, Math.round((anchor.getTime() - end.getTime()) / DAY));
+      const a = attributes(state, 28, offsetDays);
+      const scores = {};
+      for (const k of ATTRIBUTES) scores[k.key] = a[k.key].score;
+      out.push({ date: dstr(end), offsetDays, scores, any: a.CON.detail.sessions > 0 });
+    }
+    return out;
+  }
+
+  /* Sets and tonnage per week for the last N weeks. */
+  function volumeWeeks(state, weeks = 12) {
+    const out = [];
+    for (let i = weeks - 1; i >= 0; i--) {
+      const ws = windowWorkouts(state, 7, i * 7);
+      let sets = 0, tonnage = 0, rpeSum = 0, rpeN = 0, reps = 0;
+      for (const w of ws) for (const en of w.entries || []) {
+        const st = entryStats(en);
+        sets += st.sets; tonnage += st.tonnage; reps += st.reps;
+        if (st.avgRPE != null && st.sets) { rpeSum += st.avgRPE * st.sets; rpeN += st.sets; }
+      }
+      out.push({ weeksAgo: i, sessions: ws.length, sets, tonnage, reps,
+                 avgRPE: rpeN ? rpeSum / rpeN : null });
+    }
+    return out;
+  }
+
+  /* Autoregulation read. Only two things count as evidence, both from logged
+     data, and both are stated as the shape of accumulating fatigue rather than a
+     verdict: effort climbing while output stalls, or sustained volume at the top
+     of the useful range. Silence is the default — an app that cries "deload"
+     every other week trains the user to ignore it. */
+  function deloadCheck(state) {
+    const w = volumeWeeks(state, 9).filter((x) => x.sessions > 0);
+    if (w.length < 4) return { suggest: false, why: "Not enough training weeks logged to judge yet.", weeks: w.length };
+    const last3 = w.slice(-3), prev3 = w.slice(-6, -3);
+    const mean = (xs) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+    const setsNow = mean(last3.map((x) => x.sets));
+    const setsPrev = prev3.length ? mean(prev3.map((x) => x.sets)) : null;
+    const rpeNow = mean(last3.map((x) => x.avgRPE).filter((x) => x != null));
+    const rpePrev = mean(prev3.map((x) => x.avgRPE).filter((x) => x != null));
+    if (rpeNow != null && rpePrev != null && rpeNow - rpePrev >= 0.5
+        && setsPrev != null && setsNow <= setsPrev * 1.02) {
+      return { suggest: true, setsNow, rpeNow, rpePrev,
+        why: `Average RPE has risen ${(rpeNow - rpePrev).toFixed(1)} over three weeks while weekly sets stayed level (${Math.round(setsPrev)} → ${Math.round(setsNow)}). Effort climbing at a flat workload is the classic shape of accumulated fatigue.`,
+        fix: "Take a lighter week — roughly half your sets at the same loads — then resume." };
+    }
+    return { suggest: false, setsNow, rpeNow, why: "No fatigue pattern in the last three weeks.", weeks: w.length };
+  }
+
+  /* A target for one exercise, with progress and an ETA that is only offered
+     when there is a real trend to extrapolate. A date invented from two data
+     points would be worse than no date. */
+  function targetProgress(state, exId) {
+    const t = (state.targets || {})[exId];
+    if (!t || !(num(t.value) > 0)) return null;
+    const target = num(t.value);
+    const mode = exMode(state, exId);
+    // bestFor exposes a metric per mode (est1RM / reps / time / dist) — there is
+    // no generic `best`, and reading one gave 0 progress on every target.
+    const b = bestFor(state, exId);
+    const current = mode === "weight_reps" ? num(b.est1RM)
+      : mode === "reps" ? num(b.reps)
+      : mode === "time" ? num(b.time)
+      : mode === "distance_time" ? num(b.dist)
+      : (num(b.est1RM) || num(b.time));
+    const pts = seriesFor(state, exId)
+      .map((p) => ({ t: new Date(p.date + "T12:00:00").getTime(), v: mode === "weight_reps" ? p.est1RM : p.top }))
+      .filter((p) => p.v > 0).sort((a, b2) => a.t - b2.t);
+    let eta = null, ratePerWeek = null, basis = "not enough sessions";
+    if (pts.length >= 4) {
+      const spanDays = (pts[pts.length - 1].t - pts[0].t) / DAY;
+      if (spanDays >= 14) {
+        // least squares on value vs days
+        const n = pts.length;
+        const mx = pts.reduce((a, p) => a + p.t, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
+        let sxy = 0, sxx = 0;
+        for (const p of pts) { sxy += (p.t - mx) * (p.v - my); sxx += (p.t - mx) * (p.t - mx); }
+        const slopePerDay = sxx > 0 ? sxy / sxx : 0;
+        ratePerWeek = slopePerDay * 7;
+        if (ratePerWeek > 0 && current < target) {
+          const weeks = (target - current) / ratePerWeek;
+          // A projection further out than a year is noise dressed as a date.
+          if (weeks <= 104) { eta = Math.ceil(weeks); basis = "your logged rate"; }
+          else { eta = null; basis = "over a year at your current rate"; }
+        } else if (current >= target) { basis = "already met"; }
+        else { basis = ratePerWeek <= 0 ? "you are not currently trending up" : "not enough sessions"; }
+      }
+    }
+    const pct = clamp((current / target) * 100);
+    return { target, current, pct, eta, ratePerWeek, basis, mode, date: t.set || null,
+             remaining: Math.max(0, target - current) };
+  }
+
+  /* ---------- the user's own notes-app shorthand ---------- */
+  /* Exactly the format he started with, so an export can be pasted straight back
+     into his notes:
+
+       Bench press machine:
+       1:100x10
+       2:100x10
+
+     RPE and rest are appended only when they were actually logged — dropping
+     them would lose real entries, inventing them would be worse. */
+  function exportNoteShorthand(state, workoutId) {
+    const w = (state.workouts || []).find((x) => x.id === workoutId);
+    if (!w) return "";
+    // Plain numbers only. Unit conversion and repeated addition produce values
+    // like 120.80000000000001, and that noise would land straight in the user's
+    // notes — the whole point is that the output is as clean as what he typed.
+    const r2 = (v) => { const n = num(v); return Math.abs(n - Math.round(n)) < 1e-9 ? Math.round(n) : Math.round(n * 100) / 100; };
+    const lines = [];
+    if (w.note) lines.push("# " + w.note);
+    for (const en of w.entries || []) {
+      const mode = en.mode || exMode(state, en.id);
+      lines.push(en.name + ":");
+      (en.sets || []).forEach((s, i) => {
+        const sfx = [];
+        if (num(s.rpe) > 0) sfx.push("@" + r2(s.rpe));
+        const rest = num(s.rest) > 0 ? num(s.rest) : num(en.restDefault);
+        if (rest > 0) sfx.push("r" + rest);
+        const tail = sfx.length ? " " + sfx.join(" ") : "";
+        let body;
+        if (mode === "time") body = `${r2(num(s.t) || num(s.r))}s`;
+        else if (mode === "weight_time") body = `${r2(s.w)}x${r2(s.t)}s`;
+        else if (mode === "distance_time") body = `${r2(num(s.d) / 1000)}km ${num(s.t) ? Math.floor(num(s.t) / 60) + ":" + String(Math.round(num(s.t) % 60)).padStart(2, "0") : ""}`.trim();
+        else if (mode === "weight_distance") body = `${r2(s.w)}x${r2(s.d)}m`;
+        else if (mode === "reps") body = String(r2(s.r));
+        else body = `${r2(s.w)}x${r2(s.r)}`;
+        lines.push(`${i + 1}:${body}${tail}`);
+      });
+      lines.push("");
+    }
+    return lines.join("\n").trim();
+  }
+
+  /* ---------- consistency calendar ---------- */
+  /* A per-day map of the last N days: everything the year grid needs, computed
+     from logged sessions only. */
+  function dayMap(state, days = 371) {
+    const out = {};
+    const anchor = new Date(); anchor.setHours(12, 0, 0, 0);
+    for (let i = 0; i < days; i++) {
+      const d = new Date(anchor); d.setDate(d.getDate() - i);
+      out[dstr(d)] = { sets: 0, tonnage: 0, sessions: 0, groups: [] };
+    }
+    for (const w of state.workouts || []) {
+      const cell = out[w.date];
+      if (!cell) continue;
+      const gs = new Set();
+      for (const en of w.entries || []) {
+        const st = entryStats(en);
+        cell.sets += st.sets; cell.tonnage += st.tonnage;
+        for (const g of exGroups(state, en.id)) gs.add(g);
+      }
+      cell.sessions = 1;
+      cell.groups = Array.from(gs);
+    }
+    return out;
+  }
+
+  /* ---------- muscle freshness (recovery-aware) ---------- */
+  /* How long since each group was trained, as a 0-100 "freshness" read against a
+     72-hour recovery window — the point at which most people are ready to train
+     a group again. This is recency, not a physiological measurement, and it is
+     labelled that way in the UI. */
+  function freshness(state) {
+    const mg = muscleGroups(state, 28);
+    const anchor = new Date(); anchor.setHours(12, 0, 0, 0);
+    const out = {};
+    for (const g of GROUP_ORDER) {
+      const last = mg[g] && mg[g].last;
+      if (!last) { out[g] = { fresh: null, days: null, setsThisWeek: mg[g] ? mg[g].setsPerWk : 0 }; continue; }
+      const days = Math.max(0, (anchor.getTime() - new Date(last + "T12:00:00").getTime()) / DAY);
+      out[g] = {
+        days,
+        fresh: clamp(Math.round((days / 3) * 100)),
+        setsThisWeek: mg[g].setsPerWk,
+        last,
       };
     }
     return out;
@@ -922,6 +1121,8 @@ const Engine = (() => {
     title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep,
+    attributeHistory, volumeWeeks, deloadCheck, targetProgress,
+    exportNoteShorthand, dayMap, freshness,
   };
 })();
 if (typeof module !== "undefined") module.exports = Engine;

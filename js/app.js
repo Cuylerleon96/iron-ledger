@@ -289,6 +289,10 @@
       })),
     });
 
+    dashHistory(host);
+    dashConsistency(host);
+    dashVolume(host);
+
     /* attribute detail */
     const det = el("section", { class: "card" });
     det.innerHTML = `<div class="card-head"><h3>What the numbers mean</h3></div>`;
@@ -367,6 +371,86 @@
     host.append(prs);
   }
 
+  /* The year in stats: each point is an honest re-evaluation of the training
+     that preceded that month, so the line is a record and not a projection. */
+  function dashHistory(host) {
+    const hist = Engine.attributeHistory(S, 12);
+    const card = el("section", { class: "card" });
+    const last = hist[hist.length - 1];
+    const firstIdx = hist.findIndex((p) => p.any);
+    const first = firstIdx >= 0 ? hist[firstIdx] : null;
+    card.innerHTML = `<div class="card-head"><h3>Progress over the year</h3>
+      <span class="muted">${first ? "since " + first.date : "last 12 months"}</span></div>`;
+    const ch = el("div", { class: "chart-host" });
+    card.append(ch);
+    const legend = el("div", { class: "attr-legend" });
+    Engine.ATTRIBUTES.forEach((a) => {
+      // only claim a change once there is an earlier month that HAD data
+      const delta = first ? last.scores[a.key] - first.scores[a.key] : null;
+      const arrow = delta == null ? `<span class="flat">—</span>`
+        : delta > 0 ? `<span class="up">▲${delta}</span>`
+        : delta < 0 ? `<span class="down">▼${Math.abs(delta)}</span>` : `<span class="flat">—</span>`;
+      legend.append(el("div", { class: "attr-row" },
+        `<span class="dot" style="background:${a.color}"></span>
+         <span class="attr-name">${a.label}</span>
+         <span class="attr-score">${last.scores[a.key]}</span>${arrow}`));
+    });
+    card.append(legend);
+    host.append(card);
+    Chart.multi(ch, {
+      series: Engine.ATTRIBUTES.map((a) => ({
+        label: a.label, color: a.color,
+        points: hist.map((p) => ({ x: p.date, y: p.scores[a.key] })),
+      })),
+    });
+  }
+
+  /* A year of showing up, one square per day. */
+  function dashConsistency(host) {
+    const dm = Engine.dayMap(S, 371);
+    const trained = Object.values(dm).filter((d) => d.sessions > 0).length;
+    const card = el("section", { class: "card" });
+    card.innerHTML = `<div class="card-head"><h3>Consistency</h3>
+      <span class="muted">${trained} of the last 371 days</span></div>`;
+    const h = el("div", { class: "hm-host" });
+    card.append(h);
+    host.append(card);
+    Chart.heatmap(h, { days: dm });
+  }
+
+  /* Weekly volume, the fatigue read, and how long since each group was trained.
+     The deload line only speaks when the logged effort actually says something —
+     an app that shouts "deload" every other week teaches you to ignore it. */
+  function dashVolume(host) {
+    const weeks = Engine.volumeWeeks(S, 12);
+    const del = Engine.deloadCheck(S);
+    const fresh = Engine.freshness(S);
+    const card = el("section", { class: "card" });
+    card.innerHTML = `<div class="card-head"><h3>Volume &amp; recovery</h3>
+      <span class="muted">sets per week, last 12 weeks</span></div>`;
+    const ch = el("div", { class: "chart-host" });
+    card.append(ch);
+    card.append(el("p", { class: "deload " + (del.suggest ? "warn" : "ok") },
+      del.suggest ? `<b>Consider a lighter week.</b> ${esc(del.why)} ${esc(del.fix || "")}` : esc(del.why)));
+
+    const fr = el("div", { class: "fresh-row" });
+    Engine.GROUP_ORDER.forEach((g) => {
+      const f = fresh[g];
+      const txt = f.fresh == null ? "no data" : f.days < 1 ? "today" : Math.round(f.days) + "d";
+      const cls = f.fresh == null ? "none" : f.fresh >= 90 ? "ready" : f.fresh >= 55 ? "mid" : "worked";
+      fr.append(el("span", { class: "fresh-chip " + cls,
+        title: f.fresh == null ? "Not trained in the last 4 weeks" : `Last trained ${Math.round(f.days * 10) / 10} days ago` },
+        `${esc(g)} <b>${txt}</b>`));
+    });
+    card.append(fr);
+    card.append(el("p", { class: "muted small" }, "Days since each group was last trained — recency, not a measurement of recovery."));
+    host.append(card);
+    Chart.line(ch, {
+      fillArea: true, color: "#f8d030", unit: " sets",
+      points: weeks.map((w) => ({ x: Engine.dstr(Date.now() - w.weeksAgo * 7 * 86400000), y: w.sets })),
+    });
+  }
+
   function bestLabel(r) {
     const b = r.best;
     if (!b || !b.date) return "—";
@@ -418,6 +502,7 @@
         <h3>${draft.id ? "Editing session" : "New session"}</h3>
         <div class="row">
           <input type="date" id="w-date" value="${draft.date}">
+          ${lastSession() ? `<button class="btn ghost" id="btn-repeat" title="Start from your most recent session">Repeat ${lastSession().date}</button>` : ""}
           <button class="btn ghost" id="btn-import">Paste from notes</button>
         </div>
       </div>
@@ -440,12 +525,25 @@
     $("#w-note").addEventListener("input", (e) => { draft.note = e.target.value; });
     $("#btn-add").addEventListener("click", () => exercisePicker((ex) => addEntry(ex)));
     $("#btn-import").addEventListener("click", importDialog);
+    const rep = $("#btn-repeat");
+    if (rep) rep.addEventListener("click", () => {
+      const w = lastSession();
+      draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
+      render(); toast("Started from " + w.date + " — edit and save", "good");
+    });
     $("#btn-save").addEventListener("click", saveDraft);
     const del = $("#btn-del"); if (del) del.addEventListener("click", () => {
       // Irreversible and it can be a whole session of work, so confirm once.
       if (!confirm("Delete this session? This cannot be undone.")) return;
       Store.deleteWorkout(draft.id); draft = newDraft(); toast("Session deleted", "warn"); render();
     });
+  }
+
+  /* The most recent SAVED session, newest by date (the array is date-ordered but
+     sorting here costs nothing and removes the assumption). */
+  function lastSession() {
+    const ws = (S.workouts || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    return ws.length ? ws[ws.length - 1] : null;
   }
 
   function addEntry(ex) {
@@ -751,7 +849,7 @@
         <div class="hist-head">
           <div><b>${w.date}</b> <span class="muted">· ${(w.entries || []).length} ${pl((w.entries || []).length, "exercise")} · ${sets} ${pl(sets, "set")} · ${fmt(U.w(tonnage))} ${U.label()}${sessionRpe ? ` · avg RPE ${sessionRpe.toFixed(1)}` : ""}${sessionRest ? ` · rest ${fmtRest(sessionRest)}` : ""}</span>
           ${w.note ? `<div class="muted small">${esc(w.note)}</div>` : ""}</div>
-          <div class="row"><button class="btn ghost tiny ed">Edit</button><button class="btn ghost tiny cp">Repeat</button></div>
+          <div class="row"><button class="btn ghost tiny nt">Note</button><button class="btn ghost tiny ed">Edit</button><button class="btn ghost tiny cp">Repeat</button></div>
         </div>
         <div class="hist-body">
           ${(w.entries || []).map((en) => {
@@ -769,6 +867,23 @@
       $(".cp", card).addEventListener("click", () => {
         draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
         setView("log"); toast("Loaded into a new session");
+      });
+      $(".nt", card).addEventListener("click", async () => {
+        const txt = Engine.exportNoteShorthand(S, w.id);
+        try {
+          await navigator.clipboard.writeText(txt);
+          toast("Copied in your notes format — paste it anywhere", "good", 4200);
+        } catch (e) {
+          // clipboard can be refused; never leave the button doing nothing
+          const box = el("div", { class: "import-box" });
+          box.innerHTML = `<h3>Copy to your notes</h3>
+            <p class="muted small">Select all and copy.</p>
+            <textarea id="nt-ta" rows="12">${esc(txt)}</textarea>
+            <div class="row end"><button class="btn primary" id="nt-x">Done</button></div>`;
+          openModal(box, "wide");
+          const ta = $("#nt-ta", box); ta.focus(); ta.select();
+          $("#nt-x", box).addEventListener("click", closeModal);
+        }
       });
       host.append(card);
     });
@@ -794,6 +909,8 @@
         <input class="inp" id="lb-q" placeholder="Search…">
         <select class="mini" id="lb-cat"><option value="">All categories</option>
           ${["Chest", "Back", "Shoulders", "Arms", "Legs", "Calves", "Abs", "Cardio", "Other"].map((c) => `<option>${c}</option>`).join("")}</select>
+        <select class="mini" id="lb-eq"><option value="">All equipment</option>
+          ${["Barbell", "Dumbbell", "Cable", "Machine", "Bench", "Kettlebell", "Bodyweight", "Band"].map((c) => `<option>${c}</option>`).join("")}</select>
       </div>
       <div class="row" id="lb-progress"></div>`;
     host.append(head);
@@ -807,7 +924,7 @@
     const list = el("div", { class: "lib-list" });
     host.append(list);
     const paint = () => {
-      const res = searchExercises($("#lb-q").value, { cat: $("#lb-cat").value, limit: 120 });
+      const res = searchExercises($("#lb-q").value, { cat: $("#lb-cat").value, eq: $("#lb-eq").value, limit: 120 });
       list.innerHTML = "";
       res.forEach((x) => {
         const row = el("div", { class: "lib-row" },
@@ -819,7 +936,21 @@
     };
     $("#lb-q", head).addEventListener("input", paint);
     $("#lb-cat", head).addEventListener("change", paint);
+    $("#lb-eq", head).addEventListener("change", paint);
     paint();
+  }
+
+  /* A target is only given an ETA when a real trend exists to extrapolate from;
+     otherwise it says which piece is missing rather than inventing a date. */
+  function targetProgressLine(id) {
+    const tp = Engine.targetProgress(S, id);
+    if (!tp) return "";
+    const unit = Engine.exMode(S, id) === "weight_reps" ? " " + U.label() + " e1RM" : "";
+    const cur = fmtW(U.w(tp.current));
+    const tgt = fmtW(U.w(tp.target));
+    const eta = tp.eta != null ? ` · ~${tp.eta} week${tp.eta === 1 ? "" : "s"} at your logged rate` : ` · ${tp.basis}`;
+    const cls = tp.pct >= 100 ? "up" : "";
+    return `<p class="target-line ${cls}">Target <b>${tgt}${unit}</b> · now <b>${cur}</b> (${Math.round(tp.pct)}%)${esc(eta)}</p>`;
   }
 
   function exDetail(id) {
@@ -845,11 +976,29 @@
         </label>
         <button class="btn ghost tiny" id="dt-hide">${S.overrides[id] ? "Unhide" : "Hide from lists"}</button>
       </div>
+      <div class="row">
+        <label class="mini-lab">Target (${Engine.exMode(S, id) === "weight_reps" ? U.label() + " e1RM" : "best"})
+          <input class="inp num" id="dt-tgt" type="number" step="any" placeholder="none"
+                 value="${S.targets[id] ? fmtW(U.w(S.targets[id].value)) : ""}" style="width:96px"></label>
+        <button class="btn ghost tiny" id="dt-tset">Set target</button>
+        ${S.targets[id] ? `<button class="btn ghost tiny" id="dt-tclear">Clear</button>` : ""}
+      </div>
+      ${targetProgressLine(id)}
       <div id="dt-chart" class="chart-host"></div>
       <div class="row end"><button class="btn ghost" id="dt-x">Close</button><button class="btn primary" id="dt-log">Log this now</button></div>`;
     openModal(box, "wide");
     $("#dt-x").addEventListener("click", closeModal);
-    $("#dt-mode").addEventListener("change", (e) => { Store.setOverride(id, { mode: e.target.value }); toast("Tracking mode updated"); render(); });
+    $("\#dt-mode").addEventListener("change", (e) => { Store.setOverride(id, { mode: e.target.value }); toast("Tracking mode updated"); render(); });
+    const tset = $("#dt-tset", box);
+    if (tset) tset.addEventListener("click", () => {
+      const raw = $("#dt-tgt", box).value;
+      const disp = parseFloat(raw);
+      if (!disp) { Store.clearTarget(id); toast("Target cleared"); closeModal(); render(); return; }
+      Store.setTarget(id, U.wi(disp));        // store kg, show display units
+      toast("Target set", "good"); closeModal(); render();
+    });
+    const tclr = $("#dt-tclear", box);
+    if (tclr) tclr.addEventListener("click", () => { Store.clearTarget(id); toast("Target cleared"); closeModal(); render(); });
     $("#dt-log").addEventListener("click", () => { closeModal(); draft = draft || newDraft(); addEntry({ id, n: info.n }); setView("log"); });
     const chartHost = $("#dt-chart", box);
     const pts = series.filter((p) => (Engine.exMode(S, id) === "weight_reps" ? p.est1RM : p.top) > 0)
@@ -1163,6 +1312,10 @@
           render();
         }
       } catch (e) { console.warn("device restore skipped:", e && e.message); }
+      // A dated backup, at most once a day, ONLY after recovery has run — so it
+      // can never capture an unrecovered (empty) state.
+      try { await Store.autoBackup(); }
+      catch (e) { console.warn("auto backup skipped:", e && e.message); }
     };
     document.addEventListener("deviceready", attempt, { once: true });
     setTimeout(attempt, 1200);      // deviceready may already have fired

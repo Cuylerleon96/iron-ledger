@@ -138,7 +138,16 @@ b, strong { font-weight: 700; }
 }
 
 /* ---------------- layout ---------------- */
-main { max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem; display: grid; gap: .8rem; }
+/* minmax(0, 1fr), not the implicit `auto`: an auto column sizes to the widest
+   CHILD, so one wide element (the year grid is 686px of max-content) widened the
+   whole page to 721px on a 412px phone. Every card then overran the viewport and
+   text was clipped at the screen edge. Capping the column at the container width
+   keeps any future wide content inside its own scroll box. */
+main {
+  max-width: 1060px; margin: 0 auto; padding: .8rem .6rem 2rem;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: .8rem;
+}
+main > * { min-width: 0; }
 
 /* ---------------- panels ---------------- */
 .card {
@@ -344,6 +353,37 @@ input[type="date"] { color-scheme: light; }
 .btn.tiny { padding: .22rem .42rem; font-size: .6rem; border-radius: 5px; }
 .btn.big { width: 100%; padding: .7rem; font-size: .74rem; }
 .btn.primary.big { font-size: .8rem; }
+
+/* ---------------- year grid ---------------- */
+.hm-host { overflow-x: auto; padding-bottom: .25rem; }
+.hm-grid {
+  display: grid; grid-auto-flow: column;
+  grid-template-rows: repeat(7, 10px); gap: 3px; width: max-content;
+}
+.hm-cell { width: 10px; height: 10px; border-radius: 2px; background: rgba(255,255,255,.07); }
+.hm-cell.pad { background: transparent; }
+.hm-cell.l1 { background: rgba(248,208,48,.30); }
+.hm-cell.l2 { background: rgba(248,208,48,.52); }
+.hm-cell.l3 { background: rgba(248,208,48,.74); }
+.hm-cell.l4 { background: #f8d030; }
+
+/* ---------------- freshness + deload ---------------- */
+.fresh-row { display: flex; flex-wrap: wrap; gap: .3rem; margin: .2rem 0 .35rem; }
+.fresh-chip {
+  font-size: .58rem; padding: .16rem .4rem; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.25); text-shadow: var(--outline-sm);
+}
+.fresh-chip.ready  { background: rgba(120,200,80,.22); border-color: rgba(120,200,80,.6); }
+.fresh-chip.mid    { background: rgba(248,208,48,.18); border-color: rgba(248,208,48,.5); }
+.fresh-chip.worked { background: rgba(240,80,60,.18);  border-color: rgba(240,80,60,.5); }
+.fresh-chip.none   { opacity: .55; }
+
+.deload { font-size: .64rem; line-height: 1.5; margin: .45rem 0 .15rem; }
+.deload.warn { color: #ffd166; }
+.deload.ok   { color: #b8e0c0; }
+
+.target-line { font-size: .64rem; margin: .3rem 0 .15rem; line-height: 1.5; }
+.target-line.up { color: #a8e878; }
 
 /* ---------------- update badge ---------------- */
 /* A gold dot on the Profile tab: visible enough to be noticed, quiet enough not

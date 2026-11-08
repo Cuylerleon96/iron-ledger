@@ -147,6 +147,73 @@ const Chart = (() => {
     host.append(svg);
   }
 
+  /* ---------- MULTI-LINE ---------- */
+  /* Several series on SHARED fixed axes. The attribute history must be read
+     against one 0-100 scale: auto-fitting each line separately would make a flat
+     stat look like a dramatic climb, which is exactly the lie a progress chart
+     must not tell. */
+  function multi(host, opts) {
+    const { series = [], height = 190, fixedMax = 100, unit = "" } = opts;
+    host.innerHTML = "";
+    const usable = series.filter((s) => (s.points || []).length >= 2);
+    if (!usable.length) {
+      host.innerHTML = `<div class="empty-chart">Not enough history yet — this fills in as you log.</div>`;
+      return;
+    }
+    const W = 640, H = height, P = { l: 40, r: 12, t: 12, b: 24 };
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "linechart", preserveAspectRatio: "none" });
+    const allX = usable.reduce((a, s) => a.concat(s.points.map((p) => new Date(p.x).getTime())), []);
+    const x0 = Math.min(...allX), x1 = Math.max(...allX) || x0 + 1;
+    const hi = Math.max(1, fixedMax || Math.max(...usable.reduce((a, s) => a.concat(s.points.map((p) => p.y)), [1])));
+    const sx = (v) => P.l + ((v - x0) / (x1 - x0 || 1)) * (W - P.l - P.r);
+    const sy = (v) => H - P.b - (Math.max(0, Math.min(hi, v)) / hi) * (H - P.t - P.b);
+
+    for (let i = 0; i <= 4; i++) {
+      const v = (hi * i) / 4, y = sy(v);
+      svg.append(el("line", { x1: P.l, y1: y, x2: W - P.r, y2: y, stroke: "#ffffff", "stroke-opacity": ".22", "stroke-width": 1, "stroke-dasharray": "4 5" }));
+      const t = el("text", { x: P.l - 6, y: y + 3.5, "text-anchor": "end", class: "lc-ylab" });
+      t.textContent = Math.round(v); svg.append(t);
+    }
+    for (const s of usable) {
+      const d = s.points.map((p, i) => `${i ? "L" : "M"}${sx(new Date(p.x).getTime())} ${sy(p.y)}`).join(" ");
+      svg.append(el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2.6, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+      s.points.forEach((p) => {
+        const c = el("circle", { cx: sx(new Date(p.x).getTime()), cy: sy(p.y), r: 3.4, fill: "#0a2a2a", stroke: s.color, "stroke-width": 1.8 });
+        const t = el("title"); t.textContent = `${s.label} · ${p.x}: ${Math.round(p.y)}${unit}`;
+        c.append(t); svg.append(c);
+      });
+    }
+    host.append(svg);
+  }
+
+  /* ---------- YEAR GRID ---------- */
+  /* One cell per day, shaded by how much was done. Deliberately ONE hue at
+     varying opacity: the only thing encoded is "how much", and a categorical
+     palette would imply categories that are not there. */
+  function heatmap(host, opts) {
+    const { days = {} } = opts;
+    host.innerHTML = "";
+    const keys = Object.keys(days).sort();       // oldest first
+    if (!keys.length) { host.innerHTML = `<div class="empty-chart">No history yet.</div>`; return; }
+    const top = Math.max(1, ...keys.map((k) => days[k].sets));
+    const grid = document.createElement("div");
+    grid.className = "hm-grid";
+    // pad the first column so every row is a fixed weekday
+    const lead = (new Date(keys[0] + "T12:00:00").getDay() + 6) % 7;   // 0 = Monday
+    for (let i = 0; i < lead; i++) {
+      const b = document.createElement("i"); b.className = "hm-cell pad"; grid.append(b);
+    }
+    for (const k of keys) {
+      const d = days[k];
+      const lvl = d.sets <= 0 ? 0 : Math.min(4, 1 + Math.floor((d.sets / top) * 4));
+      const c = document.createElement("i");
+      c.className = "hm-cell l" + lvl;
+      c.title = `${k} — ${d.sets ? d.sets + (d.sets === 1 ? " set" : " sets") : "rest"}`;
+      grid.append(c);
+    }
+    host.append(grid);
+  }
+
   /* ---------- BARS ---------- */
   function bars(host, opts) {
     const { items = [], unit = "", max } = opts;
@@ -166,6 +233,6 @@ const Chart = (() => {
     host.append(wrap);
   }
 
-  return { radar, line, bars, TIER_COLOR, esc };
+  return { radar, line, multi, heatmap, bars, TIER_COLOR, esc };
 })();
 if (typeof module !== "undefined") module.exports = Chart;

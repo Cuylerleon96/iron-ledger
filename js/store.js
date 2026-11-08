@@ -18,6 +18,7 @@ const Store = (() => {
     overrides: {},     // exId -> {mode?, g?, n?}
     custom: [],        // user-created exercises
     achievements: {},  // id -> ISO date
+    targets: {},       // exId -> { value, set } — a goal for one exercise
     settings: { seeded: false },
   });
 
@@ -40,6 +41,7 @@ const Store = (() => {
     out.custom = Array.isArray(out.custom) ? out.custom : [];
     out.overrides = out.overrides || {};
     out.achievements = out.achievements || {};
+    out.targets = out.targets || {};
     return out;
   };
 
@@ -118,6 +120,12 @@ const Store = (() => {
     clearTimeout(saveTimer); saveTimer = setTimeout(doIt, 250);
   }
 
+  /* Local calendar date. toISOString() is UTC and rolls over at 19:00 EST. */
+  const dstrToday = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
   const uid = () => "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   function upsertWorkout(w) {
@@ -195,6 +203,18 @@ const Store = (() => {
     if (ids.length) save(true);
   }
 
+  /* A goal for one exercise. Stored on the state, not the profile, because it
+     belongs to the lift — and it is a target, not a measurement, so it is
+     excluded from `richness` (which counts history). */
+  function setTarget(exId, value) {
+    const v = Number(value);
+    if (!isFinite(v) || v <= 0) { delete state.targets[exId]; save(true); return null; }
+    state.targets[exId] = { value: v, set: dstrToday() };
+    save(true);
+    return state.targets[exId];
+  }
+  const clearTarget = (exId) => { delete state.targets[exId]; save(true); };
+
   const exportJSON = () => JSON.stringify(state, null, 2);
 
   function importJSON(text, mode = "replace") {
@@ -214,6 +234,9 @@ const Store = (() => {
       // height, goal or units — a "restore" that silently lost half the ledger.
       Object.keys(incoming.overrides || {}).forEach((k) => {
         if (!state.overrides[k]) state.overrides[k] = incoming.overrides[k];
+      });
+      Object.keys(incoming.targets || {}).forEach((k) => {
+        if (!state.targets[k]) state.targets[k] = incoming.targets[k];
       });
       // Only fill what is unset, so importing an old file can never clobber a
       // newer local edit.
@@ -282,6 +305,54 @@ const Store = (() => {
     return false;
   }
 
+  /* ---------- rolling dated backups ---------- */
+  /* The pre-update snapshot only exists at the moment of an update. These roll:
+     at most one a day, into the same protected app storage, keeping the last few.
+     So a bad state found a week later can still be stepped back from.
+     The list of written names lives in localStorage rather than being read back
+     from the directory, so pruning does not depend on a directory listing. */
+  const BAK_LIST = "iron-ledger-backup-list";
+  const KEEP_BACKUPS = 5;
+
+  async function autoBackup() {
+    if (typeof Native === "undefined" || !Native.available) return null;
+    if (richness(state) === 0) return null;                 // nothing worth keeping
+    const name = Native.BAK_PREFIX + dstrToday() + ".json";
+    let names = [];
+    try { names = JSON.parse(localStorage.getItem(BAK_LIST) || "[]"); } catch (e) { names = []; }
+    if (!Array.isArray(names)) names = [];
+    if (names.includes(name)) return name;                   // already taken today
+
+    const blob = JSON.stringify({ savedAt: new Date().toISOString(), why: "daily", state });
+    if (!(await Native.writeNamed(name, blob))) return null;
+
+    names = names.concat([name]).filter((n, i, a) => a.indexOf(n) === i).sort();
+    const keep = names.slice(-KEEP_BACKUPS);
+    for (const old of names.slice(0, Math.max(0, names.length - KEEP_BACKUPS))) await Native.deleteNamed(old);
+    try { localStorage.setItem(BAK_LIST, JSON.stringify(keep)); } catch (e) { /* cosmetic */ }
+    console.info("daily backup written:", name, "keeping", keep.length);
+    return name;
+  }
+
+  /* Newest rolling backup first. Only ever read while memory is still empty, so
+     it cannot overwrite newer data. */
+  async function recoverFromBackup() {
+    if (typeof Native === "undefined" || !Native.available) return false;
+    let names = [];
+    try { names = JSON.parse(localStorage.getItem(BAK_LIST) || "[]"); } catch (e) { return false; }
+    if (!Array.isArray(names) || !names.length) return false;
+    for (const name of names.slice().reverse()) {
+      const res = await Native.readNamed(name);
+      if (!res.ok) continue;
+      try {
+        const blob = JSON.parse(res.text);
+        const snap = migrate(blob && blob.state ? blob.state : blob);
+        if (richness(snap) > richness(state)) { state = snap; save(true); return true; }
+      } catch (e) { /* try the older one */ }
+    }
+    return false;
+  }
+
   /* The snapshot written immediately before an update is installed. It is the
      copy that survives even if the install wipes the WebView store, and it is
      only ever read when both localStorage AND the live mirror came up empty —
@@ -310,7 +381,9 @@ const Store = (() => {
      pre-update snapshot, and only while memory is still empty. */
   async function recover() {
     if (await bootstrapNative()) return "device mirror";
-    if (richness(state) === 0 && await recoverFromSnapshot()) return "pre-update snapshot";
+    if (richness(state) > 0) return null;
+    if (await recoverFromSnapshot()) return "pre-update snapshot";
+    if (await recoverFromBackup()) return "daily backup";
     return null;
   }
 
@@ -321,6 +394,7 @@ const Store = (() => {
     exportJSON, importJSON, exportCSV, reset, loadBackup, hasBackup, uid, migrate,
     bootstrapNative, recover, snapshotPreUpdate, recoverFromSnapshot, richness,
     setSaveErrorHandler: (fn) => { onSaveError = fn; },
+    setTarget, clearTarget, autoBackup, recoverFromBackup,
   };
 })();
 if (typeof module !== "undefined") module.exports = Store;

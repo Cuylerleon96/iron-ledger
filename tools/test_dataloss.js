@@ -51,6 +51,7 @@ function env({ ls = {}, files = {}, failRead = false, corruptMirror = false } = 
       return { data: disk[p] };
     },
     stat: async ({ path: p }) => ({ size: String(disk[p] || "").length }),
+    deleteFile: async ({ path: p }) => { if (!(p in disk)) throw new Error("File does not exist at " + p); delete disk[p]; },
   };
   const sandbox = {
     console: { log() {}, warn() {}, error() {}, info() {} },
@@ -169,6 +170,64 @@ function env({ ls = {}, files = {}, failRead = false, corruptMirror = false } = 
     const src = await e.Store.recover();
     eq("no crash, no false recovery from garbage", src, null);
     eq("snapshot still readable afterwards", JSON.parse(e.disk[SNAP]).state.workouts.length, 30);
+  }
+
+  console.log("--- rolling daily backups ---");
+  {
+    const rich = mkState(40, 10);
+    const e = env({ ls: rich });
+    const first = await e.Store.autoBackup();
+    const second = await e.Store.autoBackup();
+    eq("a dated backup is written", typeof first, "string");
+    eq("running twice in a day does not duplicate", second, first);
+    eq("it holds the history", JSON.parse(e.disk[first]).state.workouts.length, 40);
+    eq("nothing to keep means no file", await env({}).Store.autoBackup(), null);
+
+    // pruning: force more than KEEP_BACKUPS distinct names through the list
+    const listed = JSON.parse(e.store["iron-ledger-backup-list"]);
+    eq("the list records exactly what was kept", listed.length, 1);
+    for (let i = 1; i <= 7; i++) {
+      e.store["iron-ledger-backup-list"] = JSON.stringify(
+        Array.from({ length: i }, (_, k) => "iron-ledger-backup-2026-01-0" + (k + 1) + ".json"));
+      e.disk["iron-ledger-backup-2026-01-0" + i + ".json"] = JSON.stringify({ state: mkState(1, 1) });
+      await e.Store.autoBackup();
+    }
+    const after = JSON.parse(e.store["iron-ledger-backup-list"]);
+    eq("no more than 5 backups are kept", after.length <= 5, true);
+    const onDisk = Object.keys(e.disk).filter((f) => f.startsWith("iron-ledger-backup-")).length;
+    eq("old files are actually deleted", onDisk <= 5, true);
+  }
+
+  console.log("--- a rolling backup can recover when the mirror and snapshot cannot ---");
+  {
+    const rich = mkState(30, 8);
+    const e = env({ ls: rich });
+    await e.Store.autoBackup();
+    const backupName = JSON.parse(e.store["iron-ledger-backup-list"])[0];
+    // the mirror is gone and localStorage was wiped
+    delete e.disk[FILE];
+    delete e.store["fitness-app-v1"];
+    const after = env({ ls: {}, files: e.disk });
+    // carry the backup list across the "relaunch"
+    after.store["iron-ledger-backup-list"] = JSON.stringify([backupName]);
+    const src = await after.Store.recover();
+    eq("recovered from the daily backup", src, "daily backup");
+    eq("history came back", after.Store.state.workouts.length, 30);
+  }
+
+  console.log("--- lift targets persist and survive an export ===");
+  {
+    const e = env({ ls: mkState(2, 2) });
+    e.Store.setTarget(73, 140);
+    eq("target stored", e.Store.state.targets["73"].value, 140);
+    const file = e.Store.exportJSON();
+    // a nonsense value removes the target rather than storing it
+    eq("rejects nonsense", e.Store.setTarget(73, 0), null);
+    eq("...and clears it", e.Store.state.targets["73"], undefined);
+    e.Store.setTarget(73, 140);
+    const f = env({});
+    f.Store.importJSON(file, "merge");
+    eq("target survives a restore", f.Store.state.targets["73"].value, 140);
   }
 
   console.log("--- HEADLINE: a full update cycle loses nothing ---");

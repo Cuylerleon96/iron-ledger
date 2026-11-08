@@ -89,12 +89,23 @@ const Native = (() => {
     }
   }
 
+  async function deleteNamed(name) {
+    if (!has) return false;
+    try {
+      await waitReady();
+      await withTimeout(FS.deleteFile(fileOpts(name)), 8000, "deleteFile");
+      return true;
+    } catch (e) { console.warn("native delete failed (" + name + "):", e && e.message); return false; }
+  }
+
   const write = (text) => writeNamed(FILE, text);
   const read = () => readNamed(FILE);
   const writeSnapshot = (text) => writeNamed(SNAP_FILE, text);
   const readSnapshot = () => readNamed(SNAP_FILE);
-  const info = () => ({ available: has, dir: DIR, file: FILE, snapshot: SNAP_FILE });
+  const BAK_PREFIX = "iron-ledger-backup-";
+  const info = () => ({ available: has, dir: DIR, file: FILE, snapshot: SNAP_FILE, backupPrefix: BAK_PREFIX });
 
-  return { available: has, write, read, writeNamed, readNamed, writeSnapshot, readSnapshot, info, DIR, FILE, SNAP_FILE };
+  return { available: has, write, read, writeNamed, readNamed, deleteNamed,
+           writeSnapshot, readSnapshot, info, DIR, FILE, SNAP_FILE, BAK_PREFIX };
 })();
 if (typeof module !== "undefined") module.exports = Native;
