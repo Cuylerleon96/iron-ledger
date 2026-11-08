@@ -1,14 +1,15 @@
 {
-  "versionCode": 5,
-  "versionName": "1.0.4",
+  "versionCode": 6,
+  "versionName": "1.0.5",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "47a195710c8d1b25e2c552d90910068924dab69e05748c506f07dcd47d1904cb",
-  "sizeBytes": 3231546,
+  "sha256": "d533a1fa2abcfe216f252f51c1a2b999558b477d05ccb25424bcd668cac1fb5f",
+  "sizeBytes": 3232144,
   "published": "2026-11-08",
   "notes": [
-    "Body fat now syncs from your check-ins like weight does \u2014 no need to enter it twice",
-    "Editing weight or body fat in Profile records today's check-in, so there is one source of truth",
-    "Vitality scoring reads body fat from the log, not a stale profile copy",
-    "Includes 1.0.2 and 1.0.3: History sets visible, readable exercise chips, fresher update feed"
+    "RPE now shows up everywhere: per set in History, and averaged per exercise and per session",
+    "Plateau advice uses your RPE \u2014 near-maximal effort says deload, real headroom says add load",
+    "Your name appears on the dashboard instead of being collected and ignored",
+    "Removed unused leftover fields; every input now feeds something you can see",
+    "Includes 1.0.2-1.0.4: History sets visible, readable chips, fresher feed, body-composition sync"
   ]
 }
