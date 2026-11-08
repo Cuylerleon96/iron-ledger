@@ -436,5 +436,45 @@ console.log("\n=== 18. a new user must not be judged against weeks that predate 
     e.E.muscleGroups(oneSet, 28).Chest.setsPerWk, 1);
 }
 
+console.log("\n=== 19. first run: nothing may be invented or imposed ===");
+{
+  const e = env();
+  const blank = () => base({ profile: { name: "", sex: "M", heightCm: null, weightKg: null, bodyFatPct: null,
+    goalWeightKg: null, goalBodyFatPct: null, weeklyTarget: 4, units: "kg" } });
+  const noWeight = blank();
+  Object.assign(noWeight, { workouts: [{ id: "a", date: iso(1), note: "",
+    entries: [{ id: 73, name: "Barbell Bench Press", mode: "weight_reps", sets: [{ w: 80, r: 5 }] }] }] });
+
+  // a fabricated measurement presented as a real one is worse than no score
+  const s = e.E.attributes(noWeight, 28, 0).STR;
+  eq("no bodyweight means no Strength score", s.score, 0);
+  eq("...and it says why", s.detail.basis, "no weight");
+  eq("...and reports no weight rather than an invented one", s.detail.bw, 0);
+  eq("achievement ratios do not fire against a made-up weight",
+    e.E.achievementContext(noWeight).ratio.bench, 0);
+  // with a real weight it is unchanged
+  const w = blank();
+  Object.assign(w, { profile: Object.assign({}, blank().profile, { weightKg: 80 }),
+    workouts: noWeight.workouts });
+  truthy("a real bodyweight still scores", e.E.attributes(w, 28, 0).STR.score > 0);
+  eq("...using the weight given", e.E.attributes(w, 28, 0).STR.detail.bw, 80);
+
+  // the year chart must not plot months that predate the account
+  const young = blank();
+  Object.assign(young, { profile: Object.assign({}, blank().profile, { weightKg: 80 }),
+    workouts: [{ id: "a", date: iso(2), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 80, r: 5 }] }] }] });
+  eq("a 3-day-old account plots one month, not twelve", e.E.attributeHistory(young, 12).length, 1);
+  const old = blank();
+  Object.assign(old, { workouts: Array.from({ length: 12 }, (_, i) => ({ id: "w" + i, date: iso(i * 7), note: "",
+    entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] })) });
+  eq("a 3-month-old account plots three", e.E.attributeHistory(old, 12).length, 3);
+
+  // and a fresh install must not seed a workout into the user's log
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  eq("boot() no longer auto-seeds a session", /!S\.settings\.seeded && !S\.workouts\.length/.test(appSrc), false);
+  truthy("the Profile button still offers it deliberately", /d-seed/.test(appSrc));
+  truthy("the UI explains the missing bodyweight", /Strength is a ratio[^"]*Add your bodyweight/.test(appSrc));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

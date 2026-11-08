@@ -469,7 +469,14 @@ const Engine = (() => {
   }
 
   function strengthScore(state, ws) {
-    const bw = bodyweight(state) || 80;
+    /* No bodyweight, no ratio. This used to fall back to a hardcoded 80 kg and
+       then PRINT it — telling a user who had never entered a weight that his
+       bodyweight was 80 kg, and scoring his bench against it. A fabricated
+       measurement presented as a real one is worse than no score, so this reports
+       "no weight" and the UI asks for one, exactly like the other attributes do
+       when they have nothing to go on. */
+    const bw = bodyweight(state);
+    if (!(bw > 0)) return { score: 0, basis: "no weight", bw: 0, n: 0, lifts: {} };
     const sex = state.profile.sex || "M";
     const lifts = bestLifts(state, ws);
     const keys = Object.keys(lifts);
@@ -844,8 +851,12 @@ const Engine = (() => {
        over: 31 March minus one month is 3 March, so on the 29th-31st the year
        chart's months drifted, overlapped and repeated. */
     const anchorDay = Math.min(anchor.getDate(), 28);
+    // a month before the first logged session is not a zero month, it is not a
+    // month — plotting eleven of them drew a flat line then a spike
+    const firstDate = (state.workouts || []).map((w) => w.date).filter(Boolean).sort()[0] || null;
     for (let i = months - 1; i >= 0; i--) {
       const end = new Date(anchor.getFullYear(), anchor.getMonth() - i, anchorDay, 12, 0, 0, 0);
+      if (firstDate && dstr(end) < firstDate) continue;
       const offsetDays = Math.max(0, Math.round((anchor.getTime() - end.getTime()) / DAY));
       const a = attributes(state, 28, offsetDays);
       const scores = {};
@@ -1452,10 +1463,12 @@ const Engine = (() => {
       const dow = new Date(w.date + "T12:00:00").getDay();
       if (dow === 0 || dow === 6) weekend = true;
     }
-    const bw = bodyweight(state) || 80;
+    // same rule as strengthScore: a ratio needs a real weight, or the badge fires
+    // on a number the user never gave
+    const bw = bodyweight(state);
     const lifts = bestLifts(state, ws);
     const ratio = { bench: 0, squat: 0, dead: 0, ohp: 0, row: 0 };
-    for (const k of Object.keys(lifts)) if (k in ratio) ratio[k] = lifts[k] / bw;
+    if (bw > 0) for (const k of Object.keys(lifts)) if (k in ratio) ratio[k] = lifts[k] / bw;
     const mg = muscleGroups(state, 28);
     const trainedG = GROUP_ORDER.filter((g) => mg[g].setsPerWk > 0);
     const st = streaks(state);

@@ -1,13 +1,13 @@
 {
-  "versionCode": 24,
-  "versionName": "1.0.23",
+  "versionCode": 25,
+  "versionName": "1.0.24",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "a6436768a4902051d0003188cc5716487f6ad1961be99cda44b435eb19f36a92",
-  "sizeBytes": 3264947,
+  "sha256": "9202af4e931d9a929921a8a81fe3b59be9ede1f24f5969185442a2229df4768f",
+  "sizeBytes": 3265447,
   "published": "2026-11-08",
   "notes": [
-    "A new account is no longer judged against weeks that did not exist yet. Every weekly rate was divided by a full four weeks, so your first few sessions read as a huge shortfall against a month you were not there for. Three sessions in your first three days scored 28 out of 100; it now scores 80, because that is what doing everything right looks like",
-    "The same fix applies to Stamina, to Mobility, and to every muscle groups sets per week, so a first weeks training is measured against that week rather than averaged away across three weeks before you started",
-    "Once you have 28 days of history this changes nothing, and it cannot be gained either: the count starts at your very first logged session"
+    "Nothing is invented for a new account any more. With no bodyweight entered the app used to fall back to a hardcoded 80 kg AND PRINT IT, telling you your bodyweight was 80 kg and scoring your bench against it. Without a real weight Strength now says so and asks for one, exactly like the other attributes do when they have nothing to go on",
+    "A fresh install no longer seeds a workout into your log. It used to insert a real session on first run, so a new account charts, XP, badges, muscle bars and Discipline all counted training that never happened. Loading that session is still available on purpose in Profile",
+    "The year chart only plots months since your first logged session, instead of eleven empty months and a spike"
   ]
 }

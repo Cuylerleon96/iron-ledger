@@ -472,7 +472,9 @@
   function attrExplain(key, d) {
     const x = d.detail;
     switch (key) {
-      case "STR": return x.basis === "standards"
+      case "STR": return x.basis === "no weight"
+        ? "Strength is a ratio — how much you lift relative to how much you weigh. Add your bodyweight in Profile and this becomes a real score."
+        : x.basis === "standards"
         ? `Estimated 1RM on ${x.n} core lift${x.n > 1 ? "s" : ""} vs published bodyweight standards (bodyweight ${fmtW(U.w(x.bw))} ${U.label()}).`
         : x.basis === "estimated"
           ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.`
@@ -1376,8 +1378,12 @@
       Store.setSaveErrorHandler(() => toast("Storage is full — that change may not have been saved. Export a backup.", "warn", 9000));
     }
     buildIndex();
-    // first run: seed the example session so the app is not empty
-    if (!S.settings.seeded && !S.workouts.length && typeof SEED_WORKOUT !== "undefined") seedData();
+    /* No auto-seeding. This used to insert a real session on first run, so a
+       brand-new account's charts, XP, badges, muscle bars and Discipline all
+       counted a workout the user never did — data they did not enter, presented
+       as their own. The Profile button "Load my 7 Nov session" stays, so it is
+       available on purpose and never imposed. */
+    if (!S.settings.seeded) { S.settings.seeded = true; Store.save(true); }
     // award anything already earned (matters after a restore or import)
     const earned = Engine.newAchievements(S);
     if (earned.length) Store.unlock(earned);
