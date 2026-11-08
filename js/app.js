@@ -1953,7 +1953,7 @@
       ${bfBlock}
       ${measBlock}
       <div class="chart-host" id="bw-chart"></div>
-      <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmtW(U.w(b.weightKg))} ${U.label()}</span><span class="muted">${[b.bodyFatPct ? b.bodyFatPct + "%" : "", ...Engine.MEASURES.filter((m) => Engine.num(b[m.key]) > 0).map((m) => `${m.label} ${fmtW(U.len(Engine.num(b[m.key])))}${U.llab()}`)].filter(Boolean).join(" · ")}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
+      <div class="bw-list">${log.map((b) => `<div class="pr-row has-del"><span>${b.date}</span><span>${fmtW(U.w(b.weightKg))} ${U.label()}</span><span class="muted">${[b.bodyFatPct ? b.bodyFatPct + "%" : "", ...Engine.MEASURES.filter((m) => Engine.num(b[m.key]) > 0).map((m) => `${m.label} ${fmtW(U.len(Engine.num(b[m.key])))}${U.llab()}`)].filter(Boolean).join(" · ")}</span><button class="btn ghost tiny bdel" data-d="${b.date}" title="Remove" aria-label="Remove weigh-in ${b.date}">✕</button></div>`).join("")}</div>`;
     host.append(bw);
     Chart.line($("#bw-chart", bw), { points: (S.bodylog || []).map((b) => ({ x: b.date, y: U.w(b.weightKg) })), color: "#a878f8", unit: " " + U.label() });
     const bfHost = $("#bf-chart", bw);

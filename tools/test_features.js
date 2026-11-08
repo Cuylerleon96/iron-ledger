@@ -443,6 +443,25 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
   truthy("the has-del row is a 4-column grid whose name cell can shrink", /\.pr-row\.has-del \{ grid-template-columns: minmax\(0, 1fr\) auto auto auto; \}/.test(css));
   truthy("the logged-food ✕ gets a 48 px tap target without inflating the row", /\.pr-row\.has-del \.food-del::before/.test(css) && /width: 48px; height: 48px/.test(css));
 
+  // --- the bodyweight-log row: the same defect, the same inline fix ---
+  truthy("the bodyweight-log row keeps its ✕ inline (has-del modifier)", /<div class="pr-row has-del"><span>\$\{b\.date\}/.test(app));
+  truthy("the bodyweight-log ✕ carries an aria-label naming the weigh-in", /class="btn ghost tiny bdel" data-d="\$\{b\.date\}" title="Remove" aria-label="Remove weigh-in \$\{b\.date\}"/.test(app));
+  truthy("the bodyweight ✕ shares the 48 px tap target (has-del .bdel)", /\.pr-row\.has-del \.bdel::before/.test(css));
+
+  // --- .pr-row call-site census: three sites, each with its expected child count ---
+  const prSites = [...app.matchAll(/(?:class="pr-row( has-del)?"|class: "pr-row( has-del)?")/g)].map((m) => m[0]);
+  eq(".pr-row call-site census: three sites, in source order", prSites, ['class: "pr-row"', 'class="pr-row has-del"', 'class="pr-row has-del"']);
+  const kids = (tpl) => (tpl.match(/<span/g) || []).length + (tpl.match(/<button/g) || []).length;
+  const recentTpl = (app.match(/class: "pr-row" \},\s*`([\s\S]*?)`\)\)/) || [])[1] || "";
+  eq("Recent-records row has 3 children (name, best, date) — base grid, no ✕", kids(recentTpl), 3);
+  truthy("Recent-records row carries no delete control", !/<button/.test(recentTpl));
+  const foodTpl = (app.match(/class="pr-row has-del">([\s\S]*?)<\/div>'\)\.join/) || [])[1] || "";
+  eq("logged-food row has 4 children (3 cells + ✕)", kids(foodTpl), 4);
+  truthy("logged-food ✕ is named", /aria-label="Remove '/.test(foodTpl));
+  const bwTpl = (app.match(/class="pr-row has-del">(<span>\$\{b\.date\}[\s\S]*?)<\/div>`\)\.join/) || [])[1] || "";
+  eq("bodyweight-log row has 4 children (3 cells + ✕)", kids(bwTpl), 4);
+  truthy("bodyweight ✕ is named", /aria-label="Remove weigh-in \$\{b\.date\}"/.test(bwTpl));
+
   // --- the remaining pass: focus trap, Escape, heatmap text, small type ---
   const chart = fs.readFileSync(path.join(B, "js", "chart.js"), "utf8");
   const appSrc = app;

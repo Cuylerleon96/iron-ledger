@@ -1,11 +1,11 @@
 {
-  "versionCode": 58,
-  "versionName": "1.0.57",
+  "versionCode": 59,
+  "versionName": "1.0.58",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "41ae51f584734768f04489eb1dfd97662c80ca4b286915da4670c07606722c8e",
-  "sizeBytes": 3862447,
+  "sha256": "9d3155104497e55c88f393b8309af86aad402a96cebc594093483018829a5f6c",
+  "sizeBytes": 3862505,
   "published": "2026-11-08",
   "notes": [
-    "Nutrition: the remove \u2715 on a logged food now sits inline on its row, and the age prompt points to your birth year in Profile."
+    "The Profile bodyweight log's remove \u2715 now sits inline on its row and names what it deletes."
   ]
 }

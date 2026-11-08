@@ -333,16 +333,19 @@ main > * { min-width: 0; }
 /* ---------------- rows / lists ---------------- */
 .pr-row { display: grid; grid-template-columns: 1fr auto auto; gap: .5rem; align-items: center; padding: .32rem .3rem; font-size: .66rem; border-bottom: 2px dotted rgba(255, 255, 255, .14); }
 .pr-row:last-child { border-bottom: 0; }
-/* A .pr-row that carries a trailing delete control (the logged-food list). The
-   base grid is three columns, so a FOURTH child (the ✕) auto-placed onto a line
-   of its own as a full-width outlined box — the row looked broken. Four columns
-   keep the ✕ inline on the trailing edge, and minmax(0,1fr) lets the food name
-   wrap instead of shoving the ✕ down (checked at 320 px). The ✕ keeps the small
-   .btn.ghost.tiny look; a centred 48 px ::before gives it a 48 dp tap target
-   without inflating the row. */
+/* A .pr-row that carries a trailing delete control (the logged-food list and the
+   Profile bodyweight log). The base grid is three columns, so a FOURTH child (the
+   ✕) auto-placed onto a line of its own as a full-width outlined box — the row
+   looked broken. Four columns keep the ✕ inline on the trailing edge, and
+   minmax(0,1fr) lets the name cell wrap instead of shoving the ✕ down (checked at
+   320 px). The ✕ keeps the small .btn.ghost.tiny look; a centred 48 px ::before
+   gives it a 48 dp tap target without inflating the row. Applies to both the
+   logged-food ✕ (.food-del) and the bodyweight ✕ (.bdel). */
 .pr-row.has-del { grid-template-columns: minmax(0, 1fr) auto auto auto; }
-.pr-row.has-del .food-del { position: relative; }
-.pr-row.has-del .food-del::before {
+.pr-row.has-del .food-del,
+.pr-row.has-del .bdel { position: relative; }
+.pr-row.has-del .food-del::before,
+.pr-row.has-del .bdel::before {
   content: ""; position: absolute; left: 50%; top: 50%;
   width: 48px; height: 48px; transform: translate(-50%, -50%);
 }
