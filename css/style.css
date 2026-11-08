@@ -383,6 +383,7 @@ input[type="date"] { color-scheme: light; }
 .deload.ok   { color: #b8e0c0; }
 
 .target-line { font-size: .64rem; margin: .3rem 0 .15rem; line-height: 1.5; }
+.chart-cap { margin: .5rem 0 .1rem; }
 .target-line.up { color: #a8e878; }
 
 /* ---------------- update badge ---------------- */

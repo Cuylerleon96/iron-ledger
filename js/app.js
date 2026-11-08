@@ -1132,6 +1132,7 @@
         <label>Body fat %<input class="inp" id="p-bf" type="number" step="0.1" value="${p.bodyFatPct ?? ""}"></label>
         <p class="muted small grid-note">These two are read from your <b>bodyweight log</b> — editing them here records a check-in for today.</p>
         <label>Goal weight (${U.label()})<input class="inp" id="p-gw" type="number" step="0.1" value="${p.goalWeightKg ? U.w(p.goalWeightKg).toFixed(1) : ""}"></label>
+        <label>Goal body fat %<input class="inp" id="p-gbf" type="number" step="0.1" min="3" max="60" value="${p.goalBodyFatPct ?? ""}"></label>
         <label>Weekly session target<input class="inp" id="p-wt" type="number" value="${p.weeklyTarget ?? 4}"></label>
         <label>Units<select class="inp" id="p-u"><option value="kg" ${U.kg ? "selected" : ""}>Kilograms</option><option value="lb" ${!U.kg ? "selected" : ""}>Pounds</option></select></label>
       </div>
@@ -1140,16 +1141,32 @@
 
     const bw = el("section", { class: "card" });
     const log = [...(S.bodylog || [])].reverse().slice(0, 30);
+    const bfp = Engine.bodyFatProgress(S);
+    const bfReadings = (S.bodylog || []).filter((b) => Engine.num(b.bodyFatPct) > 0)
+      .slice().sort((a, b) => a.date.localeCompare(b.date));
+    const floor = Engine.ESSENTIAL_BF[p.sex === "F" ? "F" : "M"];
+    const bfBlock = (bfp || bfReadings.length >= 2) ? `
+      ${bfp ? `<p class="target-line ${bfp.met ? "up" : ""}">Body-fat goal <b>${fmtW(bfp.goal)}%</b>${
+        bfp.current != null
+          ? ` · now <b>${fmtW(bfp.current)}%</b> (${Math.round(bfp.pct)}%)` +
+            (bfp.change != null ? ` · ${bfp.change > 0 ? "+" : ""}${fmtW(bfp.change)} pts since ${bfp.from}` : "") +
+            (bfp.met ? " · met" : ` · ${fmtW(Math.abs(bfp.remaining))} pts to go`)
+          : " · no body-fat check-in yet"}</p>
+        ${bfp.belowEssential ? `<p class="muted small">Under about ${floor}% is below the essential-fat floor — not a level anyone holds.</p>` : ""}` : ""}
+      ${bfReadings.length >= 2 ? `<p class="muted small chart-cap">Body fat % over time</p><div class="chart-host" id="bf-chart"></div>` : ""}` : "";
     bw.innerHTML = `
       <div class="card-head"><h3>Bodyweight log</h3><span class="muted">${(S.bodylog || []).length} check-ins</span></div>
       <div class="row"><input class="inp" type="date" id="b-date" value="${today()}" style="max-width:160px">
         <input class="inp" id="b-w" type="number" step="0.1" placeholder="Weight (${U.label()})" style="max-width:140px">
         <input class="inp" id="b-bf" type="number" step="0.1" placeholder="Body fat %" style="max-width:130px">
         <button class="btn" id="b-add">Log</button></div>
+      ${bfBlock}
       <div class="chart-host" id="bw-chart"></div>
       <div class="bw-list">${log.map((b) => `<div class="pr-row"><span>${b.date}</span><span>${fmtW(U.w(b.weightKg))} ${U.label()}</span><span class="muted">${b.bodyFatPct ? b.bodyFatPct + "%" : ""}</span><button class="btn ghost tiny bdel" data-d="${b.date}">✕</button></div>`).join("")}</div>`;
     host.append(bw);
     Chart.line($("#bw-chart", bw), { points: (S.bodylog || []).map((b) => ({ x: b.date, y: U.w(b.weightKg) })), color: "#a878f8", unit: " " + U.label() });
+    const bfHost = $("#bf-chart", bw);
+    if (bfHost) Chart.line(bfHost, { points: bfReadings.map((b) => ({ x: b.date, y: Engine.num(b.bodyFatPct) })), color: "#e878a8", unit: "%", fillArea: false });
 
     const upd = el("section", { class: "card" });
     upd.innerHTML = `
@@ -1200,10 +1217,18 @@
         if (bfPct) p.bodyFatPct = bfPct;
       }
       p.goalWeightKg = g("#p-gw") ? U.wi(parseFloat(g("#p-gw"))) : null;
+      const gbf = parseFloat(g("#p-gbf"));
+      p.goalBodyFatPct = isFinite(gbf) && gbf > 0 ? Math.max(1, Math.min(70, gbf)) : null;
       p.weeklyTarget = parseInt(g("#p-wt"), 10) || 4;
       p.units = g("#p-u");
       Store.save(true);
-      toast(wKg ? "Saved — recorded a check-in for today" : "Profile saved", "good");
+      // Factual, and only when it applies: a body-fat target under the essential
+      // floor is not a target anyone can hold, so say so rather than accept it.
+      if (Engine.belowEssentialBF(p.goalBodyFatPct, p.sex)) {
+        toast(`Goal saved — but under about ${Engine.ESSENTIAL_BF[p.sex === "F" ? "F" : "M"]}% is below the essential-fat floor and can't be held long.`, "warn", 9000);
+      } else {
+        toast(wKg ? "Saved — recorded a check-in for today" : "Profile saved", "good");
+      }
       render();
     });
     $("#b-add", bw).addEventListener("click", () => {

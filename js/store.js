@@ -10,7 +10,7 @@ const Store = (() => {
     createdAt: new Date().toISOString(),
     profile: {
       name: "", sex: "M", heightCm: null,
-      weightKg: null, bodyFatPct: null, goalWeightKg: null,
+      weightKg: null, bodyFatPct: null, goalWeightKg: null, goalBodyFatPct: null,
       weeklyTarget: 4, units: "kg",
     },
     workouts: [],

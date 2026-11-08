@@ -147,6 +147,76 @@ console.log("=== consistency calendar ===");
   truthy("a day with no training is zeroed", Object.values(dm).some((d) => d.sessions === 0 && d.sets === 0));
 }
 
+console.log("=== body-fat goal ===");
+{
+  const e = env({});
+  eq("no goal means no progress object", e.E.bodyFatProgress(e.S.state), null);
+
+  const g = env({});
+  g.S.state.profile.goalBodyFatPct = 15;
+  g.S.state.profile.heightCm = 180;
+  g.S.addBodyLog({ date: iso(120), weightKg: 88, bodyFatPct: 24 });
+  g.S.addBodyLog({ date: iso(60), weightKg: 85, bodyFatPct: 20 });
+  g.S.addBodyLog({ date: iso(5), weightKg: 83, bodyFatPct: 17 });
+  const p = g.E.bodyFatProgress(g.S.state);
+  console.log(`        goal ${p.goal}% · now ${p.current}% · from ${p.start}% · ${Math.round(p.pct)}% there · ${p.remaining} pts to go`);
+  eq("goal is reported", p.goal, 15);
+  eq("current reading is the newest check-in", p.current, 17);
+  eq("it knows where it started", p.start, 24);
+  eq("progress is a real percentage", p.pct > 50 && p.pct < 100, true);
+  eq("remaining is positive while above goal", p.remaining > 0, true);
+  eq("the change is the honest delta", p.change, -7);
+
+  // the score must actually USE the goal
+  const toward = g.E.attributes(g.S.state, 28).VIT;
+  const away = env({});
+  away.S.state.profile.goalBodyFatPct = 15;
+  away.S.state.profile.heightCm = 180;
+  away.S.addBodyLog({ date: iso(120), weightKg: 78, bodyFatPct: 14 });
+  away.S.addBodyLog({ date: iso(5), weightKg: 88, bodyFatPct: 24 });
+  const awayV = away.E.attributes(away.S.state, 28).VIT;
+  console.log(`        VIT moving toward the goal = ${toward.score}, moving away = ${awayV.score}`);
+  truthy("moving toward the goal scores higher than moving away", toward.score > awayV.score);
+  truthy("the basis names the goal", /goal/.test(toward.detail.basis));
+
+  // a met goal reads as met
+  const done = env({});
+  done.S.state.profile.goalBodyFatPct = 15;
+  done.S.addBodyLog({ date: iso(60), weightKg: 84, bodyFatPct: 18 });
+  done.S.addBodyLog({ date: iso(3), weightKg: 80, bodyFatPct: 15 });
+  eq("a met goal is marked met", done.E.bodyFatProgress(done.S.state).met, true);
+
+  // no goal -> the healthy band still applies (previous behaviour intact)
+  const band = env({});
+  band.S.state.profile.bodyFatPct = 15;
+  band.S.state.profile.heightCm = 180;
+  band.S.state.profile.weightKg = 82;
+  // with no goal the healthy-band scoring is untouched (basis mentions body fat
+  // and NOT a goal)
+  const bandBasis = band.E.attributes(band.S.state, 28).VIT.detail.basis;
+  console.log(`        no-goal basis: "${bandBasis}"`);
+  truthy("without a goal the healthy-band wording is unchanged", /body fat/.test(bandBasis) && !/goal/.test(bandBasis));
+}
+
+console.log("=== the essential-fat floor ===");
+{
+  const e = env({});
+  eq("4% for a man is flagged", e.E.belowEssentialBF(4, "M"), true);
+  eq("15% for a man is not", e.E.belowEssentialBF(15, "M"), false);
+  eq("12% for a woman is flagged", e.E.belowEssentialBF(12, "F"), true);
+  eq("16% for a woman is not", e.E.belowEssentialBF(16, "F"), false);
+  eq("no value is not flagged", e.E.belowEssentialBF(null, "M"), false);
+}
+
+console.log("=== the body-fat goal survives an export ===");
+{
+  const a = env({});
+  a.S.state.profile.goalBodyFatPct = 14;
+  const f = env({});
+  f.S.importJSON(a.S.exportJSON(), "replace");
+  eq("goal survives a round trip", f.S.state.profile.goalBodyFatPct, 14);
+}
+
 console.log("=== muscle freshness ===");
 {
   const e = trained(2, { perWeek: 1 });

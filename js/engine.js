@@ -490,6 +490,13 @@ const Engine = (() => {
     return { score: s, sessions, expected, rate, streakDays: st.days, streakWeeks: st.weeks };
   }
 
+  /* Below this, fat is not leanness any more, it is the essential-fat floor:
+     widely cited as roughly 3-5% for men and 10-13% for women. A goal under the
+     lower bound is worth flagging rather than silently accepting, because the
+     app would otherwise help someone aim somewhere they cannot stay. */
+  const ESSENTIAL_BF = { M: 5, F: 13 };
+  const belowEssentialBF = (pct, sex) => num(pct) > 0 && num(pct) < ESSENTIAL_BF[sex === "F" ? "F" : "M"];
+
   function vitalityScore(state, asOfDate) {
     // asOfDate re-evaluates an earlier month using the measurements that existed
     // THEN. Without it a history point would silently borrow today's bodyweight.
@@ -510,7 +517,21 @@ const Engine = (() => {
     // Prefer the log (the source of truth); the profile copy is only a fallback.
     const bfLogged = log.filter((b) => num(b.bodyFatPct) > 0);
     const bf = bfLogged.length ? num(bfLogged[bfLogged.length - 1].bodyFatPct) : num(state.profile.bodyFatPct);
-    if (bf > 0) {
+    const bfGoal = num(state.profile.goalBodyFatPct);
+    if (bf > 0 && bfGoal > 0) {
+      // A goal turns "are you inside a healthy band" into "are you closing the
+      // gap", exactly as the weight goal does — and it is what a body-fat target
+      // is FOR, so it carries the same weight as the weight trend rather than the
+      // smaller band-weighting. Without a goal the healthy band still applies.
+      if (bfLogged.length >= 2) {
+        const start = num(bfLogged[0].bodyFatPct);
+        const total = Math.abs(start - bfGoal);
+        const done = total > 0 ? 1 - Math.abs(bf - bfGoal) / total : 1;
+        parts.push({ w: 0.5, v: clamp(done * 100) }); used.push("body fat trend vs goal");
+      } else {
+        parts.push({ w: 0.5, v: clamp(100 - Math.abs(bf - bfGoal) * 6) }); used.push("body fat vs goal");
+      }
+    } else if (bf > 0) {
       const sex = state.profile.sex || "M";
       const lo = sex === "F" ? 18 : 8, hi = sex === "F" ? 28 : 18;
       const v = bf < lo ? clamp(100 - (lo - bf) * 6) : bf > hi ? clamp(100 - (bf - hi) * 5) : 100;
@@ -715,6 +736,26 @@ const Engine = (() => {
       lines.push("");
     }
     return lines.join("\n").trim();
+  }
+
+  /* Progress toward the body-fat goal, mirroring how the weight goal reads.
+     Pure measurement vs target — no projection, no invented date. */
+  function bodyFatProgress(state) {
+    const goal = num(state.profile.goalBodyFatPct);
+    if (!(goal > 0)) return null;
+    const log = (state.bodylog || []).filter((b) => num(b.bodyFatPct) > 0)
+      .slice().sort((a, b) => a.date.localeCompare(b.date));
+    const cur = log.length ? num(log[log.length - 1].bodyFatPct) : num(state.profile.bodyFatPct);
+    if (!(cur > 0)) return { goal, current: null, pct: null, from: null, change: null, belowEssential: belowEssentialBF(goal, state.profile.sex) };
+    const start = log.length >= 2 ? num(log[0].bodyFatPct) : null;
+    const total = start != null ? Math.abs(start - goal) : null;
+    const pct = total > 0 ? clamp((1 - Math.abs(cur - goal) / total) * 100)
+      : (Math.abs(cur - goal) < 0.05 ? 100 : 0);
+    return { goal, current: cur, start, from: log.length ? log[0].date : null,
+             change: start != null ? Math.round((cur - start) * 10) / 10 : null,
+             remaining: Math.round((cur - goal) * 10) / 10,
+             pct, met: Math.abs(cur - goal) < 0.5,
+             belowEssential: belowEssentialBF(goal, state.profile.sex) };
   }
 
   /* ---------- consistency calendar ---------- */
@@ -1122,7 +1163,7 @@ const Engine = (() => {
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep,
     attributeHistory, volumeWeeks, deloadCheck, targetProgress,
-    exportNoteShorthand, dayMap, freshness,
+    exportNoteShorthand, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
   };
 })();
 if (typeof module !== "undefined") module.exports = Engine;
