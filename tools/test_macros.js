@@ -184,5 +184,107 @@ eq("unknown pace key is reported", M.paceRate("nope", 80).recognized, false);
 eq("energy adjustment -0.7 kg/wk", M.energyAdjustment(-0.7).kcalPerDay, -770);
 eq("7700 kcal/kg labelled a first approximation", /FIRST APPROXIMATION/.test(M.energyAdjustment(-0.7).source), true);
 
+console.log("\n--- (10) named training phases ---");
+eq("PHASES is an array", Array.isArray(M.PHASES), true);
+eq("PHASES has 6 ordered options", M.PHASES.length, 6);
+eq("phase order", M.PHASES.map((p) => p.key),
+  ["maintain", "lean-gain", "bulk", "cut-gradual", "cut-standard", "cut-aggressive"]);
+// every phase maps to a real pace band AND goal, with non-empty blurb + source
+M.PHASES.forEach((p) => {
+  const band = M.PACE_BANDS[p.pace];
+  eq(`phase ${p.key}: real pace band`, !!band, true);
+  eq(`phase ${p.key}: goal matches its pace band`, band && band.goal, p.goal);
+  eq(`phase ${p.key}: non-empty blurb`, typeof p.blurb === "string" && p.blurb.length > 10, true);
+  eq(`phase ${p.key}: non-empty source`, typeof p.source === "string" && p.source.length > 0, true);
+  eq(`phase ${p.key}: non-empty label`, typeof p.label === "string" && p.label.length > 0, true);
+});
+const PHASE_TEXT = M.PHASES.map((p) => p.label + " " + p.blurb).join(" ").toLowerCase();
+eq("phase copy uses no shaming words", /cheat|guilt|fail|bad\b/.test(PHASE_TEXT), false);
+// lean-gain strictly slower than bulk
+const leanPct = M.PACE_BANDS[M.PHASES[1].pace].pctPerWeek;
+const bulkPct = M.PACE_BANDS[M.PHASES[2].pace].pctPerWeek;
+eq("lean-gain slower than bulk (pct)", leanPct < bulkPct, true);
+eq("lean-gain kg/wk slower than bulk at 80 kg",
+  M.paceRate(M.PHASES[1].pace, 80).kgPerWeek < M.paceRate(M.PHASES[2].pace, 80).kgPerWeek, true);
+// gradual < standard < aggressive
+const cgPct = M.PACE_BANDS[M.PHASES[3].pace].pctPerWeek;
+const csPct = M.PACE_BANDS[M.PHASES[4].pace].pctPerWeek;
+const caPct = M.PACE_BANDS[M.PHASES[5].pace].pctPerWeek;
+eq("gradual < standard < aggressive", cgPct < csPct && csPct < caPct, true);
+eq("gradual cut uses loss-slow", M.PHASES[3].pace, "loss-slow");
+eq("standard cut uses loss-moderate", M.PHASES[4].pace, "loss-moderate");
+eq("aggressive cut uses loss-fast", M.PHASES[5].pace, "loss-fast");
+
+console.log("\n--- (11) phaseFor / recommendedPhase / resolvePhase ---");
+eq("phaseFor('bulk') label", M.phaseFor("bulk").label, "Bulk");
+eq("phaseFor('lean-gain') goal", M.phaseFor("lean-gain").goal, "gain");
+eq("phaseFor unknown -> null", M.phaseFor("nope"), null);
+eq("recommendedPhase(gain) default = lean-gain", M.recommendedPhase({ goal: "gain" }).key, "lean-gain");
+eq("recommendedPhase(lose) default = cut-gradual", M.recommendedPhase({ goal: "lose" }).key, "cut-gradual");
+eq("recommendedPhase(maintain) = maintain", M.recommendedPhase({ goal: "maintain" }).key, "maintain");
+eq("recommendedPhase({}) defaults to maintain", M.recommendedPhase({}).key, "maintain");
+eq("recommendedPhase states a reason",
+  typeof M.recommendedPhase({ goal: "gain" }).reason === "string" && M.recommendedPhase({ goal: "gain" }).reason.length > 0, true);
+// phase KEY wins over goal+pace when both are given
+eq("resolvePhase by key", M.resolvePhase("bulk").key, "bulk");
+eq("resolvePhase: key wins over conflicting goal+pace", M.resolvePhase({ phase: "bulk", goal: "lose", pace: "loss-fast" }).key, "bulk");
+eq("resolvePhase by pace", M.resolvePhase({ pace: "loss-moderate" }).key, "cut-standard");
+eq("resolvePhase by goal alone -> recommended", M.resolvePhase({ goal: "gain" }).key, "lean-gain");
+eq("resolvePhase unknown key is reported", M.resolvePhase("nope").recognized, false);
+
+console.log("\n--- (12) goal-conflict check ---");
+// the owner's real profile: 70 -> 75 kg ; 12% -> 10% bf
+const CUYLER = { weightKg: 70, bodyFatPct: 12, goalWeightKg: 75, goalBodyFatPct: 10 };
+const gc = M.goalConflict(CUYLER);
+eq("the owner conflict FIRES", gc.conflict, true);
+eq("the owner conflict kind", gc.kind, "gain-while-cutting-fat");
+// current LBM = 70*0.88 = 55.164090 ; goal LBM = 75*0.90 = 65.317302
+// requiredLeanChangeKg = 10.153212
+near("requiredLeanChangeKg ~= +10.1 (within 0.2)", gc.requiredLeanChangeKg, 10.1, 0.2);
+near("requiredLeanChangeKg exact 10.1532", gc.requiredLeanChangeKg, 10.1532, 0.01);
+eq("note mentions lean mass", /lean mass/i.test(gc.note), true);
+eq("note names which goal to lead", /lead with/i.test(gc.note), true);
+eq("note says the goals pull against each other", /pull against each other/i.test(gc.note), true);
+eq("conflict carries a source", typeof gc.source === "string" && gc.source.length > 0, true);
+// compatible pair: weight down AND body fat down
+const compat = M.goalConflict({ weightKg: 90, bodyFatPct: 25, goalWeightKg: 82, goalBodyFatPct: 18 });
+eq("compatible pair does NOT fire", compat.conflict, false);
+eq("compatible pair kind is null", compat.kind, null);
+// not enough data — no invented value
+const nodata = M.goalConflict({ weightKg: 80, goalWeightKg: 85, bodyFatPct: 20 });
+eq("missing goal body fat -> no conflict", nodata.conflict, false);
+eq("missing goal body fat -> reason", nodata.reason, "not enough data");
+eq("missing goal body fat -> no invented lean change", nodata.requiredLeanChangeKg, null);
+eq("missing current body fat -> not enough data",
+  M.goalConflict({ weightKg: 80, goalWeightKg: 85, goalBodyFatPct: 15 }).reason, "not enough data");
+// lose weight while gaining fat -> flagged
+const badpair = M.goalConflict({ weightKg: 90, bodyFatPct: 20, goalWeightKg: 80, goalBodyFatPct: 26 });
+eq("lose-weight/gain-fat fires", badpair.conflict, true);
+eq("lose-weight/gain-fat kind", badpair.kind, "lose-while-gaining-fat");
+// the "large" threshold is labelled an arrangement
+eq("large threshold value", M.LARGE_LEAN_CHANGE_KG, 5);
+eq("large-threshold source says 'arrangement'", /arrangement/i.test(M.LARGE_LEAN_CHANGE_SOURCE), true);
+eq("the owner's required change is flagged large", gc.large, true);
+
+console.log("\n--- (13) training-informed activity factor ---");
+const af4 = M.activityFactor({}, { sessionsPerWeek: 4 });
+eq("4 sessions/wk -> 1.375", af4.pal, 1.375);
+eq("4 sessions/wk basis names the sessions", /4 training sessions\/week/.test(af4.basis), true);
+eq("1 session + 30 min cardio -> 1.2", M.activityFactor({}, { sessionsPerWeek: 1, cardioMinutesPerWeek: 30 }).pal, 1.2);
+const af0 = M.activityFactor({}, { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 });
+eq("0 training -> 1.2", af0.pal, 1.2);
+eq("0 training basis = 'no training logged'", af0.basis, "no training logged");
+const afUndef = M.activityFactor({});
+eq("missing training arg -> 1.2 (graceful)", afUndef.pal, 1.2);
+eq("missing training arg basis = 'no training logged'", afUndef.basis, "no training logged");
+eq("150 min cardio alone -> 1.375", M.activityFactor({}, { cardioMinutesPerWeek: 150 }).pal, 1.375);
+eq("activityFactor caveat is non-empty", typeof af4.caveat === "string" && af4.caveat.length > 0, true);
+eq("caveat calls it a weak estimate", /weak/i.test(af4.caveat), true);
+eq("caveat names the controller", /controller/i.test(af4.caveat), true);
+eq("activityFactor carries a source", typeof af4.source === "string" && af4.source.length > 0, true);
+// tdeeFallback default behaviour for callers that pass nothing — unchanged
+eq("tdeeFallback default pal still 1.2", M.tdeeFallback(2000).pal, 1.2);
+eq("tdeeFallback default kcal unchanged", M.tdeeFallback(2000).kcal, 2400);
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

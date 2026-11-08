@@ -38,6 +38,13 @@ const Macros = (() => {
     carbs:      "IOM DRI — carbohydrate RDA 130 g/day",
     pace:       "Cut-points are OUR arrangement of published ranges, not themselves published. " +
                 "Anchor: Garthe 2011 — ~1.4 %BW/wk did not add lean mass (men tended to lose it).",
+    phase:      "User-facing names for the SAME pace bands above; the bands are OUR arrangement of " +
+                "published ranges (see SOURCES.pace), not published themselves.",
+    training:   "WHO 2020 physical-activity guidelines (150-300 min/wk moderate activity); the " +
+                "conventional LOW PAL factors 1.2 (sedentary) and 1.375 (lightly active) are from " +
+                "FAO/WHO/UNU 2004.",
+    goalConflict: "Lean-mass arithmetic is definitional (LBM = weight x (1 - bf/100)). The 'large' " +
+                "cut-point is OUR arrangement, not a published number.",
   };
 
   /* ---------- constants ---------- */
@@ -328,6 +335,172 @@ const Macros = (() => {
     };
   };
 
+  /* ============================================================
+     ADDITIONS (additive only — plan()/rmr()/controller()/protein()/fat()/
+     carbs() above are untouched)
+     ============================================================ */
+
+  /* ---------- 1. NAMED TRAINING PHASES ----------
+     User-facing CHOICES that map onto the EXISTING pace bands — no new rates.
+     A phase is the pairing of a goal with one of the published-derived bands. */
+  const PHASES = [
+    { key: "maintain", label: "Maintain", goal: "maintain", pace: "maintain",
+      blurb: "Eating to stay about the same weight — enough to train and recover without drifting up or down.",
+      source: SOURCES.phase },
+    { key: "lean-gain", label: "Lean gain", goal: "gain", pace: "gain-slow",
+      blurb: "Gaining slowly, so most of what you add is muscle.",
+      source: SOURCES.phase },
+    { key: "bulk", label: "Bulk", goal: "gain", pace: "gain-fast",
+      blurb: "Gaining faster — quicker progress, but more of what you add is fat.",
+      source: SOURCES.phase },
+    { key: "cut-gradual", label: "Gradual cut", goal: "lose", pace: "loss-slow",
+      blurb: "Losing fat slowly, so you keep as much muscle as possible while it comes off.",
+      source: SOURCES.phase },
+    { key: "cut-standard", label: "Standard cut", goal: "lose", pace: "loss-moderate",
+      blurb: "A steady middle-speed cut — a good balance of visible progress and holding onto muscle.",
+      source: SOURCES.phase },
+    { key: "cut-aggressive", label: "Aggressive cut", goal: "lose", pace: "loss-fast",
+      blurb: "The fastest fat loss — and the most likely to cost you muscle.",
+      source: SOURCES.phase },
+  ];
+
+  const phaseByKey = (key) => PHASES.filter((p) => p.key === String(key || ""))[0] || null;
+  const phaseFor = (key) => {
+    const p = phaseByKey(key);
+    return p ? Object.assign({}, p) : null;
+  };
+
+  /* Default CHOICE for a goal direction, with the reason stated. */
+  const recommendedPhase = (inputs = {}) => {
+    const goal = (inputs && inputs.goal) || "maintain";
+    if (goal === "gain") {
+      const p = phaseFor("lean-gain");
+      p.reason = "Default for a gaining goal: the slowest gain band adds the least fat for the same training.";
+      return p;
+    }
+    if (goal === "lose") {
+      const p = phaseFor("cut-gradual");
+      p.reason = "Default for a cutting goal: the slowest loss band best preserves muscle.";
+      return p;
+    }
+    const p = phaseFor("maintain");
+    p.reason = "No gain or loss goal set, so the neutral band is the default.";
+    return p;
+  };
+
+  /* The UI may pass EITHER a phase key OR goal+pace. A phase KEY WINS if both are
+     given (it is the more specific, already-resolved choice). */
+  const resolvePhase = (sel = {}) => {
+    const asObj = (typeof sel === "string") ? { phase: sel } : (sel || {});
+    if (asObj.phase) {
+      const p = phaseByKey(asObj.phase);
+      if (!p) return { recognized: false, resolvedBy: "phase-key", key: String(asObj.phase),
+        reason: `Unknown phase key "${asObj.phase}".`, source: SOURCES.phase };
+      return Object.assign({ recognized: true, resolvedBy: "phase-key" }, p);
+    }
+    if (asObj.pace) {
+      const p = PHASES.filter((x) => x.pace === asObj.pace)[0] || null;
+      if (!p) return { recognized: false, resolvedBy: "pace", key: null,
+        reason: `No phase uses pace "${asObj.pace}".`, source: SOURCES.phase };
+      return Object.assign({ recognized: true, resolvedBy: "pace" }, p);
+    }
+    if (asObj.goal) {
+      return Object.assign({ recognized: true, resolvedBy: "goal" }, recommendedPhase(asObj));
+    }
+    return { recognized: false, resolvedBy: "none", key: null,
+      reason: "No phase key, pace or goal supplied.", source: SOURCES.phase };
+  };
+
+  /* ---------- 2. GOAL-CONFLICT CHECK ----------
+     A profile can carry two goals that pull in opposite directions. Compare the
+     DIRECTION of the weight goal against the DIRECTION of the body-fat goal. */
+  const LARGE_LEAN_CHANGE_KG = 5;
+  const LARGE_LEAN_CHANGE_SOURCE =
+    "Arrangement, not a published cut-point. Rationale: a trained lifter adds on the order of " +
+    "1-2 kg of lean mass in a normal 12-16 week gaining phase, and a body-fat measurement carries " +
+    "a few kg of error at these weights, so 5 kg sits clearly beyond one realistic phase.";
+
+  const goalConflict = (inputs = {}) => {
+    const src = SOURCES.goalConflict;
+    const num = (v) => (v == null || !isFinite(v)) ? null : Number(v);
+    const w = num(inputs.weightKg), gw = num(inputs.goalWeightKg);
+    const bf = num(inputs.bodyFatPct), gbf = num(inputs.goalBodyFatPct);
+    const fmt = (x) => (Math.round(x * 10) / 10).toFixed(1);
+
+    if (bf == null || gbf == null)
+      return { conflict: false, kind: null, requiredLeanChangeKg: null, large: false,
+        note: "Not enough data — both a current and a goal body-fat percentage are needed to " +
+              "compare the two goals. No value is invented.",
+        reason: "not enough data", source: src };
+    if (w == null || gw == null)
+      return { conflict: false, kind: null, requiredLeanChangeKg: null, large: false,
+        note: "Not enough data — both a current and a goal weight are needed to compare the two goals.",
+        reason: "not enough data", source: src };
+
+    const currentLBM = w * (1 - bf / 100);
+    const goalLBM = gw * (1 - gbf / 100);
+    const requiredLeanChangeKg = goalLBM - currentLBM;
+    const large = Math.abs(requiredLeanChangeKg) >= LARGE_LEAN_CHANGE_KG;
+    const wDir = Math.sign(gw - w);
+    const bfDir = Math.sign(gbf - bf);
+
+    if (wDir > 0 && bfDir < 0) {
+      const note =
+        `Gaining weight while reducing body fat implies adding about ${fmt(requiredLeanChangeKg)} kg of ` +
+        `pure lean mass while your fat mass goes DOWN. A real gaining phase adds some fat alongside the ` +
+        `muscle, so these two goals pull against each other${large ? ` — and this one is large` : ""}. ` +
+        `Lead with the weight goal (a gaining phase) and treat the ${gbf}% body-fat target as a separate ` +
+        `later cut; chasing both at once usually delivers neither.`;
+      return { conflict: true, kind: "gain-while-cutting-fat", requiredLeanChangeKg, large, note, source: src };
+    }
+    if (wDir < 0 && bfDir > 0) {
+      const note =
+        `Losing weight while body fat goes UP means the weight you lose is lean mass while you add fat — ` +
+        `the opposite of what most people want. Lead with preserving lean mass: keep protein high and keep ` +
+        `training, and re-check which goal is realistic.`;
+      return { conflict: true, kind: "lose-while-gaining-fat", requiredLeanChangeKg, large, note, source: src };
+    }
+    return { conflict: false, kind: null, requiredLeanChangeKg, large: false,
+      note: "Weight and body-fat goals point the same way (or one is unchanged) — no conflict.",
+      source: src };
+  };
+
+  /* ---------- 3. TRAINING-INFORMED STARTING ACTIVITY FACTOR ----------
+     Use the user's OWN LOGGED training to choose between the two CONVENTIONAL LOW
+     factors only. This is a WEAK signal, so it never becomes a continuous formula
+     and there is never a user-selected dropdown (self-selected PAL overestimates
+     TDEE by ~200-300 kcal/day). */
+  const TRAINING_CAVEAT =
+    "Weak, low-range estimate: a PAL derived from logged training is systematically biased and " +
+    "individual-level error runs ~50-60%. It only chooses between the two lowest conventional " +
+    "factors (1.2 sedentary / 1.375 light). Once weigh-ins exist the closed-loop controller " +
+    "supersedes this starting value.";
+
+  const activityFactor = (inputs = {}, training = {}) => {
+    const t = training || {};
+    const s = (t.sessionsPerWeek == null || !isFinite(t.sessionsPerWeek)) ? 0 : Number(t.sessionsPerWeek);
+    const c = (t.cardioMinutesPerWeek == null || !isFinite(t.cardioMinutesPerWeek)) ? 0 : Number(t.cardioMinutesPerWeek);
+    const hasTraining = s > 0 || c > 0;
+    const active = s >= 3 || c >= 150;          // 3 sessions, or the WHO 150 min/wk
+    const pal = active ? 1.375 : 1.2;
+
+    let basis;
+    if (!hasTraining) {
+      basis = "no training logged";
+    } else {
+      const parts = [];
+      if (s > 0) parts.push(`${s} training session${s === 1 ? "" : "s"}/week logged`);
+      if (c > 0) parts.push(`${c} min/week cardio logged`);
+      basis = parts.join("; ");
+      if (!active) basis += " — below the 3-session / 150-min thresholds, so the sedentary factor is used";
+    }
+    return {
+      pal, method: active ? "logged-training-light" : "logged-training-sedentary",
+      basis, thresholds: { sessionsPerWeek: 3, cardioMinutesPerWeek: 150 },
+      source: SOURCES.training, caveat: TRAINING_CAVEAT,
+    };
+  };
+
   return {
     /* constants */
     KCAL_PER_KG, KCAL_PER_KG_SOURCE, CARB_FLOOR, PROTEIN_FLOOR_G_PER_KG, FAT_FLOOR_G_PER_KG,
@@ -344,6 +517,10 @@ const Macros = (() => {
     protein, fat, carbs,
     /* orchestration */
     refuse, warningsFor, plan, bmi, paceTempo, defaultPace,
+    /* additions: named phases, goal conflict, training-informed activity factor */
+    PHASES, phaseFor, recommendedPhase, resolvePhase,
+    goalConflict, LARGE_LEAN_CHANGE_KG, LARGE_LEAN_CHANGE_SOURCE,
+    activityFactor, TRAINING_CAVEAT,
   };
 })();
 if (typeof module !== "undefined") module.exports = Macros;
