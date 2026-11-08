@@ -1,11 +1,11 @@
 {
-  "versionCode": 44,
-  "versionName": "1.0.43",
+  "versionCode": 45,
+  "versionName": "1.0.44",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d2617230484a29787dcb56a25f7adb74566720ec887fc1ee5666e081d7b589a7",
-  "sizeBytes": 3298354,
+  "sha256": "602179da3b53e901b505bfcb287f6edd096ecaeb59a09c7c5398d60aa0e51348",
+  "sizeBytes": 3298586,
   "published": "2026-11-08",
   "notes": [
-    "Titles now run all the way up - the ladder used to stall with one title covering 23 levels."
+    "Deleting a custom exercise no longer leaves stray settings behind, and no longer writes a setting you never made."
   ]
 }

@@ -834,8 +834,10 @@ console.log("\n=== 29. custom exercises can be renamed and deleted (item 3) ==="
   /* Store.updateCustom / deleteCustom existed but were never called from the UI,
      so a typo (or a notes-importer fuzzy match) was permanent and kept feeding
      the muscle-group analysis. The detail modal now offers both, and deleting
-     DETACHES the logged sets (keeps history, stops the analysis pollution)
-     rather than blocking. */
+     removes every key the exercise owned (target + override) while KEEPING the
+     logged sets — history is never rewritten. With the override gone, exInfo()
+     falls back to ["Core"], so those sets keep counting (as Core) instead of
+     being detached. */
   const h = appEnv({});
   h.A.buildIndex();
   h.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
@@ -853,7 +855,7 @@ console.log("\n=== 29. custom exercises can be renamed and deleted (item 3) ==="
   h.A.deleteCustomEx("uz");
   eq("delete removes it from the custom list", h.S.state.custom.length, 0);
   eq("but keeps the logged set (detach, not silent data loss)", h.S.state.workouts[0].entries.length, 1);
-  eq("and stops it feeding the muscle analysis", h.E.exGroups(h.S.state, "uz"), []);
+  eq("and keeps counting as its fallback group", h.E.exGroups(h.S.state, "uz"), ["Core"]);
   // the modal actually wires the controls (not a dead control)
   const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
   truthy("the detail modal embeds the custom controls", /\$\{customControlsHTML\(id\)\}/.test(src));
@@ -1096,6 +1098,66 @@ console.log("\n=== 35. the title ladder reaches the top without stalling ===");
   const xpToReach = (L) => { let lo = 0, hi = 1e9; while (lo < hi) { const m = Math.floor((lo + hi) / 2); if (e.E.levelInfo(m).level >= L) hi = m; else lo = m + 1; } return lo; };
   eq("level 31 (Legend) needs 318,650 XP", xpToReach(31), 318650);
   eq("level 46 (Immortal) needs 793,266 XP", xpToReach(46), 793266);
+}
+
+console.log("\n=== 36. deleting a custom exercise leaves no stray keys (it used to write one) ===");
+{
+  /* The delete path cleaned up only the definition. Two things stayed keyed to
+     the dead id — state.targets[id] (a per-exercise goal) and state.overrides[id]
+     (mode/effort weight) — and it also WROTE state.overrides[id] = {g:[]} even
+     when none existed, a setting the user never made. Now BOTH keys are removed
+     and nothing else is touched. */
+  const e = env();
+  e.S.reset();
+  e.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
+  e.S.setTarget("uz", 60);                              // per-exercise goal
+  e.S.setOverride("uz", { mode: "time", weight: 0.9 }); // mode + effort weight
+  e.S.upsertWorkout({ id: "wz", date: "2026-11-01", entries: [{ id: "uz", name: "Typo Press", mode: "time", sets: [{ w: 0, r: 0 }] }] });
+  // snapshot everything EXCEPT custom/overrides/targets to prove nothing else moved
+  const rest = (s) => JSON.stringify({ workouts: s.workouts, bodylog: s.bodylog, achievements: s.achievements, profile: s.profile, settings: s.settings });
+  const beforeRest = rest(e.S.state);
+  eq("setup: target was set", !!e.S.state.targets["uz"], true);
+  eq("setup: override was set", JSON.stringify(e.S.state.overrides["uz"]), JSON.stringify({ mode: "time", weight: 0.9 }));
+
+  e.S.deleteCustom("uz");
+  eq("the definition is gone", e.S.state.custom.length, 0);
+  eq("the per-exercise target is removed", "uz" in e.S.state.targets, false);
+  eq("the mode/weight override is removed", "uz" in e.S.state.overrides, false);
+  eq("...no override key is left for the dead id", Object.keys(e.S.state.overrides), []);
+  eq("nothing else changed", rest(e.S.state), beforeRest);
+  eq("the logged session is untouched", e.S.state.workouts.length, 1);
+}
+
+console.log("\n=== 37. deleting a custom exercise never CREATES an override ===");
+{
+  /* The old path wrote overrides[id] = {g:[]} unconditionally, so deleting an
+     exercise that had NO override still created one — a write the user never
+     asked for. */
+  const e = env();
+  e.S.reset();
+  e.S.addCustom({ id: "nz", n: "No Override", c: "Legs", p: ["Quads"], s: [], e: [], m: "reps", g: ["Legs"], d: "" });
+  eq("setup: it starts with no override", "nz" in e.S.state.overrides, false);
+  e.S.deleteCustom("nz");
+  eq("no overrides key is created for it", "nz" in e.S.state.overrides, false);
+  eq("and the overrides map is still empty", Object.keys(e.S.state.overrides).length, 0);
+}
+
+console.log("\n=== 38. a deleted exercise's logged sets keep counting (as the fallback group) ===");
+{
+  /* The observed consequence of removing the override, reported with numbers:
+     the deleted exercise's logged sets are no longer detached — exInfo() falls
+     back to ["Core"], so they count under Core. The exercise's OWN group is lost
+     with its definition, so this is a generic bucket, not its real one. */
+  const e = env();
+  e.S.reset();
+  e.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
+  e.S.upsertWorkout({ id: "wz", date: "2026-11-01", entries: [{ id: "uz", name: "Typo Press", mode: "weight_reps", sets: [{ w: 40, r: 10, rpe: 8 }, { w: 40, r: 10, rpe: 8 }, { w: 40, r: 10, rpe: 8 }] }] });
+  const chestBefore = e.E.muscleGroups(e.S.state, 4000).Chest.totalSets;
+  e.S.deleteCustom("uz");
+  const mg = e.E.muscleGroups(e.S.state, 4000);
+  eq("the deleted workout is still in the log", e.S.state.workouts.length, 1);
+  eq("the three sets now count under Core", mg.Core.totalSets, 3);
+  eq("...and no longer under the exercise's original group", mg.Chest.totalSets < chestBefore, true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

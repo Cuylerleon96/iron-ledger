@@ -195,12 +195,22 @@ const Store = (() => {
     state.custom = state.custom.filter((x) => x.id !== id);
     // Past sessions KEEP their sets. Each entry carries its own name and mode, so
     // the history still renders correctly — and silently rewriting training the
-    // user already logged is data loss they never asked for. But the deleted id
-    // must stop polluting the muscle-group analysis: exInfo() falls back to a
-    // default with g:["Core"], so every orphaned set would keep scoring into Core
-    // forever. An explicit empty group override DETACHES the leftover history
-    // from the analysis while the sets stay in the log.
-    state.overrides[id] = Object.assign({}, state.overrides[id], { g: [] });
+    // user already logged is data loss they never asked for.
+    // Everything else keyed to this exercise id goes with the definition: a
+    // per-exercise target and any mode/weight override belong to the exercise,
+    // and once it is gone nothing reads them, so they are dangling data keyed to
+    // an id that no longer exists. The old code instead WROTE
+    // state.overrides[id] = {g:[]} — which also CREATED an override for an
+    // exercise that never had one, a write the user never asked for.
+    // Consequence for the analysis, now that the override is gone: exInfo()
+    // falls back to its default group ["Core"], so the deleted exercise's
+    // already-logged sets keep counting toward a group (Core) rather than being
+    // silently detached. That matches the standing rule that history is never
+    // rewritten — the user really did perform the work — but the fallback group
+    // is generic, so a deleted Chest exercise's sets land under Core. Measured
+    // in test_mathfixes section 36.
+    delete state.targets[id];
+    delete state.overrides[id];
     save(true);
     allowShrink = false;
   }

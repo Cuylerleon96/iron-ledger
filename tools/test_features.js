@@ -218,7 +218,7 @@ console.log("=== an empty account has an empty calendar ===");
   eq("no sessions means no calendar, not 371 blanks", Object.keys(empty.E.dayMap(empty.S.state, 371)).length, 0);
 }
 
-console.log("=== deleting a custom exercise detaches its logged sets ===");
+console.log("=== deleting a custom exercise keeps its logged sets (they count as the fallback group) ===");
 {
   const e = env({});
   e.S.addCustom({ id: "uz", n: "Typo Machien Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
@@ -228,7 +228,11 @@ console.log("=== deleting a custom exercise detaches its logged sets ===");
   eq("it is gone from the custom list", e.S.state.custom.length, 0);
   eq("its logged sets stay on the workout (no silent data loss)", e.S.state.workouts.length, 1);
   eq("...and the entries are untouched", e.S.state.workouts[0].entries.length, 1);
-  eq("it no longer contributes any muscle group", e.E.exGroups(e.S.state, "uz"), []);
+  // The override is removed with the definition (no dangling key), so exInfo()
+  // falls back to its default group ["Core"]. History is never rewritten: the
+  // logged work keeps counting instead of being detached. (Was: an explicit
+  // g:[] override detached it. See test_mathfixes section 36 for the counts.)
+  eq("it keeps counting as its fallback group", e.E.exGroups(e.S.state, "uz"), ["Core"]);
 }
 
 console.log("=== body-fat goal ===");
