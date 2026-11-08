@@ -1,16 +1,11 @@
 {
-  "versionCode": 13,
-  "versionName": "1.0.12",
+  "versionCode": 14,
+  "versionName": "1.0.13",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "a0ac53650cb9d8bd7f0c42ce54fc024f5d4a82fbb12a6f58b4ac5efd5c9ae581",
-  "sizeBytes": 3244442,
+  "sha256": "a8bdc2715859e487b5a82be24bdd98896ba02aac761556e11042b690525d7dba",
+  "sizeBytes": 3244612,
   "published": "2026-11-08",
   "notes": [
-    "Export JSON and Export CSV now actually work on Android. They were doing nothing at all: a web-style download is a no-op inside an app. They now write a real file and offer to send it where you like",
-    "Importing a backup now brings back your whole profile - name, height, goal, units - instead of only the sessions",
-    "Fixed: a brand-new install showed Vitality 45, described as 'Decent', with nothing logged. It reads 0 like every other stat",
-    "Fixed: without rest logged the dashboard claimed '100% work time'. It now says nothing rather than inventing a number",
-    "Fixed: deleting a custom exercise erased it from sessions you had already logged",
-    "Deleting a session and restoring a backup now ask before they act; a full-storage save failure is now announced instead of silent"
+    "Wording fix: the app described its set counts as working sets, but warm-ups are not marked, so it counts every completed set. It now just says sets - same numbers, honest label"
   ]
 }
