@@ -218,7 +218,7 @@ console.log("=== an empty account has an empty calendar ===");
   eq("no sessions means no calendar, not 371 blanks", Object.keys(empty.E.dayMap(empty.S.state, 371)).length, 0);
 }
 
-console.log("=== deleting a custom exercise keeps its logged sets (they count as the fallback group) ===");
+console.log("=== deleting a custom exercise pins its group on the logged sets ===");
 {
   const e = env({});
   e.S.addCustom({ id: "uz", n: "Typo Machien Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
@@ -228,11 +228,17 @@ console.log("=== deleting a custom exercise keeps its logged sets (they count as
   eq("it is gone from the custom list", e.S.state.custom.length, 0);
   eq("its logged sets stay on the workout (no silent data loss)", e.S.state.workouts.length, 1);
   eq("...and the entries are untouched", e.S.state.workouts[0].entries.length, 1);
-  // The override is removed with the definition (no dangling key), so exInfo()
-  // falls back to its default group ["Core"]. History is never rewritten: the
-  // logged work keeps counting instead of being detached. (Was: an explicit
-  // g:[] override detached it. See test_mathfixes section 36 for the counts.)
-  eq("it keeps counting as its fallback group", e.E.exGroups(e.S.state, "uz"), ["Core"]);
+  eq("...with the set itself unrewritten",
+     [e.S.state.workouts[0].entries[0].sets[0].w, e.S.state.workouts[0].entries[0].sets[0].r], [40, 10]);
+  // The group is pinned ON THE ENTRY at delete time (no per-exercise key has to
+  // survive), so the history keeps crediting the muscle it actually trained
+  // instead of re-attributing to the generic ["Core"] fallback. (Was: the
+  // exercise's group was lost with its definition. See test_mathfixes §38.)
+  eq("the entry carries the group it trained", e.E.entryGroups(e.S.state, e.S.state.workouts[0].entries[0]), ["Chest"]);
+  eq("...and the bare dead id still resolves to the fallback (the entry is what is pinned)",
+     e.E.exGroups(e.S.state, "uz"), ["Core"]);
+  eq("so the logged work counts toward Chest", e.E.muscleGroups(e.S.state, 4000).Chest.totalSets, 1);
+  eq("...and NOT toward Core", e.E.muscleGroups(e.S.state, 4000).Core.totalSets, 0);
 }
 
 console.log("=== body-fat goal ===");

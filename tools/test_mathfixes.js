@@ -433,7 +433,7 @@ console.log("\n=== 17. bodyweight movements: the load is the body ===");
     workouts: [{ id: "a", date: iso(7), note: "", entries: [{ id: "b1", name: "Pull Up", mode: "weight_reps", sets: [{ r: 6, bwKg: BW }] }] },
                { id: "b", date: iso(0), note: "", entries: [{ id: "b1", name: "Pull Up", mode: "weight_reps", sets: [{ r: 10, bwKg: BW }] }] }] });
   const cmp = e.E.compareLast(two, "b1");
-  truthy("6 -> 10 reps reads as progress", cmp && cmp.better && cmp.est1RM.pct > 0);
+  truthy("6 -> 10 reps reads as progress", cmp && cmp.est1RM.pct > 0);
   truthy("it has a target percentage", e.E.targetProgress(two, "b1").pct > 0);
   truthy("it sets PRs", e.E.prTable(two).some((x) => x.prs.length > 0));
   truthy("it volume-loads the back", e.E.muscleGroups(two, 28).Back.setsPerWk > 0);
@@ -1100,32 +1100,45 @@ console.log("\n=== 35. the title ladder reaches the top without stalling ===");
   eq("level 46 (Immortal) needs 793,266 XP", xpToReach(46), 793266);
 }
 
-console.log("\n=== 36. deleting a custom exercise leaves no stray keys (it used to write one) ===");
+console.log("\n=== 36. deleting a custom exercise leaves no stray keys, and pins the group its work trained ===");
 {
-  /* The delete path cleaned up only the definition. Two things stayed keyed to
-     the dead id — state.targets[id] (a per-exercise goal) and state.overrides[id]
-     (mode/effort weight) — and it also WROTE state.overrides[id] = {g:[]} even
-     when none existed, a setting the user never made. Now BOTH keys are removed
-     and nothing else is touched. */
+  /* The delete path cleans up everything the exercise owned AND stamps the
+     group(s) its already-logged sets actually trained onto those entries, so the
+     muscle analysis keeps crediting the real muscle instead of re-attributing
+     the work to the generic ["Core"] fallback. History is NOT rewritten: no
+     weight, rep, distance, date or set is touched — only the entry's attribution
+     is pinned. */
   const e = env();
   e.S.reset();
   e.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
   e.S.setTarget("uz", 60);                              // per-exercise goal
-  e.S.setOverride("uz", { mode: "time", weight: 0.9 }); // mode + effort weight
-  e.S.upsertWorkout({ id: "wz", date: "2026-11-01", entries: [{ id: "uz", name: "Typo Press", mode: "time", sets: [{ w: 0, r: 0 }] }] });
-  // snapshot everything EXCEPT custom/overrides/targets to prove nothing else moved
-  const rest = (s) => JSON.stringify({ workouts: s.workouts, bodylog: s.bodylog, achievements: s.achievements, profile: s.profile, settings: s.settings });
-  const beforeRest = rest(e.S.state);
+  e.S.setOverride("uz", { mode: "weight_reps", weight: 0.9 }); // mode + effort weight
+  e.S.upsertWorkout({ id: "wz", date: "2026-11-01", entries: [{ id: "uz", name: "Typo Press", mode: "weight_reps", sets: [{ w: 40, r: 10, rpe: 8 }] }] });
+  const other = (s) => JSON.stringify({ bodylog: s.bodylog, achievements: s.achievements, profile: s.profile, settings: s.settings });
+  const otherBefore = other(e.S.state);
+  const workoutsBefore = JSON.parse(JSON.stringify(e.S.state.workouts));
   eq("setup: target was set", !!e.S.state.targets["uz"], true);
-  eq("setup: override was set", JSON.stringify(e.S.state.overrides["uz"]), JSON.stringify({ mode: "time", weight: 0.9 }));
+  eq("setup: override was set", JSON.stringify(e.S.state.overrides["uz"]), JSON.stringify({ mode: "weight_reps", weight: 0.9 }));
 
   e.S.deleteCustom("uz");
+
   eq("the definition is gone", e.S.state.custom.length, 0);
-  eq("the per-exercise target is removed", "uz" in e.S.state.targets, false);
-  eq("the mode/weight override is removed", "uz" in e.S.state.overrides, false);
-  eq("...no override key is left for the dead id", Object.keys(e.S.state.overrides), []);
-  eq("nothing else changed", rest(e.S.state), beforeRest);
-  eq("the logged session is untouched", e.S.state.workouts.length, 1);
+  eq("(a) state.targets[id] is gone", "uz" in e.S.state.targets, false);
+  eq("(a) state.overrides[id] is gone", "uz" in e.S.state.overrides, false);
+  eq("(a) ...and no override key is left for the dead id", Object.keys(e.S.state.overrides), []);
+  eq("(c) nothing outside the logged entries changed", other(e.S.state), otherBefore);
+
+  // (c) the ONE intended change: group + effort weight pinned on the entry
+  const expected = JSON.parse(JSON.stringify(workoutsBefore));
+  expected[0].entries[0].g = ["Chest"];
+  expected[0].entries[0].ew = 0.9;
+  eq("(c) the only change to any session is the pinned group + effort weight",
+     JSON.parse(JSON.stringify(e.S.state.workouts)), expected);
+
+  // (b) the logged set still counts as Chest, and NOT as Core
+  const mg = e.E.muscleGroups(e.S.state, 4000);
+  eq("(b) the logged set counts toward Chest", mg.Chest.totalSets, 1);
+  eq("(b) ...and NOT toward Core", mg.Core.totalSets, 0);
 }
 
 console.log("\n=== 37. deleting a custom exercise never CREATES an override ===");
@@ -1142,22 +1155,108 @@ console.log("\n=== 37. deleting a custom exercise never CREATES an override ==="
   eq("and the overrides map is still empty", Object.keys(e.S.state.overrides).length, 0);
 }
 
-console.log("\n=== 38. a deleted exercise's logged sets keep counting (as the fallback group) ===");
+console.log("\n=== 38. a deleted exercise's logged sets keep counting as the muscle they trained ===");
 {
-  /* The observed consequence of removing the override, reported with numbers:
-     the deleted exercise's logged sets are no longer detached — exInfo() falls
-     back to ["Core"], so they count under Core. The exercise's OWN group is lost
-     with its definition, so this is a generic bucket, not its real one. */
+  /* Reported as before/after with numbers. Before the fix, removing the override
+     made exInfo() fall back to ["Core"], so the deleted Chest exercise's three
+     sets silently re-attributed to Core. Now the group is pinned on the entry at
+     delete time, so Chest keeps the work and Core gets none of it. */
   const e = env();
   e.S.reset();
   e.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
   e.S.upsertWorkout({ id: "wz", date: "2026-11-01", entries: [{ id: "uz", name: "Typo Press", mode: "weight_reps", sets: [{ w: 40, r: 10, rpe: 8 }, { w: 40, r: 10, rpe: 8 }, { w: 40, r: 10, rpe: 8 }] }] });
-  const chestBefore = e.E.muscleGroups(e.S.state, 4000).Chest.totalSets;
+  const m0 = e.E.muscleGroups(e.S.state, 4000);
+  const chestBefore = m0.Chest.totalSets, coreBefore = m0.Core.totalSets, scoreBefore = m0.Chest.score;
   e.S.deleteCustom("uz");
   const mg = e.E.muscleGroups(e.S.state, 4000);
+  console.log(`     Chest raw sets ${chestBefore} -> ${mg.Chest.totalSets} · Core raw sets ${coreBefore} -> ${mg.Core.totalSets} · Chest score ${scoreBefore} -> ${mg.Chest.score}`);
   eq("the deleted workout is still in the log", e.S.state.workouts.length, 1);
-  eq("the three sets now count under Core", mg.Core.totalSets, 3);
-  eq("...and no longer under the exercise's original group", mg.Chest.totalSets < chestBefore, true);
+  eq("the three sets still count under Chest", mg.Chest.totalSets, 3);
+  eq("...and NOT under Core (which the override's removal used to cause)", mg.Core.totalSets, 0);
+  eq("the exercise's group is pinned on every one of its entries",
+     e.S.state.workouts[0].entries.every((en) => JSON.stringify(en.g) === JSON.stringify(["Chest"])), true);
+}
+
+console.log("\n=== 38b. an exercise re-created with the same id does not re-attribute old history ===");
+{
+  /* Custom ids are generated fresh ('u'+timestamp), but a restored backup can
+     bring the same id back. The OLD logged entries keep the group they were
+     stamped with; only NEW entries for that id follow the new definition. */
+  const e = env();
+  e.S.reset();
+  e.S.addCustom({ id: "uz", n: "Press", c: "Chest", p: ["Chest"], s: [], e: [], m: "weight_reps", g: ["Chest"], d: "" });
+  e.S.upsertWorkout({ id: "w1", date: "2026-11-01", entries: [{ id: "uz", name: "Press", mode: "weight_reps", sets: [{ w: 40, r: 10 }] }] });
+  e.S.deleteCustom("uz");
+  e.S.addCustom({ id: "uz", n: "New Press", c: "Legs", p: ["Quads"], s: [], e: [], m: "weight_reps", g: ["Legs"], d: "" });
+  const mg = e.E.muscleGroups(e.S.state, 4000);
+  eq("old history still credits Chest", mg.Chest.totalSets, 1);
+  eq("the re-created definition does not re-attribute it to Legs", mg.Legs.totalSets, 0);
+  e.S.upsertWorkout({ id: "w2", date: "2026-11-02", entries: [{ id: "uz", name: "New Press", mode: "weight_reps", sets: [{ w: 60, r: 5 }] }] });
+  const mg2 = e.E.muscleGroups(e.S.state, 4000);
+  eq("new work for the id follows the NEW definition", mg2.Legs.totalSets, 1);
+  eq("...and does not retro-credit Chest", mg2.Chest.totalSets, 1);
+}
+
+console.log("\n=== 38c. an entry for an id that no longer exists and was never stamped ===");
+{
+  /* Reachable only by importing a file with an entry but no definition. There is
+     nothing to preserve, so it falls back to the default group for a bare id —
+     the same behaviour exGroups has always had. */
+  const e = env();
+  e.S.reset();
+  e.S.upsertWorkout({ id: "w", date: "2026-11-01", entries: [{ id: "ghost", name: "Ghost", mode: "weight_reps", sets: [{ w: 50, r: 5 }] }] });
+  eq("no definition -> the bare id resolves to the default group", e.E.exGroups(e.S.state, "ghost"), ["Core"]);
+  eq("and its un-stamped entry resolves the same way",
+     e.E.entryGroups(e.S.state, e.S.state.workouts[0].entries[0]), ["Core"]);
+}
+
+console.log("\n=== 39. computed-but-unshown values: each is surfaced, or removed ===");
+{
+  /* The engine computed ten values that never reached the screen. Those with no
+     home were DELETED from the computation; those a screen now reads were kept.
+     This asserts the removal so they cannot quietly come back. */
+  const e = env();
+  e.S.reset();
+  e.S.addCustom({ id: "run", n: "Running", c: "Cardio", p: ["Legs"], s: [], e: [], m: "distance_time", g: ["Legs"], d: "" });
+  e.S.upsertWorkout({ id: "w1", date: "2026-11-01", entries: [{ id: "run", name: "Running", mode: "distance_time", sets: [{ d: 5000, t: 1800 }] }] });
+
+  const sm = e.E.summary(e.S.state);
+  const gone = ["reps", "timeMin", "restMin", "avgRest", "exercises", "sets"].filter((k) => k in sm);
+  eq("summary no longer carries any unshown value", gone, []);
+  eq("summary still carries the values a card reads",
+     ["sessions", "tonnage", "distKm", "density", "xp", "level", "title", "streak", "prs", "prsAll"].every((k) => k in sm), true);
+  eq("the newly surfaced distance is the real total (5 km)", sm.distKm, 5);
+
+  const st = e.E.staminaScore(e.S.state, e.E.windowWorkouts(e.S.state, 28));
+  eq("stamina no longer computes the unshown min/km pace", "paceMinPerKm" in st, false);
+  truthy("...but still reports the pace the END readout shows", st.paceKmh > 0);
+
+  e.S.upsertWorkout({ id: "w2", date: "2026-11-08", entries: [{ id: "run", name: "Running", mode: "distance_time", sets: [{ d: 6000, t: 1900 }] }] });
+  const cmp = e.E.compareLast(e.S.state, "run");
+  eq("compareLast carries no unread top/better", ["top", "better"].filter((k) => k in cmp), []);
+  truthy("...and still compares e1RM and volume", !!cmp.est1RM && !!cmp.volume);
+
+  const fr = e.E.freshness(e.S.state);
+  eq("freshness still reports setsThisWeek (now shown on the recovery chip)",
+     "setsThisWeek" in fr[Object.keys(fr)[0]], true);
+
+  // the two SURFACED values are actually rendered, in the existing cards
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the dashboard renders the distance chip from summary.distKm",
+    /s\.distKm > 0 \? `<span class="chip"[^`]*km logged/.test(appSrc));
+  truthy("the recovery chip's tooltip renders freshness.setsThisWeek",
+    /f\.setsThisWeek\} sets\/wk/.test(appSrc));
+}
+
+console.log("\n=== 40. deleting an exercise with no logged sets writes nothing onto history ===");
+{
+  const e = env();
+  e.S.reset();
+  e.S.addCustom({ id: "qz", n: "Never Used", c: "Back", p: ["Back"], s: [], e: [], m: "weight_reps", g: ["Back"], d: "" });
+  eq("setup: no workouts at all", e.S.state.workouts.length, 0);
+  e.S.deleteCustom("qz");
+  eq("no workout was invented", e.S.state.workouts.length, 0);
+  eq("and the custom list is empty", e.S.state.custom.length, 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

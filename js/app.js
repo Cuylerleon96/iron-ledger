@@ -420,6 +420,7 @@
           <div class="chips">
             <span class="chip">${s.sessions} ${pl(s.sessions, "session")}</span>
             <span class="chip">${term("tonnage", `${fmt(s.tonnage / 1000, 1)} t lifted`)}</span>
+            ${s.distKm > 0 ? `<span class="chip" title="Total distance logged across every session, all-time">${fmt(s.distKm, 1)} km logged</span>` : ""}
             ${s.density ? `<span class="chip" title="Share of all logged session time spent working rather than resting — all-time">${term("density", `${s.density}% work time (all-time)`)}</span>` : ""}
             <span class="chip">${s.streak.days}d streak</span>
             <span class="chip">${term("pr", `${s.prs} ${pl(s.prs, "PR")} this month`)}</span>
@@ -622,7 +623,7 @@
       const txt = f.fresh == null ? "no data" : f.days < 1 ? "today" : Math.round(f.days) + "d";
       const cls = f.fresh == null ? "none" : f.fresh >= 90 ? "ready" : f.fresh >= 55 ? "mid" : "worked";
       fr.append(el("span", { class: "fresh-chip " + cls,
-        title: f.fresh == null ? "Not trained in the last 4 weeks" : `Last trained ${Math.round(f.days * 10) / 10} days ago` },
+        title: f.fresh == null ? "Not trained in the last 4 weeks" : `Last trained ${Math.round(f.days * 10) / 10} days ago · ${f.setsThisWeek} sets/wk in the last 4 weeks` },
         `${esc(g)} <b>${txt}</b>`));
     });
     card.append(fr);

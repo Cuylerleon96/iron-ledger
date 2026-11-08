@@ -89,7 +89,8 @@ console.log("=== no invented numbers ===");
   const one = env({ "fitness-app-v1": JSON.stringify(noRest) });
   const st = one.E.summary(one.S.state, 28);
   eq("density is unknown when rest was not logged", st.density, null);
-  eq("...and no rest was counted", st.avgRest, null);
+  eq("...and no rest was counted on any entry",
+     one.S.state.workouts.every((w) => (w.entries || []).every((en) => one.E.entryStats(en).avgRest === null)), true);
   const withRest = env({ "fitness-app-v1": JSON.stringify(mk(2, 2)) });
   withRest.S.upsertWorkout({ id: "wr", date: "2026-11-07", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10, rest: 90 }] }] });
   const st2 = withRest.E.summary(withRest.S.state, 4000);

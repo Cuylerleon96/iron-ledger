@@ -1,11 +1,13 @@
 {
-  "versionCode": 45,
-  "versionName": "1.0.44",
+  "versionCode": 46,
+  "versionName": "1.0.45",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "602179da3b53e901b505bfcb287f6edd096ecaeb59a09c7c5398d60aa0e51348",
-  "sizeBytes": 3298586,
+  "sha256": "e374e90ca350e7550ea203dabf22a1e5f8f4662162709373863f11e7bcccc601",
+  "sizeBytes": 3299591,
   "published": "2026-11-08",
   "notes": [
-    "Deleting a custom exercise no longer leaves stray settings behind, and no longer writes a setting you never made."
+    "Deleting a custom exercise now keeps its logged sets counting toward the muscle they actually trained, instead of silently re-attributing them to Core.",
+    "The dashboard shows your all-time distance logged, and each recovery chip's tooltip names the sets per week behind it.",
+    "Removed numbers the app computed but never showed \u2014 all-time reps, total and average rest, work-time, your exercise count, min-per-km pace, and two unused comparison values."
   ]
 }

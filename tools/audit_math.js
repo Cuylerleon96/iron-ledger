@@ -195,7 +195,7 @@ console.log("\n[9] est1RM cap: do 12 and 20 reps at the same load look identical
   console.log(`     est1RM(100kg,  5 reps) = ${c}`);
   const s1 = mkState({ workouts: [wk(iso(7), [{ w: 100, r: 12 }]), wk(iso(0), [{ w: 100, r: 20 }])] });
   const cmp = e.E.compareLast(s1, 73);
-  console.log(`     100x12 -> 100x20 reads as: e1RM ${((cmp.est1RM.pct)).toFixed(1)}% (${cmp.est1RM.cur} vs ${cmp.est1RM.prev}), better=${cmp.better}`);
+  console.log(`     100x12 -> 100x20 reads as: e1RM ${((cmp.est1RM.pct)).toFixed(1)}% (${cmp.est1RM.cur} vs ${cmp.est1RM.prev}), better=${cmp.est1RM.pct > 0}`);
   if (a === b) finding(9, "Past 12 reps the e1RM is flat, so real progress reads as none",
     `100kg x 12 and 100kg x 20 both estimate ${a} — going from 12 to 20 reps at the same load shows as 0% and 'not better'. The cap is defensible; showing it as unchanged progress is not`);
   else check("distinct", a !== b, true);

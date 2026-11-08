@@ -192,23 +192,36 @@ const Store = (() => {
   }
   function deleteCustom(id) {
     allowShrink = true;
+    /* Capture what this exercise's logged work ACTUALLY trained — its muscle
+       group(s) and effort weight — from the live definition and override, BEFORE
+       either is removed. */
+    const eng = (typeof Engine !== "undefined") ? Engine : null;
+    const groups = eng
+      ? eng.exGroups(state, id)
+      : (((state.overrides || {})[id] && state.overrides[id].g)
+         || (state.custom.find((x) => x.id === id) || {}).g || []);
+    const ew = eng ? eng.exerciseWeight(state, id) : null;
+    /* Past sessions KEEP their sets untouched — the weight, reps, distance and
+       dates the user logged are never rewritten. What IS pinned is the
+       ATTRIBUTION of work already done: the group(s) it was trained as are
+       stamped onto each logged entry for this id, so the muscle analysis keeps
+       crediting the muscle that was actually trained. Without this the
+       definition's removal made exInfo() fall back to the generic ["Core"], so a
+       deleted Chest exercise's sets re-attributed to Core — a wrong answer on the
+       card this app is built around (measured in test_mathfixes §38).
+       Everything else keyed to this exercise goes with the definition: a
+       per-exercise target and any mode/weight override belong to the exercise,
+       and once it is gone nothing reads them — dangling data on a dead id. (The
+       old code instead WROTE state.overrides[id] = {g:[]}, which also CREATED an
+       override for an exercise that never had one.) */
+    if (groups.length || ew != null) {
+      for (const w of state.workouts || []) for (const en of w.entries || []) {
+        if (en.id !== id) continue;
+        if (groups.length && !Array.isArray(en.g)) en.g = groups.slice();
+        if (ew != null && en.ew == null) en.ew = ew;
+      }
+    }
     state.custom = state.custom.filter((x) => x.id !== id);
-    // Past sessions KEEP their sets. Each entry carries its own name and mode, so
-    // the history still renders correctly — and silently rewriting training the
-    // user already logged is data loss they never asked for.
-    // Everything else keyed to this exercise id goes with the definition: a
-    // per-exercise target and any mode/weight override belong to the exercise,
-    // and once it is gone nothing reads them, so they are dangling data keyed to
-    // an id that no longer exists. The old code instead WROTE
-    // state.overrides[id] = {g:[]} — which also CREATED an override for an
-    // exercise that never had one, a write the user never asked for.
-    // Consequence for the analysis, now that the override is gone: exInfo()
-    // falls back to its default group ["Core"], so the deleted exercise's
-    // already-logged sets keep counting toward a group (Core) rather than being
-    // silently detached. That matches the standing rule that history is never
-    // rewritten — the user really did perform the work — but the fallback group
-    // is generic, so a deleted Chest exercise's sets land under Core. Measured
-    // in test_mathfixes section 36.
     delete state.targets[id];
     delete state.overrides[id];
     save(true);

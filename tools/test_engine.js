@@ -25,7 +25,7 @@ Engine.GROUP_ORDER.forEach(g=>console.log(`  ${g.padEnd(10)} ${String(MG[g].scor
 console.log('\n-- weak points --');
 Engine.weakPoints(S,28).forEach(w=>console.log(`  [${w.severity}] ${w.title} :: ${w.detail}`));
 const sum=Engine.summary(S);
-console.log('\n-- summary --', JSON.stringify({sessions:sum.sessions,tonnage:sum.tonnage,sets:sum.sets,xp:sum.xp,lvl:sum.level.level,title:sum.title,prs:sum.prsAll}));
+console.log('\n-- summary --', JSON.stringify({sessions:sum.sessions,tonnage:sum.tonnage,distKm:sum.distKm,xp:sum.xp,lvl:sum.level.level,title:sum.title,prs:sum.prsAll}));
 console.log('-- badges met --', Engine.achievements(S).filter(a=>a.met).map(a=>a.name).join(', ')||'(none)');
 // stress: second session beats the first
 const w2=JSON.parse(JSON.stringify(SEED_WORKOUT)); w2.id='w2'; w2.date='2026-11-10';

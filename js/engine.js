@@ -437,6 +437,26 @@ const Engine = (() => {
     return exInfo(state, id).g || [];
   };
 
+  /* ---------- a LOGGED entry's own attribution ----------
+     Ordinary entries resolve from the live exercise definition (exGroups /
+     exerciseWeight). But when a custom exercise is DELETED its definition (and
+     its override) is gone, so exInfo() would fall back to the generic ["Core"]
+     and a deleted Chest exercise's already-logged sets would re-attribute to
+     Core — a wrong answer on the muscle-balance card the app is built around.
+     To prevent that, Store.deleteCustom STAMPS the group(s) the work actually
+     trained (and the effort weight it was worth) onto every logged entry for
+     that id, at the moment of deletion. These two readers prefer that stamp, so
+     the history keeps attributing to the muscle it really trained — permanently,
+     and without any per-exercise key having to survive. See test_mathfixes §38. */
+  const entryGroups = (state, en) => {
+    if (en && Array.isArray(en.g)) return en.g;
+    return exGroups(state, en ? en.id : null);
+  };
+  const entryWeight = (state, en) => {
+    if (en && en.ew != null && num(en.ew) > 0) return num(en.ew);
+    return exerciseWeight(state, en ? en.id : null);
+  };
+
   function liftKey(name) {
     for (const [re, k] of LIFT_MATCH) if (re.test(name)) return k;
     return null;
@@ -575,7 +595,11 @@ const Engine = (() => {
     return pts;
   }
 
-  /* Latest session vs the one before it — the ▲/▼ the user asked for. */
+  /* Latest session vs the one before it — the ▲/▼ the user asked for.
+     Reports only the two readings the UI actually shows: e1RM (weight×reps) and
+     volume. A third "top set" reading and a precomputed `better` boolean were
+     both computed and never read — the compare banner derives its own ▲/▼ from
+     the e1RM percentage — so they were removed rather than left to rot. */
   function compareLast(state, exId) {
     const pts = seriesFor(state, exId);
     if (pts.length < 2) return null;
@@ -585,8 +609,6 @@ const Engine = (() => {
       date: cur.date, prevDate: prev.date,
       est1RM: { cur: cur.est1RM, prev: prev.est1RM, pct: pct(cur.est1RM, prev.est1RM) },
       volume: { cur: cur.volume, prev: prev.volume, pct: pct(cur.volume, prev.volume) },
-      top:    { cur: cur.top,    prev: prev.top,    pct: pct(cur.top, prev.top) },
-      better: cur.est1RM > prev.est1RM || (cur.est1RM === prev.est1RM && cur.volume > prev.volume),
     };
   }
 
@@ -825,7 +847,7 @@ const Engine = (() => {
     }
     return { score: clamp(score), cardioMinPerWk: minPerWk,
              distKmPerWk: distKm / weeks, distKm, cardioKm, distMod,
-             paceKmh, paceMinPerKm: paceKmh ? 60 / paceKmh : null,
+             paceKmh,
              maxReps, setsPerWk: sets / weeks, avgRest, density, hardReps, highReps, restN };
   }
 
@@ -1315,7 +1337,7 @@ const Engine = (() => {
       for (const en of w.entries || []) {
         const st = entryStats(en);
         cell.sets += st.sets; cell.tonnage += st.tonnage;
-        for (const g of exGroups(state, en.id)) gs.add(g);
+        for (const g of entryGroups(state, en)) gs.add(g);
       }
       cell.sessions = 1;
       cell.groups = Array.from(gs);
@@ -1437,11 +1459,11 @@ const Engine = (() => {
     for (const w of ws) for (const en of w.entries || []) {
       const st = entryStats(en);
       if (!st.sets) continue;
-      const gs = exGroups(state, en.id).filter((g) => GROUP_ORDER.includes(g));
+      const gs = entryGroups(state, en).filter((g) => GROUP_ORDER.includes(g));
       if (!gs.length) continue;
       // primary group takes full credit, others share it; how much a set is WORTH
       // comes from the exercise itself (see exerciseWeight)
-      const wgt = exerciseWeight(state, en.id);
+      const wgt = entryWeight(state, en);
       gs.forEach((g, i) => {
         const share = i === 0 ? 1 : 0.5;
         sets[g] += st.sets * share;             // raw working sets — comparable to MEV/MAV/MRV
@@ -1757,7 +1779,7 @@ const Engine = (() => {
       for (const en of w.entries || []) {
         const st = entryStats(en);
         if (!st.sets) continue;
-        exGroups(state, en.id).forEach((g, i) => {
+        entryGroups(state, en).forEach((g, i) => {
           if (!GROUP_ORDER.includes(g)) return;
           m[g] = (m[g] || 0) + st.sets * (i === 0 ? 1 : 0.5);
         });
@@ -1774,7 +1796,7 @@ const Engine = (() => {
     for (const en of w.entries || []) {
       const st = entryStats(en);
       if (!st.sets) continue;
-      exGroups(state, en.id).forEach((g, i) => {
+      entryGroups(state, en).forEach((g, i) => {
         if (!GROUP_ORDER.includes(g)) return;
         const mine = st.sets * (i === 0 ? 1 : 0.5);
         total += mine;
@@ -1934,24 +1956,30 @@ const Engine = (() => {
   const safe = (f, d) => { try { return f(); } catch (e) { return d; } };
 
   /* ---------- summary ---------- */
+  /* Only what a screen actually reads. `reps`, `timeMin`, `restMin`, `avgRest`
+     and `exercises` were all computed here and read nowhere: reps are plotted
+     per week in Volume & recovery (and defined that way in the glossary), an
+     all-time rest total and average duplicate the density chip and the
+     per-session rest already on screen, timeMin is invented work-time
+     (reps x 3s + holds) rather than clock time, and the lifetime exercise count
+     has no card. `sets` was the same — nothing displayed a lifetime set total.
+     They were removed rather than left to rot. `distKm` IS shown (a dashboard
+     chip) and `tonnage` backs the tonnage chip. */
   function summary(state) {
     const ws = state.workouts || [];
-    let tonnage = 0, sets = 0, reps = 0, time = 0, dist = 0, restTotal = 0, restN = 0, workSec = 0;
+    let tonnage = 0, dist = 0, restTotal = 0, restN = 0, workSec = 0;
     for (const w of ws) for (const en of w.entries || []) {
       const s = entryStats(en);
-      tonnage += s.tonnage; sets += s.sets; reps += s.reps; time += s.time; dist += s.dist;
+      tonnage += s.tonnage; dist += s.dist;
       restTotal += s.totalRest; restN += s.restN; workSec += s.workSec;
     }
-    const avgRest = restN ? restTotal / restN : null;
     const density = restN > 0 && (workSec + restTotal) > 0
       ? Math.round((workSec / (workSec + restTotal)) * 100) : null;
     const totalXp = xp(state);
     return {
-      sessions: ws.length, tonnage, sets, reps, timeMin: time / 60, distKm: dist / 1000,
-      restMin: restTotal / 60, avgRest, density,
+      sessions: ws.length, tonnage, distKm: dist / 1000, density,
       xp: totalXp, level: levelInfo(totalXp), title: title(levelInfo(totalXp).level),
       streak: streaks(state), prs: prCount(state, 28), prsAll: prCount(state, 3650),
-      exercises: trainedExerciseIds(state, 3650).length,
     };
   }
 
@@ -1959,7 +1987,7 @@ const Engine = (() => {
     DAY, ATTRIBUTES, GROUP_ORDER, LANDMARKS, STANDARDS, TIERS, ACHIEVEMENTS,
     clamp, num, interp, tierOf, est1RM, setVolume, entryStats, liftKey, isCoreLift,
     SET_TYPES, setType, setTypeLabel, setEffort,
-    exInfo, exName, exMode, exGroups, bodyweight, bestFor, seriesFor, compareLast,
+    exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
