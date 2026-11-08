@@ -1,15 +1,15 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.5",
+  "versionCode": 7,
+  "versionName": "1.0.6",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d533a1fa2abcfe216f252f51c1a2b999558b477d05ccb25424bcd668cac1fb5f",
-  "sizeBytes": 3232144,
+  "sha256": "834fc39b994d40f364a3fec94102b4d311c472a86e5ddb32839d4af4b5b0718e",
+  "sizeBytes": 3234312,
   "published": "2026-11-08",
   "notes": [
-    "RPE now shows up everywhere: per set in History, and averaged per exercise and per session",
-    "Plateau advice uses your RPE \u2014 near-maximal effort says deload, real headroom says add load",
-    "Your name appears on the dashboard instead of being collected and ignored",
-    "Removed unused leftover fields; every input now feeds something you can see",
-    "Includes 1.0.2-1.0.4: History sets visible, readable chips, fresher feed, body-composition sync"
+    "Rest between sets can now be logged \u2014 one field per exercise, with per-set overrides (or type r90)",
+    "Rest feeds Stamina only: shorter rest means more endurance demand. Strength and Power are deliberately unaffected, since long rest is what lets you lift heavy",
+    "New insight warns when rest does not match the work: short rest on heavy sets, or long rest on high-rep sets",
+    "Training density (% of session actually working) now shows on the dashboard",
+    "Includes 1.0.2-1.0.5: History sets, readable chips, body-composition sync, RPE display"
   ]
 }
