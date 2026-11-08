@@ -1,12 +1,12 @@
 {
-  "versionCode": 30,
-  "versionName": "1.0.29",
+  "versionCode": 31,
+  "versionName": "1.0.30",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "b557efb14f7f57e61444716929562ffe6c21bad6a374a35928eea57ffd1af8d5",
-  "sizeBytes": 3268086,
+  "sha256": "d179d8152be79b2aff6831d5f83c752328ae2ee6942c54ef4fe9b284f2724404",
+  "sizeBytes": 3268559,
   "published": "2026-11-08",
   "notes": [
-    "The crunch geometry is now derived both ways, not just for your bench. Head BELOW the hips 40 degrees (your setup) stays 0.85 and 2.12x. Head ABOVE the hips 40 degrees is the mirror case: the trunk rests at +40 and curls 35 degrees to +75, the same range of motion shifted up the arc, so the whole difference is the shorter moment arm. Work is sin(75) minus sin(40) = 0.5634x flat, giving 0.23 and a work factor of 0.56 \u2014 easier, exactly as the geometry says",
-    "Derivation is written out in the source beside each coefficient: torque m g r cos phi, work proportional to sin(top) minus sin(rest), mean cosine times range of motion. Nothing in your export moved \u2014 your only crunch is the head-below one, which is untouched, and you have no head-above movement, so the reconciliation is byte-identical. Push-ups, inverted rows, nordic curls and hanging leg raises are deliberately NOT derived; they wait on published measured values"
+    "Push-up variants now use PUBLISHED force-plate measurements instead of one flat number. Percentage of bodyweight carried by the hands: flat 64-66 percent with two independent studies agreeing, knee push-up 49-52.5 percent, and across hand and foot elevation the measured range is about 41 to 74 percent. Flat stays 0.64, knee 0.51, hands-elevated 0.55, feet-elevated 0.74",
+    "Watch the naming trap: for push-ups incline means HANDS elevated and is EASIER, decline means FEET elevated and is HARDER - the opposite of your bench crunch. The rules match on the direction word, never a shared incline pattern, so your incline crunch stays the hard 0.85 case and an incline bench press is still not bodyweight at all"
   ]
 }

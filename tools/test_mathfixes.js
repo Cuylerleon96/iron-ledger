@@ -587,5 +587,21 @@ console.log("\n=== 22. crunch/sit-up on an angled bench, both directions, from t
   eq("raw sets/wk stays raw for every variant", [hb.setsPerWk, fl.setsPerWk, ha.setsPerWk], [4, 4, 4]);
 }
 
+console.log("\n=== 23. push-up variants, from published force-plate measurement ===");
+{
+  const e = env();
+  eq("flat push-up keeps the measured mid value", e.E.bwFactor("Push-ups"), 0.64);
+  eq("...as does the singular library form", e.E.bwFactor("Push-Up"), 0.64);
+  // naming trap: for push-ups 'incline' = HANDS elevated = EASIER
+  eq("incline push-up (hands up) is easier, near the 41% end", e.E.bwFactor("Incline Push-ups"), 0.55);
+  eq("decline push-up (feet up) is harder, near the 74% end", e.E.bwFactor("Decline Push-ups"), 0.74);
+  truthy("...and it is the harder of the two", e.E.bwFactor("Decline Push-ups") > e.E.bwFactor("Incline Push-ups"));
+  // and the convention must NOT leak backwards onto the bench crunch
+  eq("an incline crunch is still the hard head-below case", e.E.bwFactor("Incline Crunches"), 0.85);
+  eq("an incline bench press is not bodyweight at all", e.E.isBodyweight("Incline Bench Press"), false);
+  // knee push-up sits between
+  truthy("knee push-up is measured lower than flat", e.E.bwFactor("Knee Push-ups") < 0.64);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -120,6 +120,20 @@ const Engine = (() => {
   const BW_FACTOR = [
     [/pull.?up|chin.?up|muscle.?up|lat pull.?up/i, 1.00],
     [/\bdip\b|dips/i, 0.95],
+    /* Push-up variants from published force-plate measurement, NOT derived.
+       Percentage of bodyweight carried by the hands: flat 64-66% (two independent
+       studies agree; Int J Exerc Sci 2023 measures standard push-up 67.0 +/- 3.8%
+       men / 65.1 +/- 3.1% women), knee push-up 49-52.5%, and across hand/foot
+       elevation the measured range is approximately 41% to 74% of body mass
+       (Gouvali & Boudolos 2005). Assumed standard setups, same convention as the
+       40-degree bench: hands elevated ~30-40 cm (near the low end), feet elevated
+       ~40-60 cm (near the top).
+       NAMING TRAP: for push-ups 'incline' means HANDS elevated = EASIER, and
+       'decline' means FEET elevated = HARDER — the opposite of the bench-crunch
+       convention. These match on the direction word, never a shared 'incline'. */
+    [/push.?up.*(feet|decline)|decline push.?up|feet.?elevated push.?up/i, 0.74],
+    [/push.?up.*(hands|incline)|incline push.?up|hands.?elevated push.?up/i, 0.55],
+    [/knee push.?up|modified push.?up|push.?up.*knee/i, 0.51],
     [/push.?up|press.?up/i, 0.64],
     [/inverted row|bodyweight row|australian pull/i, 0.60],
     [/pistol|single.?leg squat|bulgarian|split squat|lunge|step.?up/i, 0.85],
