@@ -336,7 +336,12 @@ main > * { min-width: 0; }
   background: var(--cream); border: 2px solid var(--ink); border-radius: 5px; padding: .3rem .35rem;
 }
 .num { text-align: center; }
+/* A date input needs .inp like any other field. Without it there is no cream
+   background, and with color-scheme:light the browser paints a light control
+   under the card's cream text — a white box with an invisible date, which is
+   exactly how it looked on the phone. */
 input[type="date"] { color-scheme: light; }
+input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); border: 2px solid var(--ink); border-radius: 5px; padding: .42rem .5rem; font-family: var(--px); font-size: .68rem; }
 
 /* ---------------- buttons ---------------- */
 .btn {

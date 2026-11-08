@@ -1,15 +1,11 @@
 {
-  "versionCode": 17,
-  "versionName": "1.0.16",
+  "versionCode": 18,
+  "versionName": "1.0.17",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "97eea7437bbc67a0c2a03776ec648554531f8560410eb4f5e5c1cd8d57810504",
-  "sizeBytes": 3255265,
+  "sha256": "b61176882d6b1e42ddd9b1e267225f03db0730ff105caa9fc829ae5b4178b659",
+  "sizeBytes": 3255431,
   "published": "2026-11-08",
   "notes": [
-    "Fix: adding a set could remove another one. The delete handler was attached to the x between weight and reps, so tapping it silently deleted the set while the X button did nothing. The X button now deletes, and the x sign is inert",
-    "Fix: a set added through the shorthand box, or from imported notes, was stored in pounds while the app works in kilograms. Its tonnage and e1RM read about 2.2x too high for anyone on lb. Hand-typed sets were correct, which is why the two disagreed",
-    "Fix: after any redraw a weight you had already typed could come back as a long decimal, e.g. 180 lb showing as 81.64662740915384",
-    "New: a + Add set button. With the box filled it reads your shorthand, empty it just adds a line for you to fill in",
-    "Set rows now fit on one line on a phone, so the delete button no longer wraps underneath"
+    "Fix: the session date looked blank. The date box was the one field missing its styling, so the browser drew a pale control under pale text and the date was invisible. It now reads like every other field"
   ]
 }

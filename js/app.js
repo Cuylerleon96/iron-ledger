@@ -509,7 +509,7 @@
       <div class="card-head">
         <h3>${draft.id ? "Editing session" : "New session"}</h3>
         <div class="row">
-          <input type="date" id="w-date" value="${draft.date}">
+          <input class="inp" type="date" id="w-date" value="${draft.date}" style="max-width:158px">
           ${lastSession() ? `<button class="btn ghost" id="btn-repeat" title="Start from your most recent session">Repeat ${lastSession().date}</button>` : ""}
           <button class="btn ghost" id="btn-import">Paste from notes</button>
         </div>
