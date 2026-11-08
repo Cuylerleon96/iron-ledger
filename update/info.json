@@ -1,14 +1,15 @@
 {
-  "versionCode": 11,
-  "versionName": "1.0.10",
+  "versionCode": 12,
+  "versionName": "1.0.11",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "0074064e06f715ad2b0df660daf696a8d3a933a6746a6f42e4116fa4a16ed83e",
-  "sizeBytes": 3240220,
+  "sha256": "24d2f3acef4e7a6e5befafbb4872fc4fbc3b91581b68e480d7257727bd29980f",
+  "sizeBytes": 3242894,
   "published": "2026-11-08",
   "notes": [
-    "The app now checks for updates by itself when you open it - no button needed",
-    "It also re-checks when you come back to the app, so leaving it open for weeks can't miss a release",
-    "A new version shows a small gold dot on the Profile tab, so it never has to interrupt you with a popup",
-    "Profile always shows what that check found, including which build you are on"
+    "Updates can no longer cost you data: your entire history is snapshotted to the device right before an update installs",
+    "If the app ever starts without its data, it now recovers it - from the on-device copy, or failing that from that pre-update snapshot",
+    "Fixed: a failed read of the on-device copy could previously overwrite it with empty data. An unreadable copy is now left strictly alone",
+    "Fixed: after recovering your data, the on-device copy stopped updating for the rest of that session",
+    "Fixed: an ordinary edit after a recovery was not being mirrored at all"
   ]
 }
