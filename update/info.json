@@ -1,13 +1,12 @@
 {
-  "versionCode": 34,
-  "versionName": "1.0.33",
+  "versionCode": 35,
+  "versionName": "1.0.34",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "e11db64c6ff431f87cc9fd8e127ed185bd466afe61183768d89534d676fd08fd",
-  "sizeBytes": 3270943,
+  "sha256": "82dd03df7b28b30ad7536a7748346d5a5c165d52ff8d342596713e38748a92c5",
+  "sizeBytes": 3275827,
   "published": "2026-11-08",
   "notes": [
-    "Rows are now calibrated to the four MEASURED suspension-row anchors rather than picked. Three candidate models were tested against them: cosine of body angle (RMSE 0.024), linear in angle from vertical (RMSE 0.011, best), and a lever-about-the-feet model which was REJECTED because it predicts a constant load. Per-anchor residuals are in the source beside the numbers. Upright 0.38, reference 0.57, horizontal 0.81",
-    "Two families were borrowing geometry that was not theirs. A hanging leg raise is HIP flexion, not trunk flexion, so it no longer takes the crunch 0.40: both legs are 0.322 of bodyweight with a mean cosine of 0.64 over the sweep, giving 0.21 straight-leg and 0.15 bent-knee. Nordic and glute-ham were both 0.70 and are now split at 0.68 and 0.59 from upper-body mass at the knee lever",
-    "Two rules were UNREACHABLE and silently did nothing: the razor curl factor was never gated on, and an Australian pull-up was being shadowed by the pull-up pattern and scored as a full hanging pull-up at 1.00. Both fixed. Plank stays 0.00 on purpose: a hold moves nothing, so any non-zero factor would manufacture tonnage and a 1RM out of a static pose. Nothing in your export moved - none of your exercises touch these families"
+    "There is now a first-run walkthrough: six pages covering what the app is and that it is local-only, how to log a set in shorthand, what the six attributes mean, what the muscle-balance figure and weak-point advice mean, where your data lives and how backups work, and the self-update path. Skippable from every page, and it never blocks the app loading",
+    "It runs EXACTLY ONCE. There is a versioned flag and no other re-show path, so it will come back only if a future version deliberately bumps it. Critically, there is NO migration that fills the flag in for existing users - a missing flag means show - which is precisely why you will see it once on this update, and a brand-new install also sees it once"
   ]
 }

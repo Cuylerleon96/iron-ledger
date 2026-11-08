@@ -1401,6 +1401,17 @@
       setTimeout(() => toast("Add your bodyweight in Profile — it makes Strength scores real", "warn", 6000), 900);
     }
     render();                       // paint FIRST — nothing below is allowed to gate it
+    /* First-run walkthrough. AFTER the first paint, so a modal overlay lands on an
+       already-drawn dashboard and can never delay or blank the UI. It is opened
+       only when this build's version has not been recorded in
+       S.settings.welcomeSeenVersion — a missing flag means "show it", which is
+       exactly why an existing install sees it once on this update and a fresh
+       install sees it once too. No migration backfills that flag, on purpose. */
+    if (typeof Welcome !== "undefined") {
+      try {
+        Welcome.maybeOpen({ state: S, store: Store, doc: document, el, open: openModal, close: closeModal, toast });
+      } catch (e) { console.warn("welcome skipped:", e && e.message); }
+    }
     recoverFromDeviceStorage();     // fire and forget
     // update check last, delayed, and Android-only: it must never delay the UI
     setTimeout(autoUpdateCheck, 1500);
@@ -1444,11 +1455,19 @@
      OS exit. Must return a real boolean — the native callback compares it. */
   window.__back = function () {
     const modal = document.getElementById("modal");
-    if (modal && !modal.classList.contains("hidden")) { closeModal(); return true; }
+    if (modal && !modal.classList.contains("hidden")) {
+      // The walkthrough closing any way must record the version, and the hardware
+      // back button is a route out of it — so route it through the tour's own
+      // dismiss rather than closing the modal underneath it.
+      if (typeof Welcome !== "undefined" && Welcome.isActive()) Welcome.dismiss();
+      else closeModal();
+      return true;
+    }
     if (view !== "dash") { setView("dash"); return true; }
     return false;
   };
   // parseSet/parseNotes are exposed so the test suite can exercise the real
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
-  window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex };
+  window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast,
+    Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

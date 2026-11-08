@@ -555,6 +555,45 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .hist-s, .pick-meta, .lib-meta, .badge-txt small { font-size: .7rem; }
 .fix { font-size: .82rem; }
 
+/* ---------------- first-run walkthrough ---------------- */
+/* A modal panel in the app's own language: the cream-framed box, gold headings,
+   a dotted step counter and clickable page dots. Reuses the existing tokens. */
+.welcome { display: grid; gap: .55rem; }
+.welcome-head {
+  display: flex; justify-content: flex-end;
+  padding-bottom: .4rem; border-bottom: 2px dashed rgba(255, 255, 255, .32);
+}
+.welcome-step { font-family: var(--pxd); font-size: .5rem; color: var(--gold); text-shadow: var(--outline-sm); letter-spacing: .08em; }
+.welcome-title { font-family: var(--pxd); font-size: .72rem; color: var(--gold-l); text-shadow: var(--outline); }
+.welcome-body { font-family: 'Pixelify Sans', var(--px); font-size: .86rem; line-height: 1.6; color: #e8f4ff; letter-spacing: 0; }
+.welcome-body p { margin: .35rem 0; }
+.welcome-body b { color: var(--gold-l); }
+.welcome-body code {
+  font-family: var(--px); font-size: .68rem; color: var(--gold-l);
+  background: rgba(0, 0, 0, .42); border: 2px solid rgba(255, 255, 255, .3);
+  border-radius: 4px; padding: .04rem .26rem;
+}
+.welcome-body code.ex {
+  display: block; white-space: pre-wrap; line-height: 1.75; font-size: .72rem;
+  color: #dfeef6; padding: .5rem .6rem; margin: .45rem 0; border-radius: 6px;
+}
+.welcome-attrs { display: grid; gap: .3rem; margin: .35rem 0; }
+.welcome-attr { display: grid; grid-template-columns: 94px 1fr; gap: .55rem; align-items: baseline; }
+.welcome-attr b { font-family: var(--px); font-size: .66rem; color: var(--gold); text-shadow: var(--outline-sm); }
+.welcome-attr span { color: #dceaf2; }
+.welcome-pips { display: flex; gap: .45rem; justify-content: center; margin: .35rem 0 .1rem; flex-wrap: wrap; }
+.welcome-dot {
+  width: 16px; height: 16px; padding: 0; cursor: pointer; border-radius: 50%;
+  background: rgba(0, 0, 0, .4); border: 2px solid var(--cream); box-shadow: 0 0 0 1px var(--ink);
+  transition: transform .06s;
+}
+.welcome-dot:active { transform: translateY(1px); }
+.welcome-dot.on {
+  background: linear-gradient(180deg, var(--gold-l) 0%, var(--gold) 55%, var(--gold-d) 100%);
+  box-shadow: 0 0 0 1px var(--ink), 0 0 10px rgba(248, 208, 48, .55);
+}
+.welcome-foot { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: .35rem; }
+
 @media (max-width: 560px) {
   html { font-size: 15px; }
   .brand-txt { display: none; }
