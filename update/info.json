@@ -1,11 +1,17 @@
 {
-  "versionCode": 14,
-  "versionName": "1.0.13",
+  "versionCode": 15,
+  "versionName": "1.0.14",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "a8bdc2715859e487b5a82be24bdd98896ba02aac761556e11042b690525d7dba",
-  "sizeBytes": 3244612,
+  "sha256": "195b67d4909fe4c7ce1711cbed37ca7ed91fc90ca4fbb6f54dcbf0335fbbe182",
+  "sizeBytes": 3252558,
   "published": "2026-11-08",
   "notes": [
-    "Wording fix: the app described its set counts as working sets, but warm-ups are not marked, so it counts every completed set. It now just says sets - same numbers, honest label"
+    "New: Progress over the year - your six stats plotted month by month across 12 months, each point re-read from the sessions that preceded it",
+    "New: a year grid showing every day you trained, one square per day, at a glance",
+    "New: Volume and recovery - weekly sets for the last 12 weeks, a deload read taken from your own logged effort, and days since each muscle group was last trained",
+    "New: set a target for any lift. Progress is always shown; a time estimate only appears when your own logged rate supports it",
+    "New: repeat your last session with one tap from the Log tab, and copy any past session in your notes format",
+    "New: a dated backup is written once a day alongside the on-device copy, keeping the last five",
+    "Fix: the dashboard could overrun the screen sideways on a phone, clipping text at the edge. The page is now locked to the screen width"
   ]
 }
