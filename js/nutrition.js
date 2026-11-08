@@ -288,11 +288,15 @@ const Nutrition = (() => {
   /* Today's totals read against the tab's targets. TONE (a hard rule): a total
      BELOW target is never framed as failure and a total ABOVE is never a
      warning — no red, no "over", no "exceeded", no "cheat". Being over on one
-     day is ordinary. No good/bad-food framing, no exercise-earned-food language. */
+     day is ordinary. No good/bad-food framing, no exercise-earned-food language.
+     The tab's target keys are kcal/protein/fat/carbs; the intake log stores
+     kcal/protein/fat/carb/fibre — `carbs` (the tab) is `carb` (the log). */
+  const TARGET_TO_LOG = { carbs: "carb" };
   function intakeSummary(targets, totals) {
     totals = totals || {};
     return (targets || []).map((t) => {
-      const logged = (typeof totals[t.key] === "number") ? totals[t.key] : 0;
+      const key = TARGET_TO_LOG[t.key] || t.key;
+      const logged = (typeof totals[key] === "number") ? totals[key] : 0;
       const target = t.value;
       const remaining = round2(target - logged);
       const text = (logged < target)

@@ -241,6 +241,10 @@ ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.te
   ok('above-target headline avoids warning words', !BANNED.test(INut.intakeHeadline([over], 3)), INut.intakeHeadline([over], 3));
   ok('below-target reading offers what is left ("to go")', /to go/.test(under.text), under.text);
   eq('an over day is stated with the target, neutrally', over.text, '2600 kcal — your target is 2000 kcal');
+  /* the tab's target key is `carbs`; the log stores `carb` — the two must join */
+  const carbRow = INut.intakeSummary([{ key: 'carbs', label: 'Carbs', value: 265, unit: 'g' }], { carb: 51.1 })[0];
+  eq('the tab\'s "carbs" target reads the log\'s "carb" total', carbRow.logged, 51.1);
+  ok('...so the carbs row is not silently 0', carbRow.logged !== 0, carbRow);
 
   /* 7) the intake log counts as history for the mirror/backup gate */
   ok('richness counts intake entries (so a food-log-only state still backs up)',

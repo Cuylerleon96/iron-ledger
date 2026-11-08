@@ -1,11 +1,11 @@
 {
-  "versionCode": 54,
-  "versionName": "1.0.53",
+  "versionCode": 55,
+  "versionName": "1.0.54",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d4c14a84726911f09db4a68996aac6d42d1011d9479f0f45162febc4adbc560b",
-  "sizeBytes": 3853163,
+  "sha256": "ba7aa1bb691e515d8324f880c8b42f7d9104164999150db2e34d85e5434e2a52",
+  "sizeBytes": 3853258,
   "published": "2026-11-08",
   "notes": [
-    "You can now log foods in the Nutrition tab: search the offline database, pick a portion, and see today's totals against your targets."
+    "Log foods in the Nutrition tab and see today's totals against your targets. Fixed the carbs total so it reflects what you logged."
   ]
 }
