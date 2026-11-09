@@ -361,5 +361,77 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
   eq('dataset measure count is unchanged', DB.foods.reduce((n, f) => n + f.measures.length, 0), 36494);
 }
 
+/* ---------- (j) NAME CURATION: legacy terms gone, renames keep their data -------
+   The bundled set is curated by the RENAMES map in tools/build_food_db.py (the
+   generated data is never hand-edited, so the correction survives a rebuild).
+   These assertions pin that curation against the SHIPPED bundle:
+     - no shipped name carries a seed term EXCEPT the two known false positives;
+     - every renamed record resolves to its NEW name AND keeps its exact code,
+       per100 (absent key vs a real 0 preserved) and measures — only the name moved;
+     - the two false positives still ship, unchanged.
+   The term list mirrors tools/corpus-name-sweep.py DEFAULT_TERMS; the allowlist
+   mirrors its KNOWN_OK (kept in sync deliberately — both are the same decision). */
+console.log('\n--- (j) name curation (legacy terms) ---');
+{
+  const TERMS = ['oriental', 'negro', 'colored', 'half-breed', 'gypsy', 'eskimo',
+    'cripple', 'lame', 'midget', 'idiot', 'moron'];
+  const KNOWN_OK = new Set([
+    'Restaurant, Latino, Arroz con frijoles negros (rice and black beans)',
+    'Beverages, yellow green colored citrus soft drink with caffeine',
+  ]);
+  const offending = DB.foods.filter((f) => {
+    const n = f.name.toLowerCase();
+    return TERMS.some((t) => n.indexOf(t) >= 0);
+  });
+  eq('exactly the 2 known false positives carry a seed term', offending.length, 2);
+  ok('every term-bearing name is on the explicit allowlist',
+    offending.every((f) => KNOWN_OK.has(f.name)), offending.map((f) => f.name));
+  ok('no shipped name still says "oriental"',
+    !DB.foods.some((f) => /oriental/i.test(f.name)));
+  ok("no shipped name still says \"Jew's ear\"",
+    !DB.foods.some((f) => /jew'?s ear/i.test(f.name)));
+  eq('the daikon rename landed on all 4 radish rows',
+    DB.foods.filter((f) => /daikon/i.test(f.name)).length, 4);
+  ok('the wood-ear rename landed', DB.foods.some((f) => f.name === 'Wood ear, (pepeao), raw'));
+
+  /* each rename pinned to code + exact values (measured BEFORE the rename, so
+     this asserts the data did NOT move — only the name did). */
+  const renames = [
+    { code: 167958, name: 'Snacks, Asian mix, rice-based', src: 'sr',
+      per100: { kcal: 506, protein: 17.31, fat: 25.58, carb: 51.62, fibre: 13.2 }, measures: 2 },
+    { code: 168451, name: 'Radishes, daikon, raw', src: 'sr',
+      per100: { kcal: 18, protein: 0.6, fat: 0.1, carb: 4.1, fibre: 1.6 }, measures: 2 },
+    { code: 168452, name: 'Radishes, daikon, cooked, boiled, drained, without salt', src: 'sr',
+      per100: { kcal: 17, protein: 0.67, fat: 0.24, carb: 3.43, fibre: 1.6 }, measures: 1 },
+    { code: 168453, name: 'Radishes, daikon, dried', src: 'sr',
+      per100: { kcal: 271, protein: 7.9, fat: 0.72, carb: 63.37, fibre: 23.9 }, measures: 1 },
+    { code: 169082, name: 'Pork, Asian style, dehydrated', src: 'sr',
+      per100: { kcal: 615, protein: 11.8, fat: 62.4, carb: 1.4, fibre: 0 }, measures: 1 },
+    { code: 170122, name: 'Radishes, daikon, cooked, boiled, drained, with salt', src: 'sr',
+      per100: { kcal: 17, protein: 0.67, fat: 0.24, carb: 3.43, fibre: 1.6 }, measures: 1 },
+    { code: 169237, name: 'Wood ear, (pepeao), raw', src: 'sr',
+      per100: { kcal: 25, protein: 0.48, fat: 0.04, carb: 6.75 }, measures: 2 },
+  ];
+  renames.forEach((r) => {
+    const f = DB.foods.find((x) => x.code === r.code);
+    ok('rename ' + r.code + ' resolves to its new name', !!f && f.name === r.name, f && f.name);
+    ok('rename ' + r.code + ' kept code + src', !!f && f.code === r.code && f.src === r.src);
+    ok('rename ' + r.code + ' kept per100 (absent key vs real 0 preserved)',
+      !!f && JSON.stringify(f.per100) === JSON.stringify(r.per100), f && f.per100);
+    eq('rename ' + r.code + ' kept its measure count', f ? f.measures.length : -1, r.measures);
+  });
+  const pork = DB.foods.find((x) => x.code === 169082);
+  ok('pork keeps a REAL fibre 0 (present, not dropped)',
+    'fibre' in pork.per100 && pork.per100.fibre === 0, pork.per100);
+  const ear = DB.foods.find((x) => x.code === 169237);
+  ok('wood ear has NO fibre key (absent, never a 0)', !('fibre' in ear.per100), ear.per100);
+
+  /* the two false positives ship unchanged */
+  KNOWN_OK.forEach((nm) => {
+    ok('false positive still ships unchanged: ' + nm.slice(0, 26) + '…',
+      DB.foods.some((f) => f.name === nm));
+  });
+}
+
 console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

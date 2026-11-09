@@ -14,6 +14,14 @@ committed artifacts, mirroring the repo's existing data pattern
                     (js/ is copied wholesale into www/ by tools/build_www.py, so
                     the generated file is committed exactly like js/data.js.)
 
+NAME CURATION: the USDA descriptions carry some dated or loaded terms. RENAMES
+(below) maps each exact source description to a corrected displayed name; it is
+applied in build() and enforced by name_gate(), which FAILS the build if any
+shipped name still carries a seed term that is not on the KNOWN_OK allowlist in
+tools/corpus-name-sweep.py. The correction lives here — never in the generated
+data — so it survives every regeneration. See the RENAMES comments for the source
+checked per entry and why two sweep hits are deliberately left alone.
+
 THE ONE TRAP: FNDDS(survey) food_nutrient.nutrient_id is the nutrient NUMBER
 (208=Energy kcal, 203=Protein, 204=Fat, 205=Carb, 291=Fibre); SR Legacy uses the
 FDC nutrient ID (1008, 1003, 1004, 1005, 1079). nutrient.csv maps id ->
@@ -54,6 +62,71 @@ LICENSE = ("USDA FoodData Central — FNDDS 2021-2023 (survey food, published "
 # common currency; nutrient.csv reconciles the FDC ids used by SR Legacy onto it).
 KEYS = ("kcal", "protein", "fat", "carb", "fibre")
 NBR_TO_KEY = {"208": "kcal", "203": "protein", "204": "fat", "205": "carb", "291": "fibre"}
+
+# ---------------------------------------------------------------------------
+# NAME CURATION MAP  (USDA source description -> displayed name)
+# ---------------------------------------------------------------------------
+# The USDA bulk tables still carry some dated or loaded terms in their
+# descriptions. This map corrects the ones we ship, keyed on the EXACT source
+# description so a rename only fires on the intended row. It lives HERE, not in
+# the generated data, so the correction survives every regeneration of
+# data/food.json / js/fooddata.js (both are generated; never hand-edit them).
+#
+# Two classes, stated plainly so nothing reads as a catalogue fact it is not:
+#
+#  (a) A CATALOGUE NAME WITH A KNOWN MODERN GLOBAL EQUIVALENT — replace it with
+#      that global name. Source checked per entry (see the inline note).
+#  (b) A DATED ADJECTIVE WITH NO CATALOGUE REPLACEMENT — there is no authoritative
+#      global name for the food, so we swap in the neutral modern descriptor.
+#      THIS IS THE APP'S CHOICE, not a catalogue truth, and is marked as such.
+#
+# DELIBERATELY NOT TOUCHED — two sweep hits that are NOT defects:
+#   * "Restaurant, Latino, Arroz con frijoles negros (rice and black beans)"
+#     "negros" is Spanish for "black" (frijoles negros = black beans). It is
+#     ordinary vocabulary in the dish's own language, not a slur in English.
+#   * "Beverages, yellow green colored citrus soft drink with caffeine"
+#     "colored" here means food colouring (the drink is artificially coloured).
+#     It is a plain sensory descriptor, not a term about people.
+# Renaming either would be wrong, so they are absent from this map by design and
+# tools/test_food.js asserts they still ship unchanged.
+RENAMES = {
+    # (a) daikon is the globally used culinary name for this radish. Source:
+    #     Wikipedia "Daikon" — "daikon ... or daikon radish is most common";
+    #     "Oriental radish" is listed only as one of several other terms.
+    "Radishes, oriental, raw": "Radishes, daikon, raw",
+    "Radishes, oriental, cooked, boiled, drained, without salt":
+        "Radishes, daikon, cooked, boiled, drained, without salt",
+    "Radishes, oriental, cooked, boiled, drained, with salt":
+        "Radishes, daikon, cooked, boiled, drained, with salt",
+    "Radishes, oriental, dried": "Radishes, daikon, dried",
+    # (a) the fungus's standard modern English name is "wood ear". Source:
+    #     Wikipedia "Auricularia auricula-judae" — "commonly known as wood ear,
+    #     jelly ear or historically as Jew's ear". ("pepeao", its other common
+    #     name, is kept in the parenthetical.)
+    "Jew's ear, (pepeao), raw": "Wood ear, (pepeao), raw",
+    # (b) no global catalogue name exists for these two; "oriental" is a dated
+    #     adjective. We use the neutral modern descriptor "Asian" — the APP'S
+    #     CHOICE, not a catalogue truth.
+    "Snacks, oriental mix, rice-based": "Snacks, Asian mix, rice-based",
+    "Pork, oriental style, dehydrated": "Pork, Asian style, dehydrated",
+}
+
+
+def apply_renames(foods):
+    """Rename curated descriptions in place. Returns (n_renamed, unmatched_keys).
+
+    unmatched_keys lists RENAMES keys that matched no shipped food — a signal that
+    the USDA description changed upstream and the entry needs revisiting.
+    """
+    n = 0
+    seen = set()
+    for f in foods:
+        new = RENAMES.get(f["name"])
+        if new is not None:
+            seen.add(f["name"])
+            f["name"] = new
+            n += 1
+    return n, [k for k in RENAMES if k not in seen]
 
 
 def log(msg):
@@ -185,7 +258,39 @@ def build(work):
                 "src": src,
             })
     foods.sort(key=lambda x: x["code"])
+    # Curate the displayed names (USDA description -> global/neutral name). Applied
+    # here so both generated artifacts carry the correction on every rebuild.
+    n_renamed, unmatched = apply_renames(foods)
+    log(f"  renames applied: {n_renamed} of {len(RENAMES)} curated")
+    if unmatched:
+        log(f"  WARNING: curated names matched no shipped food (source changed?): {unmatched}")
     return foods
+
+
+def name_gate(foods):
+    """Gate: fail the build if any shipped name carries a seed term that is not on
+    the sweep's explicit false-positive allowlist. Reuses tools/corpus-name-sweep.py
+    (imported by path — its filename has a hyphen) so there is ONE term list and ONE
+    allowlist, not a second copy that can drift."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "corpus_name_sweep", ROOT / "tools" / "corpus-name-sweep.py")
+    if spec is None or spec.loader is None:
+        raise SystemExit("FATAL: cannot load tools/corpus-name-sweep.py for the name gate")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    hits = mod.find_hits(foods, "name")
+    unknown = [(t, n) for (t, n) in hits if n not in mod.KNOWN_OK]
+    known = [n for (_t, n) in hits if n in mod.KNOWN_OK]
+    log(f"  name gate: {len(unknown)} unknown term(s), "
+        f"{len(known)} known false positive(s)")
+    if unknown:
+        for term, name in unknown:
+            log(f"    UNKNOWN: {term!r} in {name!r}")
+        raise SystemExit(
+            "FATAL: a shipped food name still contains a seed term that is not on "
+            "the KNOWN_OK allowlist. Curate it in RENAMES (see tools/corpus-name-sweep.py).")
+    return len(unknown), len(known)
 
 
 def write_outputs(foods):
@@ -244,6 +349,7 @@ def main(argv=None):
 
         log("building…")
         foods = build(work)
+        name_gate(foods)          # gate BEFORE writing so a bad name never ships
         write_outputs(foods)
         log("done.")
     finally:
