@@ -1,11 +1,11 @@
 {
-  "versionCode": 84,
-  "versionName": "1.2.6",
+  "versionCode": 85,
+  "versionName": "1.2.7",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "6b0e5bfdb252d6cb134fe06a45bb65af6976ec32995108bc7f2dd78c802a2c61",
-  "sizeBytes": 3904501,
+  "sha256": "7bc97e972cd49ea2e987a4dfc9288f6572dc2fc47b05ce7f03026c001ce61e08",
+  "sizeBytes": 3905182,
   "published": "2026-11-09",
   "notes": [
-    "Vitality is now based only on your body measurements - food logging no longer affects it."
+    "Vitality now reflects your body composition - having a goal no longer drags it down."
   ]
 }

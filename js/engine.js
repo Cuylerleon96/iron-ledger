@@ -1131,66 +1131,83 @@ const Engine = (() => {
   }
 
   function vitalityScore(state, asOfDate) {
+    /* Vitality is BODY-COMPOSITION HEALTH first. The BASE is how healthy the
+       current body composition is on its own terms — the sex-specific healthy
+       body-fat band and a healthy BMI. A goal can only ADD: it is a bonus on top
+       of that base for the gap the log shows CLOSED, and it can NEVER pull the
+       score below the healthy-band value. Before this, merely HAVING a goal the
+       user had not yet moved toward scored the goal parts 0 and dragged a lean,
+       healthy person to ~17 — the same class of bug as v1.2.6's nutrition one: a
+       number the user never gave us must not define them. */
     // asOfDate re-evaluates an earlier month using the measurements that existed
     // THEN. Without it a history point would silently borrow today's bodyweight.
+    const profile = state.profile || {};
     const log = (state.bodylog || []).filter((b) => !asOfDate || b.date <= asOfDate)
       .slice().sort((a, b) => a.date.localeCompare(b.date));
     const bw = bodyweight(state, asOfDate);
-    const goal = num(state.profile.goalWeightKg);
+
+    // ---- BASE: body-composition health ----
     const parts = [], used = [];
-    if (log.length >= 2 && goal > 0) {
-      const start = num(log[0].weightKg), cur = num(log[log.length - 1].weightKg);
-      const total = Math.abs(start - goal);
-      const done = total > 0 ? 1 - Math.abs(cur - goal) / total : 1;
-      parts.push({ w: 0.5, v: clamp(done * 100) }); used.push("weight trend");
-    } else if (log.length === 1 && goal > 0) {
-      const gap = Math.abs(bw - goal);
-      parts.push({ w: 0.5, v: clamp(100 - gap * 4) }); used.push("weight vs goal");
-    }
     // Prefer the log (the source of truth); the profile copy is only a fallback.
     const bfLogged = log.filter((b) => num(b.bodyFatPct) > 0);
-    const bf = bfLogged.length ? num(bfLogged[bfLogged.length - 1].bodyFatPct) : num(state.profile.bodyFatPct);
-    const bfGoal = num(state.profile.goalBodyFatPct);
-    if (bf > 0 && bfGoal > 0) {
-      // A goal turns "are you inside a healthy band" into "are you closing the
-      // gap", exactly as the weight goal does — and it is what a body-fat target
-      // is FOR, so it carries the same weight as the weight trend rather than the
-      // smaller band-weighting. Without a goal the healthy band still applies.
-      if (bfLogged.length >= 2) {
-        const start = num(bfLogged[0].bodyFatPct);
-        const total = Math.abs(start - bfGoal);
-        const done = total > 0 ? 1 - Math.abs(bf - bfGoal) / total : 1;
-        parts.push({ w: 0.5, v: clamp(done * 100) }); used.push("body fat trend vs goal");
-      } else {
-        parts.push({ w: 0.5, v: clamp(100 - Math.abs(bf - bfGoal) * 6) }); used.push("body fat vs goal");
-      }
-    } else if (bf > 0) {
+    const bf = bfLogged.length ? num(bfLogged[bfLogged.length - 1].bodyFatPct) : num(profile.bodyFatPct);
+    if (bf > 0) {
       /* The healthy body-fat band is sex-specific. With sex unset the app takes
          the PROTECTIVE band — the female figures (18-28%), whose lower edge is
          the higher, more cautious leanness boundary, matching the essential-fat
-         floor. An explicit "M" still reads the male 8-18% band, so no male
-         profile moves. */
-      const sex = state.profile.sex === "M" ? "M" : "F";
+         floor. An explicit "M" reads the male 8-18% band, so no male profile
+         moves. Inside the band is a healthy 100; a body-fat GOAL cannot change
+         this base — it only ever adds (below). */
+      const sex = profile.sex === "M" ? "M" : "F";
       const lo = sex === "F" ? 18 : 8, hi = sex === "F" ? 28 : 18;
       const v = bf < lo ? clamp(100 - (lo - bf) * 6) : bf > hi ? clamp(100 - (bf - hi) * 5) : 100;
-      parts.push({ w: 0.3, v }); used.push("body fat");
+      parts.push({ w: 0.6, v }); used.push("body fat");
     }
-    const h = num(state.profile.heightCm);
+    // A healthy BMI (18.5-25). It is the weaker signal, so it carries less weight
+    // than the body-fat band.
+    const h = num(profile.heightCm);
     if (h > 0 && bw > 0) {
       const bmi = bw / Math.pow(h / 100, 2);
       const v = bmi < 18.5 ? clamp(100 - (18.5 - bmi) * 12) : bmi > 25 ? clamp(100 - (bmi - 25) * 7) : 100;
-      parts.push({ w: 0.2, v }); used.push("BMI");
+      parts.push({ w: 0.4, v }); used.push("BMI");
     }
     // No measurements means no score, exactly like the other five attributes.
     // Returning a middle value here implied "Decent" body composition on a fresh
     // install, which is a number the user never gave us.
     if (!parts.length) return { score: 0, basis: "no data", log: log.length, used: [] };
     const tw = parts.reduce((a, p) => a + p.w, 0);
-    let score = clamp(parts.reduce((a, p) => a + p.v * p.w, 0) / tw);
+    const base = clamp(parts.reduce((a, p) => a + p.v * p.w, 0) / tw);
+
+    /* ---- GOAL PROGRESS: ADD-ONLY ----
+       The fraction of the start -> goal gap the log shows CLOSED, for whichever
+       goals the profile carries. It is a BONUS scaled down and added to the base,
+       so a goal can only ever RAISE the score — never lower it, and never define
+       it. A goal with no movement measures 0 and therefore changes nothing.
+       Progress needs a STARTING reading to measure against, so a goal with fewer
+       than two weigh-ins (or two body-fat readings) contributes nothing rather
+       than being scored as if the user had not moved. */
+    const goalW = num(profile.goalWeightKg);
+    const goalBF = num(profile.goalBodyFatPct);
+    const wLogged = log.filter((b) => num(b.weightKg) > 0);
+    const gains = [];
+    if (goalW > 0 && wLogged.length >= 2) {
+      const start = num(wLogged[0].weightKg), total = Math.abs(start - goalW);
+      const done = total > 0 ? 1 - Math.abs(bw - goalW) / total : 1;
+      gains.push(clamp(done * 100));
+    }
+    if (goalBF > 0 && bfLogged.length >= 2) {
+      const start = num(bfLogged[0].bodyFatPct), total = Math.abs(start - goalBF);
+      const done = total > 0 ? 1 - Math.abs(bf - goalBF) / total : 1;
+      gains.push(clamp(done * 100));
+    }
+    const GOAL_W = 0.3;                  // a fully-closed gap tops the base up
+    const goalAdd = gains.length ? (gains.reduce((a, v) => a + v, 0) / gains.length) * GOAL_W : 0;
+    let score = clamp(base + goalAdd);
     // BMI alone is a weak signal and says nothing about body composition,
     // so a BMI-only score is capped rather than allowed to read "Fantastic".
     if (used.length === 1 && used[0] === "BMI") score = Math.min(score, 85);
-    return { score, basis: used.join(" + "), log: log.length, used };
+    const basis = used.join(" + ") + (goalAdd > 0 ? " · goal progress" : "");
+    return { score, basis, log: log.length, used: goalAdd > 0 ? used.concat("goal progress") : used };
   }
 
   /* Full attribute readout for a window, with deltas vs the previous window. */

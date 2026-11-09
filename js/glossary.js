@@ -338,8 +338,8 @@ const Glossary = (() => {
     },
     {
       id: "attr-VIT", term: "Vitality", aliases: ["Vitality", "VIT", "body comp"],
-      plain: "Your body composition, read from the weigh-ins and body-fat check-ins you log — how you are trending toward the goals you set. Food logging never feeds it.",
-      real: "A weighted blend of weight trend (or weight vs goal), body-fat trend (or body fat vs goal, or the healthy band with no goal), and BMI. It reads only your body measurements — food logging is a separate thing and never feeds it. No measurements means no score; a BMI-only score is capped.",
+      plain: "Your body composition — how healthy your weight and body fat are, plus any progress toward the goals you set. Food logging never feeds it.",
+      real: "A body-composition HEALTH score first: the sex-specific healthy body-fat band and a healthy BMI. Goal progress is then ADDED on top — closing the gap toward your goal weight or body-fat goal raises the score, but simply having a goal, or not having moved yet, never lowers it. It reads only your body measurements — food logging is a separate thing and never feeds it. No measurements means no score; a BMI-only score is capped.",
       source: "BMI is the standard weight-for-height index (WHO); the weighting of the blend and the cap are this app's own. The body-fat inputs are estimates — see the 'Body fat %' entry.",
     },
     {

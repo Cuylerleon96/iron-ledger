@@ -51,7 +51,13 @@ console.log("\n=== attributes (his Dashboard) ===");
   /* END and CON moved when weekly rates stopped being divided by four weeks he
      was not there for: his first session is 2026-11-07, so he has exactly one
      week of history, and his actual week is what should be judged. */
-  const want = { STR: 35, END: 44, POW: 11, MOB: 0, CON: 65, VIT: 79 };
+  /* VIT moved 79 -> 100 when Vitality became body-composition HEALTH first: his
+     body composition is healthy on its own terms (12% body fat inside the male
+     8-18 band, BMI 19.8 inside 18.5-25), so the base is 100. This fixture has a
+     single check-in, so the log cannot show a gap CLOSED and goal progress adds
+     nothing — the old goal-gap maths is exactly what made a healthy body read
+     low. A deliberate change, not a regression. */
+  const want = { STR: 35, END: 44, POW: 11, MOB: 0, CON: 65, VIT: 100 };
   for (const k of Object.keys(want)) eq(k, a[k].score, want[k]);
   // STR was 41 before the estimated-Strength fix; the basis is what changed:
   // a leg press and two machine presses scored on their OWN tables now

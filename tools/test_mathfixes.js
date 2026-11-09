@@ -1710,12 +1710,18 @@ console.log("\n=== 46. nutrition gamification + Vitality is body-only ===");
   eq("...and the NUTRI_VIT weight table went with it", typeof e.E.NUTRI_VIT, "undefined");
 
   // ---- (e) the body path itself is intact ----
-  const withGoal = (bl) => vit({ profile: Object.assign({}, base().profile, { goalWeightKg: 75 }), bodylog: bl });
-  truthy("with a weight goal, the weight-trend part still drives Vitality",
-     /weight trend/.test(withGoal(blog).detail.basis));
+  // RE-EXPRESSED for the add-only redesign: goal progress is now a BONUS on top
+  // of the healthy body-fat/BMI base, so the basis names it "goal progress" (not
+  // the old "weight trend"), and it can only RAISE the score. A body already at
+  // the healthy base (100) has no headroom, so the strict raise is proven on a
+  // subject whose base sits below the ceiling (a heavy body).
+  const withGoal = (p, bl) => vit({ profile: Object.assign({}, base().profile, p), bodylog: bl });
+  truthy("with a weight goal, the goal-progress part is named in the basis",
+     /goal progress/.test(withGoal({ goalWeightKg: 75 }, blog).detail.basis));
+  const heavy = [{ date: iso(40), weightKg: 104 }, { date: iso(2), weightKg: 96 }];
   truthy("...and getting closer to the goal scores higher (the log is still read)",
-     withGoal([{ date: iso(40), weightKg: 84 }, { date: iso(2), weightKg: 76 }]).score >
-     withGoal([{ date: iso(40), weightKg: 84 }, { date: iso(2), weightKg: 84 }]).score);
+     withGoal({ goalWeightKg: 75 }, heavy).score >
+     withGoal({ goalWeightKg: 75 }, [{ date: iso(40), weightKg: 96 }, { date: iso(2), weightKg: 96 }]).score);
   const bare = vit({ profile: { name: "C", sex: "M", weightKg: 80, weeklyTarget: 3, units: "kg" },
     bodylog: [], intakelog: ifood });
   eq("no body measurements at all is still a zero score, not a nutrition number",
@@ -2113,6 +2119,57 @@ console.log("\n=== 49. the draft autosave: pure decisions + a real reload ===");
   eq("with nothing stored there is no draft", em.S.readDraftRaw(), null);
   eq("...the new draft is empty", em.A.getDraft().entries.length, 0);
   eq("...and follows today", em.A.getDraft().date, iso(0));
+}
+
+console.log("\n=== 50. Vitality is body-composition HEALTH first (a goal can only add) ===");
+{
+  const e = env();
+  const vitOf = (over) => e.E.attributes(base(over), 28).VIT;
+
+  // (1) CUYLER'S REAL EXPORT — lean, healthy, goals SET, not yet moved. This is
+  // the reported defect: it read 17 / "Early days" before the fix because BOTH
+  // goal-gap parts scored 0 (current == start, so no movement yet). His own
+  // export is committed as tools/user-state.json for the regression.
+  const user = JSON.parse(fs.readFileSync(path.join(B, "tools/user-state.json"), "utf8"));
+  const cv = e.E.attributes(user, 28).VIT;
+  console.log(`        his export: VIT ${cv.score} (${cv.detail.basis})`);
+  truthy("a lean, healthy male WITH goals reads HIGH (>= 80), not the old 17", cv.score >= 80);
+  eq("...and is not the old goal-gap 17", cv.score === 17, false);
+  truthy("...the basis names the body parts used (body fat / BMI)",
+    /body fat/.test(cv.detail.basis) && /BMI/.test(cv.detail.basis));
+  // He has not moved since his start, so goal progress measures 0 and adds
+  // nothing — the point is that it also does not SUBTRACT.
+  truthy("...an unmoved goal adds no bonus but does not lower the score", !/goal/.test(cv.detail.basis));
+
+  // (2) a healthy subject with NO goal is just as high.
+  const noGoal = vitOf({ profile: { name: "N", sex: "M", heightCm: 178, weightKg: 70, bodyFatPct: 12, weeklyTarget: 3, units: "kg" } });
+  truthy("a healthy subject with NO goal reads high too", noGoal.score >= 80);
+
+  // (3) an out-of-band body reads LOW, on either axis.
+  const fat = vitOf({ profile: { name: "F", sex: "M", heightCm: 178, weightKg: 70, bodyFatPct: 40, weeklyTarget: 3, units: "kg" } });
+  const bmi32 = vitOf({ profile: { name: "B", sex: "M", heightCm: 170, weightKg: 93, bodyFatPct: null, weeklyTarget: 3, units: "kg" } });
+  console.log(`        40% body fat -> VIT ${fat.score}; BMI 32 -> VIT ${bmi32.score}`);
+  truthy("40% body fat reads LOW", fat.score <= 40);
+  truthy("a BMI of 32 reads LOW", bmi32.score <= 55);
+
+  // (4) closing the gap can only RAISE: same CURRENT body, only the START differs.
+  const prog = (start, cur) => vitOf({
+    profile: { name: "P", sex: "M", heightCm: 178, weightKg: cur, bodyFatPct: 15, goalWeightKg: 75, weeklyTarget: 3, units: "kg" },
+    bodylog: [{ date: iso(40), weightKg: start, bodyFatPct: 15 }, { date: iso(2), weightKg: cur, bodyFatPct: 15 }],
+  });
+  truthy("closing the gap RAISES the score (same current body)", prog(104, 96).score > prog(96, 96).score);
+  // ...and it can never LOWER a healthy body: an unmet goal leaves it at the base.
+  const healthy = (g) => vitOf({
+    profile: { name: "H", sex: "M", heightCm: 178, weightKg: 70, bodyFatPct: 12, goalWeightKg: g, weeklyTarget: 3, units: "kg" },
+    bodylog: [{ date: iso(40), weightKg: 70, bodyFatPct: 12 }, { date: iso(2), weightKg: 70, bodyFatPct: 12 }],
+  });
+  eq("a healthy body with an unmet goal is NOT dragged below its healthy base", healthy(90).score, 100);
+  eq("...it reads the SAME as with no goal at all", healthy(90).score, noGoal.score);
+
+  // (5) no measurements is still an honest 0 (never invented).
+  const bare = vitOf({ profile: { name: "Z", sex: "M", weeklyTarget: 3, units: "kg" } });
+  eq("no measurements at all is still 0", bare.score, 0);
+  eq("...and its basis says 'no data'", bare.detail.basis, "no data");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
