@@ -74,9 +74,13 @@ console.log("\n=== summary + weak points ===");
   /* XP was 330 while the lifetime bonus paid st.bestDays * 15 (his 2-day run:
      +30). That consecutive-day term was removed app-wide (a 3-day badge was the
      last of them), and the bonus is now weeks-at-target * 15 — he has 2 sessions
-     against a target of 4, so 0 weeks, and XP is 300. His LEVEL is unchanged
-     (300 is exactly the level-2 floor). */
-  eq("total XP", sm.xp, 300);
+     against a target of 4, so 0 weeks, which took it to 300. The weigh-in term
+     was then rebalanced: it was a flat 10 XP per ENTRY (his one check-in: +10),
+     the last farmable per-entry term, and is now ONE weekly payment for a week
+     the bodyweight log was used (+15), matching food logging — so his total is
+     305, not 300. His LEVEL is unchanged (2; the level-2 floor is 300, so 305
+     sits 5 into the level). This moved his number UP, not down. */
+  eq("total XP", sm.xp, 305);
   eq("title", sm.title, "Rookie");
   eq("density %", sm.density, 56);
   eq("streak days", sm.streak.days, 2);

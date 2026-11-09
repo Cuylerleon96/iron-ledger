@@ -69,5 +69,53 @@ ok('the progressive session keeps all six attributes', Engine.ATTRIBUTES.every(a
 ok('compareLast finds the earlier session', cmp && cmp.prevDate != null && cmp.est1RM && cmp.volume);
 ok('the progressive session beats the earlier one', cmp.est1RM.cur > cmp.est1RM.prev);
 
+/* ---- empty-state robustness --------------------------------------------------
+   xp() used to return NaN on a state with zero workouts: it read
+   streaks(state).bestWeeks, and an empty log returned an object that OMITTED
+   that key, so `undefined * 50` poisoned the total. A brand-new install is an
+   empty state, so this asserts the general rule — no exported getter may produce
+   a broken number (NaN/Infinity) or throw on an empty state, and xp() must be a
+   real 0, not NaN. These are the checks that would have caught the bug. ---- */
+console.log('\n-- empty-state robustness (the XP NaN bug class) --');
+const EMPTY = { profile:{}, workouts:[], bodylog:[], intakelog:[], profilelog:[], custom:[], overrides:{}, targets:{}, achievements:{} };
+ok('xp() on an EMPTY state is 0', Engine.xp(EMPTY) === 0);
+ok('xp() on an EMPTY state is NOT NaN', !Number.isNaN(Engine.xp(EMPTY)));
+ok('streaks() on an EMPTY state defines bestWeeks = 0', Engine.streaks(EMPTY).bestWeeks === 0);
+ok('streaks() on an EMPTY state defines bestDays = 0', Engine.streaks(EMPTY).bestDays === 0);
+const es = Engine.summary(EMPTY);
+ok('summary() on an EMPTY state carries a finite xp', Number.isFinite(es.xp) && es.xp === 0);
+ok('summary() level total/into/pct are finite on an EMPTY state',
+   Number.isFinite(es.level.total) && Number.isFinite(es.level.into) && Number.isFinite(es.level.pct));
+// the sweep over EVERY exported function that reads a state.
+const UTIL = new Set(['clamp','composeMult','kgStep','levelInfo','dstr','num','interp','weekKeyOf',
+  'setVolume','entryStats','est1RM','tierOf','liftKey','exInfo','exName','exMode','exGroups',
+  'setType','setTypeLabel','setEffort','isCoreLift','isIsolation','isMobility','isBodyweight',
+  'bwFactor','workFactor','hasBwFactor']);
+const WS_ARG = new Set(['bestLifts','bigSession','mobilityScore','powerScore','staminaScore','consistencyScore','strengthScore']);
+const SESSION_ARG = new Set(['sessionXp','effortSetsSession']);
+const nonFinite = [], threw = [];
+const scanBad = (v, d, out) => {
+  if (d > 3) return;
+  if (typeof v === 'number' && !Number.isFinite(v)) out.push('NaN');
+  else if (Array.isArray(v)) v.slice(0,5).forEach(x => scanBad(x, d+1, out));
+  else if (v && typeof v === 'object') for (const k of Object.keys(v)) scanBad(v[k], d+1, out);
+};
+for (const name of Object.keys(Engine)) {
+  const fn = Engine[name];
+  if (typeof fn !== 'function' || UTIL.has(name)) continue;
+  let out;
+  try {
+    if (WS_ARG.has(name)) out = fn(EMPTY, EMPTY.workouts);
+    else if (SESSION_ARG.has(name)) out = fn(EMPTY, { date:'2026-01-01', entries:[] });
+    else out = fn(EMPTY);
+  } catch (e) { threw.push(name + ': ' + e.message); continue; }
+  const bad = []; scanBad(out, 0, bad);
+  if (bad.length) nonFinite.push(name);
+}
+ok('no exported state getter THROWS on an empty state', threw.length === 0);
+ok('no exported state getter returns a non-finite number on an empty state',
+   nonFinite.length === 0);
+if (threw.length || nonFinite.length) console.log('        offenders: threw=[' + threw.join('; ') + '] nonFinite=[' + nonFinite.join(', ') + ']');
+
 console.log(`\nengine: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

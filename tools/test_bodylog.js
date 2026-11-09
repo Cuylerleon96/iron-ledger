@@ -246,5 +246,34 @@ console.log("--- sex may be genuinely UNSET (the Profile 'Not set' choice) ---")
   eq("...and reports no change", again, false);
 }
 
+console.log("--- weigh-in XP: coverage, not volume (the last farmable per-entry term) ---");
+{
+  // xp() used to pay `bodylog.length * 10` — a LINEAR 10 XP per weigh-in, so 50
+  // weigh-ins in one afternoon earned 500 XP and the scale could be spammed for
+  // unlimited XP. It now pays ONE weekly payment for a week the log was used,
+  // matching the food-logging term. These checks pin that shut.
+  const sess = { id: "s", date: "2026-06-02", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] };
+  const withLog = (dates) => ({ profile: { weeklyTarget: 4 }, workouts: [JSON.parse(JSON.stringify(sess))],
+    bodylog: dates.map((d) => ({ date: d, weightKg: 80 })), intakelog: [] });
+  const oneWeek  = withLog(["2026-06-02"]);                                   // 1 weigh-in, 1 week
+  const spam     = withLog(Array(50).fill("2026-06-02"));                     // 50 weigh-ins, SAME day
+  const spamWeek = withLog(Array(50).fill(0).map((_, i) =>                       // 50 weigh-ins across 5 days of ONE week
+                     ["2026-06-01","2026-06-02","2026-06-03","2026-06-04","2026-06-05"][i % 5]));
+  const cover    = withLog(["2026-05-26","2026-06-02","2026-06-09","2026-06-16","2026-06-23"]); // 5 distinct weeks
+
+  eq("50 weigh-ins in ONE day pay a single week", Engine.bodylogCoverWeeks(spam), 1);
+  eq("...and one weekly payment, not 50 x 10", Engine.bodylogXp(spam), Engine.XP.BODY_WEEK);
+  eq("50 weigh-ins spread over one week STILL pay one week", Engine.bodylogCoverWeeks(spamWeek), 1);
+  truthy("weigh-in COVERAGE (5 weeks) out-earns 50 weigh-ins in a day",
+         Engine.bodylogXp(cover) > Engine.bodylogXp(spam));
+  truthy("the bodyweight term still pays (it was not simply deleted)", Engine.bodylogXp(oneWeek) > 0);
+  truthy("50 weigh-ins in a day add NO XP over a single check-in that week",
+         Engine.xp(spam) === Engine.xp(oneWeek));
+  truthy("50 weigh-ins across 5 days of one week add NO XP either",
+         Engine.xp(spamWeek) === Engine.xp(oneWeek));
+  truthy("covering a SECOND week DOES add XP",
+         Engine.xp(cover) > Engine.xp(oneWeek));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1,11 +1,11 @@
 {
-  "versionCode": 72,
-  "versionName": "1.0.71",
+  "versionCode": 73,
+  "versionName": "1.0.72",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "29167202fe6079d0d1f72a366f37f2a47d6a33608bd521214726afd755f16922",
-  "sizeBytes": 3882294,
+  "sha256": "8b2f347877acfdede908c6f013af425e1143920c047341b9ad69649f806bfc7b",
+  "sizeBytes": 3882959,
   "published": "2026-11-08",
   "notes": [
-    "Food logging now counts toward Vitality, with a Profile switch to keep it off your stats - plus four nutrition badges that reward steady logging, never eating less."
+    "XP no longer breaks on a fresh log, and weigh-ins now reward steady check-ins across weeks instead of sheer volume."
   ]
 }

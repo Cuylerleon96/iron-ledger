@@ -1833,7 +1833,12 @@ const Engine = (() => {
   /* ---------- streaks ---------- */
   function streaks(state) {
     const dates = [...new Set((state.workouts || []).map((w) => w.date))].sort();
-    if (!dates.length) return { days: 0, weeks: 0, lastDate: null, daysSince: null };
+    /* An empty log returns the SAME shape as a populated one, with every
+       statistic zero. This used to drop bestDays/bestWeeks, so xp() read
+       undefined and produced NaN on a brand-new install (and any other caller
+       of bestDays/bestWeeks got undefined). A getter must not change shape with
+       emptiness. */
+    if (!dates.length) return { days: 0, weeks: 0, bestDays: 0, bestWeeks: 0, lastDate: null, daysSince: null };
     const set = new Set(dates);
     const today = dayKey(Date.now());
     const daysSince = daysBetween(dates[dates.length - 1], today);
@@ -1914,6 +1919,11 @@ const Engine = (() => {
     INTAKE_WEEK: 15,       // food logged on 5+ days in a week: paid ONCE per week,
                            // never per entry — see intakeXp(). Small next to a PR
                            // (100), so it cannot out-earn improvement.
+    BODY_WEEK: 15,         // a week the bodyweight log was used: paid ONCE per
+                           // week, never per weigh-in — see bodylogXp(). Fifty
+                           // weigh-ins in a day is one week, so it cannot be
+                           // farmed by volume, and it is calendar-bounded so it
+                           // cannot be farmed by count. Matches INTAKE_WEEK.
   };
 
   /* Monday-start week key for a date. Pure in the date itself, so XP does not
@@ -1939,6 +1949,22 @@ const Engine = (() => {
      eating less or a low-calorie day. Calendar-bounded: at most one payment per
      week that exists. */
   function intakeXp(state) { return intakeCoverWeeks(state, NUTRI_COVER_DAYS) * XP.INTAKE_WEEK; }
+
+  /* Bodyweight-check-in XP, on the SAME pattern as food logging: ONE payment for
+     a Monday-start week in which the bodyweight log was used, whatever that week
+     holds in ENTRIES. This replaced a flat `bodylog.length * 10`, the one
+     remaining per-entry term that paid linearly for volume — fifty weigh-ins in
+     a day earned 500 XP, so a user could farm unlimited XP by spamming the
+     scale. Counting WEEKS COVERED instead means volume earns nothing extra
+     (fifty weigh-ins in a day is still one week) while genuine coverage builds
+     steadily, and the term is calendar-bounded — at most one payment per week
+     that exists — so it cannot be farmed by count either. */
+  function bodylogCoverWeeks(state) {
+    const weeks = new Set();
+    for (const b of (state && state.bodylog) || []) if (b && b.date) weeks.add(weekKeyOf(b.date));
+    return weeks.size;
+  }
+  function bodylogXp(state) { return bodylogCoverWeeks(state) * XP.BODY_WEEK; }
 
   /* PRs per calendar date — the same one achievement per exercise per session
      prCount reports, built once so xp() stays linear. */
@@ -2037,9 +2063,12 @@ const Engine = (() => {
        (consecutive WEEKS with at least one session) is a weekly measure, not a
        consecutive-day one, so it stays. Both terms only ever grow as data is
        added, so a level can still never go down. */
-    total += weeksAtTarget(state) * 15 + streaks(state).bestWeeks * 50;
+    /* `|| 0` is defensive: streaks() now always returns a number for
+       bestWeeks, even on an empty log, but a future change to streaks() must not
+       be able to resurrect the NaN-on-empty-state bug silently. */
+    total += weeksAtTarget(state) * 15 + (streaks(state).bestWeeks || 0) * 50;
     total += intakeXp(state);          // food-logging coverage, one payment per week
-    total += (state.bodylog || []).length * 10;
+    total += bodylogXp(state);         // weigh-in coverage, one payment per week
     return total;
   }
   function levelInfo(totalXp) {
@@ -2331,6 +2360,7 @@ const Engine = (() => {
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     intakeDays, intakeCoverWeeks, intakeFoods, intakeXp, nutritionVitality, NUTRI_VIT, NUTRI_COVER_DAYS,
+    bodylogCoverWeeks, bodylogXp,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
