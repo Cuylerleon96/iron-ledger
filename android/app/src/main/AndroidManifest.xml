@@ -41,4 +41,13 @@
     <!-- Needed to hand a downloaded APK to the system installer. Without it the
          install intent is silently refused and updates appear to do nothing. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- The barcode scanner uses the WebView camera (getUserMedia). The WebView
+         only hands the camera over if the APP itself holds the runtime CAMERA
+         permission (Capacitor maps VIDEO_CAPTURE to Manifest.permission.CAMERA),
+         so this must be declared or every scan fails with NotAllowedError. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Camera is optional: declaring CAMERA would otherwise imply
+         android.hardware.camera is REQUIRED and filter the app off camera-less
+         devices. State it explicitly as optional to keep the app installable. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

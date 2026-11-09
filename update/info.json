@@ -1,11 +1,11 @@
 {
-  "versionCode": 75,
-  "versionName": "1.1.0",
+  "versionCode": 76,
+  "versionName": "1.1.1",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "4950fd313a812f0d9356ddd0b8f00914d8c097a5b1446b5b0cef23e82b1e310c",
-  "sizeBytes": 3895214,
+  "sha256": "e3b29aa4197623cedcc1fa949b891c468c345100cb78df64b237a99af06f6854",
+  "sizeBytes": 3895284,
   "published": "2026-11-09",
   "notes": [
-    "Scan a food barcode to log it \u2014 the camera runs on your phone, and the barcode number is looked up in Open Food Facts."
+    "The scanner now asks for camera access, so scanning works on your phone."
   ]
 }
