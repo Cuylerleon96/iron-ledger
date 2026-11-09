@@ -1310,6 +1310,15 @@
     return b;
   }
 
+  /* The header's avatar slot (js/hero.js) is driven by ONE class per app event:
+     a logged session -> "lift"; a weekly target met / PR / badge -> "celebrate";
+     otherwise "idle". Event-driven, never a timer. Guarded so a build without the
+     slot — or the test stubs — simply does nothing. */
+  function heroPlay(row) {
+    try { if (typeof Hero !== "undefined" && Hero && typeof Hero.play === "function") Hero.play(row); }
+    catch (e) { /* the slot is decorative; never let it break a save */ }
+  }
+
   /* The ONE save path. Everything that awards a badge, a PR or a level-up hangs
      off THIS function, and it commits the session (Store.upsertWorkout) BEFORE it
      evaluates or celebrates anything — so an unsaved or discarded session can
@@ -1328,6 +1337,7 @@
     if (!entries.length) { toast("Add at least one set", "warn"); return; }
     const isNew = !d.id;                          // an edit is not a fresh milestone
     const before = Engine.summary(Store.state);       // level/title BEFORE this save
+    const weeklyMetBefore = weekProgress(Store.state).met;
     const w = Store.upsertWorkout({ id: d.id || undefined, date: d.date, note: d.note, entries });
     const after = Engine.summary(Store.state);
     const sx = Engine.sessionXp(Store.state, w);
@@ -1346,6 +1356,9 @@
       { level: after.level.level, title: after.title },
       prs, newB) : [];
     if (ev.length) celebrate(ev);
+    /* the slot: a milestone (PR / badge / level / rank) or the weekly target
+       crossing plays "celebrate"; a freshly logged session plays "lift". */
+    heroPlay(ev.length || (!weeklyMetBefore && weekProgress(Store.state).met) ? "celebrate" : (isNew ? "lift" : "idle"));
     render();
   }
 
@@ -1405,6 +1418,7 @@
       { level: before.level.level, title: before.title },
       { level: after.level.level, title: after.title }, prs || [], newB);
     if (ev.length) celebrate(ev);
+    heroPlay(ev.length ? "celebrate" : "idle");
   }
 
   /* ================= import dialog ================= */

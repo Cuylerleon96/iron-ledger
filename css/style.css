@@ -114,6 +114,50 @@ b, strong { font-weight: 700; }
 }
 .hud-item { font-size: .68rem; text-shadow: var(--outline-sm); }
 
+/* ---------------- hero sprite slot (header) ----------------
+   An INERT slot for the owner's hand-drawn avatar, sitting between .brand and
+   .hud. Nothing here draws, reserves space or is tappable until a sprite sheet
+   exists: with no asset the element carries only class "hero" (plus no row
+   class), matches none of the rules below, and stays display:none — so it adds
+   no box, no flex gap and no height, and the header is pixel-identical to
+   before. js/hero.js adds ONE row class (idle / lift / celebrate) only AFTER
+   the sheet loads; that single asset file is the whole swap. background-image
+   is set by js/hero.js from its one SHEET path — the CSS owns geometry + frames.
+
+   SHEET GEOMETRY (re-cut the sheet in ONE place):
+     cell   = 32 x 32 native px            (a GBA 32x32 character sprite)
+     sheet  = 4 columns x 3 rows           = 128 x 96 native px
+     rows   = 0 idle / 1 lift / 2 celebrate (one row per animation)
+     drawn at 2x, so one cell covers 64 x 64 DEVICE px.
+
+   DEVICE-SIZE ARITHMETIC (an exact integer device size is the whole point):
+     DPR = 2.625 (Pixel 6).  64 device px / 2.625 = 24.381 CSS px per cell.
+     background-size = the whole sheet at 2x:
+       4 cells * 64 = 256 device px -> calc(256px / 2.625) CSS px wide
+       3 rows  * 64 = 192 device px -> calc(192px / 2.625) CSS px tall.
+   Scoped to .topbar: the app already uses .hero for the dashboard trainer
+   card, which must not be touched. */
+.topbar .hero { display: none; }
+.topbar .hero.idle, .topbar .hero.lift, .topbar .hero.celebrate {
+  display: block; flex: 0 0 auto;
+  width: calc(64px / 2.625);                     /* 64 device px = 2x a 32px cell */
+  height: calc(64px / 2.625);
+  background-repeat: no-repeat;
+  background-size: calc(256px / 2.625) calc(192px / 2.625);   /* the sheet at 2x */
+  image-rendering: pixelated;
+}
+.topbar .hero.idle      { background-position: 0 0;                        animation: hero-idle      .8s steps(4) infinite; }
+.topbar .hero.lift      { background-position: 0 calc(-64px / 2.625);      animation: hero-lift      .6s steps(4) 1; }
+.topbar .hero.celebrate { background-position: 0 calc(-128px / 2.625);     animation: hero-celebrate .8s steps(4) 2; }
+/* one row per animation: 4 columns advanced with steps(4) across the row */
+@keyframes hero-idle      { from { background-position: 0 0; }
+                            to   { background-position: calc(-256px / 2.625) 0; } }
+@keyframes hero-lift      { from { background-position: 0 calc(-64px / 2.625); }
+                            to   { background-position: calc(-256px / 2.625) calc(-64px / 2.625); } }
+@keyframes hero-celebrate { from { background-position: 0 calc(-128px / 2.625); }
+                            to   { background-position: calc(-256px / 2.625) calc(-128px / 2.625); } }
+.topbar .hero.paused { animation-play-state: paused; }
+
 /* ---------------- tabs ---------------- */
 /* Six tabs (Lock: Nutrition is the 6th). Tightened so all six fit a 412px phone
    without scrolling; overflow-x:auto stays as the fallback for narrower screens
@@ -666,6 +710,9 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 @keyframes celeb-glow { from { filter: brightness(1); } to { filter: brightness(1.35); } }
 @media (prefers-reduced-motion: reduce) {
   .modal-box.celebrate, .celeb-star { animation: none; }
+  /* the hero slot holds ONE static frame — the first cell of whichever row is
+     active — instead of animating. */
+  .topbar .hero.idle, .topbar .hero.lift, .topbar .hero.celebrate { animation: none; }
 }
 .form-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .form-grid .grid-note { grid-column: 1 / -1; margin: 0; }

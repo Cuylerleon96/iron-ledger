@@ -1077,5 +1077,79 @@ console.log("=== the Profile sex control offers a neutral 'Not set' choice ===")
   eq("...the female figure for a woman", A.bfFloorPct("F"), 13);
 }
 
+console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ===");
+{
+  /* the owner draws the avatar himself. This pins the SLOT + HARNESS that ship
+     now, with NO asset: the slot must be invisible and reserve no space until a
+     sheet exists, and the animation must be event-driven, pausable and
+     reduced-motion-safe. It is scoped to .topbar because the app already uses
+     .hero for the dashboard trainer card. */
+  const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
+  const css  = fs.readFileSync(path.join(B, "css", "style.css"), "utf8");
+  const hero = fs.readFileSync(path.join(B, "js", "hero.js"), "utf8");
+  const app  = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const header = (html.match(/<header class="topbar">([\s\S]*?)<\/header>/) || [])[1] || "";
+
+  /* (1) the slot is in the header, exactly between .brand and .hud */
+  truthy("the sprite slot sits between .brand and .hud in the header",
+    /<div class="brand">[\s\S]*?<\/div>\s*<div class="hero"[\s\S]*?<\/div>\s*<div class="hud">/.test(header));
+  const slotTag = (header.match(/<div class="hero"[^>]*>/) || [])[0] || "";
+  truthy("the slot is a plain div carrying the hero class", /^<div class="hero"/.test(slotTag));
+  truthy("...with an id the runtime can find", /id="hero"/.test(slotTag));
+  truthy("...decorative (aria-hidden), with no role/tabindex/button/handler",
+    /aria-hidden="true"/.test(slotTag) && !/role=|tabindex=|<button|onclick=|onkey/.test(slotTag));
+  eq("the slot element is empty (no placeholder child)",
+    (header.match(/<div class="hero"[^>]*>([\s\S]*?)<\/div>/) || [])[1], "");
+
+  /* (2) INERT by default: with no asset it draws nothing and reserves no space */
+  const block = (css.match(/hero sprite slot \(header\)([\s\S]*?)\/\* -+ tabs/) || [])[1] || "";
+  truthy("the default rule hides the slot (no box, no flex gap, no height)",
+    /\.topbar \.hero \{[^}]*display:\s*none/.test(block));
+  eq("the stylesheet ships NO background-image property (nothing can draw without an asset)",
+    /background-image\s*:/.test(block), false);
+  eq("the header markup ships no image or url()", /<img|url\(/.test(header), false);
+  eq("no sprite asset exists in the repo", fs.existsSync(path.join(B, "img", "hero-sheet.png")), false);
+
+  /* (3) three row classes, each on its own steps() keyframes */
+  ["idle", "lift", "celebrate"].forEach((row) => {
+    truthy(`a .hero.${row} row class exists`, new RegExp("\\.topbar \\.hero\\." + row + "\\b").test(css));
+    truthy(`@keyframes hero-${row} exists`, new RegExp("@keyframes hero-" + row + "\\b").test(css));
+    truthy(`.hero.${row} runs hero-${row} with steps(4)`,
+      new RegExp("\\.topbar \\.hero\\." + row + "\\s*\\{[^}]*animation:\\s*hero-" + row + "\\s[^;]*steps\\(4\\)").test(css));
+  });
+  truthy("the rows are idle / lift / celebrate in that order",
+    /\.hero\.idle\s*\{[^}]*hero-idle[\s\S]*?\.hero\.lift\s*\{[^}]*hero-lift[\s\S]*?\.hero\.celebrate\s*\{[^}]*hero-celebrate/.test(css));
+
+  /* (4) the geometry is an exact integer DEVICE size */
+  truthy("the cell is 64 device px square: calc(64px / 2.625)",
+    /width:\s*calc\(64px \/ 2\.625\)/.test(css) && /height:\s*calc\(64px \/ 2\.625\)/.test(css));
+  truthy("background-size is the whole 4x3 sheet at 2x (256x192 device px)",
+    /background-size:\s*calc\(256px \/ 2\.625\) calc\(192px \/ 2\.625\)/.test(css));
+  truthy("the sprite is drawn pixelated",
+    /\.topbar \.hero\.idle, \.topbar \.hero\.lift, \.topbar \.hero\.celebrate \{[^}]*image-rendering:\s*pixelated/.test(css));
+  truthy("the device arithmetic and the sheet geometry are in ONE comment",
+    /DPR = 2\.625/.test(block) && /4 columns x 3 rows/.test(block) && /32 x 32 native px/.test(block));
+
+  /* (5) pause + reduced motion */
+  truthy("a .paused class holds the animation",
+    /\.topbar \.hero\.paused\s*\{[^}]*animation-play-state:\s*paused/.test(css));
+  truthy("visibilitychange toggles .paused (hidden pauses, visible resumes)",
+    /visibilitychange/.test(hero) && /classList\.add\("paused"\)/.test(hero) && /classList\.remove\("paused"\)/.test(hero));
+  eq("there is exactly ONE prefers-reduced-motion block",
+    (css.match(/prefers-reduced-motion/g) || []).length, 1);
+  const rm = (css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/) || [])[0] || "";
+  truthy("the reduced-motion block holds the hero to ONE static frame (animation: none)",
+    /\.topbar \.hero\.idle/.test(rm) && /\.topbar \.hero\.celebrate/.test(rm) && /animation:\s*none/.test(rm));
+
+  /* (6) event-driven, never a timer */
+  truthy("the slot is driven from the save path via Hero.play",
+    /Hero\.play\(/.test(app) && /typeof Hero !== "undefined"/.test(app));
+  truthy("...lift on a fresh session and celebrate on a milestone/target",
+    /"celebrate"/.test(app) && /"lift"/.test(app) && /heroPlay\(/.test(app));
+  eq("the slot is never driven by a timer", /setInterval|setTimeout/.test(hero), false);
+  eq("the slot binds no click/tap handler", /addEventListener\("(click|pointer|touch)/.test(hero), false);
+  truthy("the runtime keeps the sheet path in ONE place", /const SHEET = "img\/hero-sheet\.png"/.test(hero));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
