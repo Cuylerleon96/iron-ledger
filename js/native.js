@@ -27,6 +27,10 @@ const Native = (() => {
                                             // the plugin switches on "DATA". Maps to getFilesDir().
   const FILE = "iron-ledger-state.json";
   const SNAP_FILE = "iron-ledger-preupdate.json";
+  // The in-progress session draft is mirrored here under its OWN file, never the
+  // state file: a draft write must not touch (or shrink) real history, and a
+  // draft read must not be confused with the whole-state mirror.
+  const DRAFT_FILE = "iron-ledger-draft.json";
   const has = !!FS;
 
   let bridgeReady = false;
@@ -103,9 +107,9 @@ const Native = (() => {
   const writeSnapshot = (text) => writeNamed(SNAP_FILE, text);
   const readSnapshot = () => readNamed(SNAP_FILE);
   const BAK_PREFIX = "iron-ledger-backup-";
-  const info = () => ({ available: has, dir: DIR, file: FILE, snapshot: SNAP_FILE, backupPrefix: BAK_PREFIX });
+  const info = () => ({ available: has, dir: DIR, file: FILE, snapshot: SNAP_FILE, draft: DRAFT_FILE, backupPrefix: BAK_PREFIX });
 
   return { available: has, write, read, writeNamed, readNamed, deleteNamed,
-           writeSnapshot, readSnapshot, info, DIR, FILE, SNAP_FILE, BAK_PREFIX };
+           writeSnapshot, readSnapshot, info, DIR, FILE, SNAP_FILE, DRAFT_FILE, BAK_PREFIX };
 })();
 if (typeof module !== "undefined") module.exports = Native;

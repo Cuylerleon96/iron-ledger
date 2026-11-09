@@ -201,7 +201,10 @@ console.log("=== the empty-box path adds a blank set instead of refusing ===");
 {
   const src = fs.readFileSync(path.join(B, "js/app.js"), "utf8");
   truthy("doAdd adds an empty set when the box is blank",
-    /if \(!qi\.value\.trim\(\)\) \{ en\.sets\.push\(\{\}\); render\(\); return; \}/.test(src));
+    /* Re-expressed for the draft autosave: the blank-box path now also mirrors the
+       draft to Store before re-rendering, so nothing typed is only in memory. The
+       INTENT is unchanged — a blank box pushes an empty set and returns. */
+    /if \(!qi\.value\.trim\(\)\) \{ en\.sets\.push\(\{\}\); persistDraft\(true\); render\(\); return; \}/.test(src));
   truthy("the button is labelled + Add set", /\+ Add set<\/button>/.test(src));
 }
 

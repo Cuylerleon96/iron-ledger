@@ -561,6 +561,52 @@ const Store = (() => {
     return false;
   }
 
+  /* ---------- the in-progress session draft ----------
+     The Log tab's draft is kept under its OWN localStorage key and its OWN
+     on-device file, so a draft write can never touch (or shrink) real history,
+     and a draft read can never be mistaken for the whole-state mirror. WHAT to
+     write is decided by Engine.draftToStore (is it worth keeping?); this is only
+     the storage. A null payload REMOVES the key, so a session that was saved or
+     deleted cannot be resurrected by a later launch. */
+  const DRAFT = "fitness-app-v1-draft";
+
+  function writeDraft(payload) {
+    try {
+      if (payload == null) localStorage.removeItem(DRAFT);
+      else localStorage.setItem(DRAFT, JSON.stringify(payload));
+    } catch (e) { console.error("draft save failed", e); }
+    // Mirror fire-and-forget: localStorage is the synchronous working copy.
+    if (typeof Native !== "undefined" && Native.available && Native.DRAFT_FILE) {
+      if (payload == null) Native.deleteNamed(Native.DRAFT_FILE);
+      else Native.writeNamed(Native.DRAFT_FILE, JSON.stringify(payload));
+    }
+  }
+
+  function readDraftRaw() {
+    try {
+      const raw = localStorage.getItem(DRAFT);
+      return raw == null ? null : JSON.parse(raw);
+    } catch (e) { console.warn("draft read failed", e); return null; }
+  }
+
+  const clearDraft = () => writeDraft(null);
+
+  /* On device: if localStorage lost the draft but the mirror still has it, copy
+     it back so the Log tab can read it. localStorage wins whenever it holds one. */
+  async function recoverDraft() {
+    if (typeof Native === "undefined" || !Native.available || !Native.DRAFT_FILE) return null;
+    if (readDraftRaw()) return null;
+    const res = await Native.readNamed(Native.DRAFT_FILE);
+    if (res.ok && res.text) {
+      try {
+        const p = JSON.parse(res.text);
+        localStorage.setItem(DRAFT, res.text);
+        return p;
+      } catch (e) { console.warn("draft mirror unreadable", e); }
+    }
+    return null;
+  }
+
   /* ---------- rolling dated backups ---------- */
   /* The pre-update snapshot only exists at the moment of an update. These roll:
      at most one a day, into the same protected app storage, keeping the last few.
@@ -653,6 +699,7 @@ const Store = (() => {
     setSaveErrorHandler: (fn) => { onSaveError = fn; },
     setTarget, clearTarget, autoBackup, recoverFromBackup,
     recordProfileLog, profileAsOf,
+    writeDraft, readDraftRaw, clearDraft, recoverDraft,
   };
 })();
 if (typeof module !== "undefined") module.exports = Store;

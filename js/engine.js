@@ -2447,8 +2447,67 @@ const Engine = (() => {
     };
   }
 
+  /* ---------- the in-progress session draft (pure) ----------
+     The Log tab's draft lives in memory; js/app.js mirrors it to Store on every
+     change so locking the phone, a WebView kill or an app update cannot lose a
+     workout the user is halfway through. The DECISIONS — what is worth writing
+     and whether a stored payload should be restored — are pure and live here so
+     they can be pinned without a DOM:
+
+       draftToStore(d)            -> the small payload to write, or null when the
+                                     draft is empty (nothing to keep).
+       draftFromStore(raw, today) -> the reconstructed draft, or null when the
+                                     stored payload holds nothing to restore.
+
+     The payload is EXACTLY the draft's own five fields {id, date, note, entries,
+     dateTouched} — never the whole state — so the written bytes stay tiny. */
+  const cloneEntries = (entries) => (Array.isArray(entries) ? entries : [])
+    .filter((en) => en && typeof en === "object" && Array.isArray(en.sets))
+    .map((en) => {
+      const out = Object.assign({}, en);         // keep the entry's own fields verbatim
+      out.sets = en.sets
+        .filter((s) => s && typeof s === "object")
+        .map((s) => Object.assign({}, s));       // a shallow copy per set: numbers/strings only
+      return out;
+    });
+
+  /* Worth persisting: any logged set, any note text, a date the user actually
+     picked, or an edit of an existing session. An untouched new draft has none
+     of these, so it is NOT written — and a stored empty payload restores to
+     nothing, so it can never create noise. */
+  const draftWorthKeeping = (entries, note, dateTouched, id) =>
+    entries.length > 0 || note.trim() !== "" || dateTouched === true || id != null;
+
+  function draftToStore(d) {
+    if (!d || typeof d !== "object") return null;
+    const entries = cloneEntries(d.entries);
+    const note = d.note == null ? "" : String(d.note);
+    const dateTouched = !!d.dateTouched;
+    const id = d.id == null ? null : d.id;
+    if (!draftWorthKeeping(entries, note, dateTouched, id)) return null;
+    return { id, date: d.date == null ? null : String(d.date), note, entries, dateTouched };
+  }
+
+  function draftFromStore(raw, todayStr) {
+    let p = raw;
+    if (typeof raw === "string") { try { p = JSON.parse(raw); } catch (e) { return null; } }
+    if (!p || typeof p !== "object") return null;
+    const entries = cloneEntries(p.entries).filter((en) => en.id != null);
+    const note = p.note == null ? "" : String(p.note);
+    const dateTouched = !!p.dateTouched;
+    const id = p.id == null ? null : p.id;
+    if (!draftWorthKeeping(entries, note, dateTouched, id)) return null;
+    /* An unsaved, untouched draft has no fixed date of its own: it follows today
+       even across a kill, exactly as renderLog keeps it on the current calendar
+       day. An edit (id) or a date the user picked keeps ITS date. */
+    const keepDate = id != null || dateTouched;
+    const date = keepDate ? (p.date != null ? String(p.date) : (todayStr || null)) : (todayStr || null);
+    return { id, date, note, entries, dateTouched };
+  }
+
   return {
     DAY, ATTRIBUTES, GROUP_ORDER, LANDMARKS, STANDARDS, TIERS, ACHIEVEMENTS,
+    draftToStore, draftFromStore,
     clamp, num, interp, tierOf, est1RM, setVolume, entryStats, liftKey, isCoreLift,
     SET_TYPES, setType, setTypeLabel, setEffort,
     exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, profileAsOf, bestFor, seriesFor, compareLast,

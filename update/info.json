@@ -1,11 +1,11 @@
 {
-  "versionCode": 80,
-  "versionName": "1.2.2",
+  "versionCode": 81,
+  "versionName": "1.2.3",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "868ecc2cbfc8a31cd5da10f08e0c2e316ffb4296f11f67104f9313e36df3f5ef",
-  "sizeBytes": 3900903,
+  "sha256": "2cd15f700230055ae0d63cb445421975d2eba399794155a496b66cfaa5d5f233",
+  "sizeBytes": 3903849,
   "published": "2026-11-09",
   "notes": [
-    "Saving a session works again - a bug had stopped the Save button from doing anything."
+    "If the app closes mid-workout, your in-progress session is kept and comes back when you reopen it."
   ]
 }

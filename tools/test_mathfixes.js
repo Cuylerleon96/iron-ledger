@@ -1962,5 +1962,155 @@ console.log("\n=== 48. the Save button's CLICK path really saves (the event-argu
   eq("a real draft argument is still honoured", k.S.state.workouts.length, 1);
 }
 
+console.log("\n=== 49. the draft autosave: pure decisions + a real reload ===");
+{
+  /* The Log tab's draft lived only in memory: a WebView suspended/killed while
+     the screen was locked lost a whole session (it happened once, for a whole
+     workout). It is now mirrored to Store on every change and rebuilt on open.
+     The pure decisions (what to write, whether to restore) and the round trip
+     are pinned here, and the reload is driven through the app's REAL handlers. */
+  const e = env();
+  const T = "2026-06-02";
+  const oneEntry = () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] });
+
+  // ---- the pure payload: only what is worth keeping ----
+  eq("an untouched new draft writes NOTHING",
+    e.E.draftToStore({ id: null, date: "2026-06-01", note: "", entries: [], dateTouched: false }), null);
+  eq("a whitespace-only note is not worth keeping",
+    e.E.draftToStore({ id: null, date: "2026-06-01", note: "   ", entries: [], dateTouched: false }), null);
+  truthy("a logged set makes it worth keeping",
+    e.E.draftToStore({ id: null, date: "2026-06-01", note: "", entries: [oneEntry()], dateTouched: false }) !== null);
+  truthy("a real note alone is worth keeping",
+    e.E.draftToStore({ id: null, date: "2026-06-01", note: "legs", entries: [], dateTouched: false }) !== null);
+  truthy("a date the user picked alone is worth keeping",
+    e.E.draftToStore({ id: null, date: "2026-06-01", note: "", entries: [], dateTouched: true }) !== null);
+
+  const stored = e.E.draftToStore({ id: null, date: "2026-06-01", note: "legs", entries: [oneEntry()], dateTouched: false });
+  eq("the payload is EXACTLY the draft's five fields",
+    Object.keys(stored).sort(), ["date", "dateTouched", "entries", "id", "note"]);
+  eq("...the draft only, never the whole state", "workouts" in stored, false);
+
+  // ---- restore: the four edge cases ----
+  eq("a null payload restores to nothing", e.E.draftFromStore(null, T), null);
+  eq("a corrupt payload restores to nothing", e.E.draftFromStore("{not json", T), null);
+  eq("a non-object payload restores to nothing", e.E.draftFromStore("42", T), null);
+  const back = e.E.draftFromStore(JSON.stringify(stored), T);
+  eq("a stored draft restores its entries identically", back.entries, stored.entries);
+  eq("...and its note", back.note, "legs");
+  eq("an untouched, unsaved draft still follows TODAY (not its stored date)", back.date, T);
+
+  const editStored = e.E.draftToStore({ id: "w1", date: "2026-05-01", note: "", entries: [oneEntry()], dateTouched: true });
+  const editBack = e.E.draftFromStore(editStored, T);
+  eq("an edited session keeps ITS date", editBack.date, "2026-05-01");
+  eq("...and its id", editBack.id, "w1");
+  eq("...and dateTouched", editBack.dateTouched, true);
+  const touched = e.E.draftToStore({ id: null, date: "2026-05-09", note: "", entries: [oneEntry()], dateTouched: true });
+  eq("a date the user picked is kept, not re-dated", e.E.draftFromStore(touched, T).date, "2026-05-09");
+
+  // ---- idempotent ----
+  eq("restoring twice yields the same draft", e.E.draftFromStore(stored, T), e.E.draftFromStore(stored, T));
+  const d1 = e.E.draftFromStore(stored, T);            // an untouched draft re-dates to today
+  eq("restore -> store -> restore is a fixed point",
+    e.E.draftFromStore(e.E.draftToStore(d1), T), d1);
+
+  /* ---- the real thing: build a draft through the app's own controls, "reload"
+     into a fresh app sharing the same localStorage, and read it back ---- */
+  const uiEnv2 = (seed, store) => {
+    store = store || {};
+    const qmap = {}, listeners = {};
+    const mkNode = (id) => ({
+      id, _html: "", className: "", dataset: {}, style: {}, children: [],
+      set innerHTML(v) { this._html = String(v); }, get innerHTML() { return this._html; },
+      addEventListener(type, fn) { (listeners[id + "|" + type] = listeners[id + "|" + type] || []).push(fn); },
+      removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+      append(c) { this.children.push(c); }, prepend() {}, remove() {}, click() {}, focus() {},
+      contains: () => false,
+      querySelector: (sel) => (qmap[sel] = qmap[sel] || mkNode(sel)), querySelectorAll: () => [],
+      getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    });
+    const qnode = (sel) => (qmap[sel] = qmap[sel] || mkNode(sel));
+    const s = {
+      console: { log() {}, warn() {}, error() {}, info() {} },
+      Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
+      isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+      setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+      confirm: () => true,                       // the delete path asks once
+      document: {
+        addEventListener() {}, removeEventListener() {},
+        querySelector: qnode, querySelectorAll: () => [], getElementById: qnode,
+        createElement: () => mkNode("e"), createElementNS: () => mkNode("ns"),
+        body: mkNode("body"), visibilityState: "visible", activeElement: null,
+      },
+      navigator: { clipboard: { writeText: async () => {} } },
+      localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+      Blob: function () {}, URL: { createObjectURL: () => "blob:x" },
+      module: { exports: {} },
+    };
+    s.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+    s.window = s; s.globalThis = s;
+    vm.createContext(s);
+    vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(base(seed || {})))});`, s);
+    const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/macros.js", "js/nutrition.js", "js/store.js", "js/app.js"]
+      .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+    vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "draftui.js" });
+    const fire = (sel, type, evt) => {
+      const ls = listeners[sel + "|" + type] || [];
+      if (!ls.length) throw new Error("no " + type + " listener on " + sel);
+      return ls[ls.length - 1](evt);
+    };
+    return { A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, store, fire };
+  };
+  const seed = { workouts: [wk(iso(7), [{ w: 100, r: 8 }])] };
+
+  // build through the app's real "Repeat last session" control, then reload
+  const shared = {};
+  const h = uiEnv2(seed, shared);
+  h.A.buildIndex(); h.A.setView("log");
+  h.fire("#btn-repeat", "click", { type: "click", target: {} });
+  const drafted = h.A.getDraft();
+  eq("a draft IS persisted by the app on a real change", h.S.readDraftRaw() !== null, true);
+  truthy("...under the app's own dedicated key", "fitness-app-v1-draft" in h.store);
+  eq("...and the saved state key is untouched", JSON.parse(h.store["fitness-app-v1"]).workouts.length, 1);
+
+  const h2 = uiEnv2(seed, shared);              // a fresh app instance (a reload),
+  h2.A.buildIndex();                            // same localStorage
+  h2.A.setView("log");
+  eq("the draft came back after the reload — identical entries", h2.A.getDraft().entries, drafted.entries);
+  eq("...identical sets", h2.A.getDraft().entries[0].sets, drafted.entries[0].sets);
+  eq("...same note", h2.A.getDraft().note, drafted.note);
+  h2.A.setView("dash"); h2.A.setView("log");    // reopening the tab is IDEMPOTENT
+  eq("reopening the tab does not duplicate or corrupt the entries", h2.A.getDraft().entries.length, drafted.entries.length);
+
+  // SAVE clears the stored draft
+  const sv = uiEnv2(seed, {});
+  sv.A.buildIndex(); sv.A.setView("log");
+  sv.fire("#btn-repeat", "click", { type: "click", target: {} });
+  eq("a draft is stored before the save", sv.S.readDraftRaw() !== null, true);
+  sv.fire("#btn-save", "click", { type: "click", target: {}, preventDefault() {} });
+  eq("SAVING clears the stored draft", sv.S.readDraftRaw(), null);
+  eq("...and leaves a fresh, empty draft", sv.A.getDraft().entries.length, 0);
+  eq("...the session itself is saved", sv.S.state.workouts.length, 2);
+
+  // DELETE clears the stored draft (after loading a real saved session to edit)
+  const dl = uiEnv2(seed, {});
+  dl.A.buildIndex(); dl.A.setView("history");
+  dl.fire(".ed", "click", { type: "click", target: {} });   // "Edit" a saved session
+  eq("editing a saved session persists it as the draft", dl.S.readDraftRaw() !== null, true);
+  eq("...keeping its id", dl.A.getDraft().id, seed.workouts[0].id);
+  eq("...and its own date", dl.A.getDraft().date, seed.workouts[0].date);
+  dl.A.setView("log");
+  dl.fire("#btn-del", "click", { type: "click", target: {} });
+  eq("DELETING clears the stored draft", dl.S.readDraftRaw(), null);
+  eq("...and the session is gone", dl.S.state.workouts.length, 0);
+
+  // an empty draft restores to NOTHING (no noise)
+  const em = uiEnv2(seed, {});
+  em.A.buildIndex(); em.A.setView("log");
+  eq("with nothing stored there is no draft", em.S.readDraftRaw(), null);
+  eq("...the new draft is empty", em.A.getDraft().entries.length, 0);
+  eq("...and follows today", em.A.getDraft().date, iso(0));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

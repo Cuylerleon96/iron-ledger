@@ -12,7 +12,7 @@ const eq = (label, got, want) => {
   ok ? pass++ : fail++;
 };
 
-const FILE = "iron-ledger-state.json", SNAP = "iron-ledger-preupdate.json";
+const FILE = "iron-ledger-state.json", SNAP = "iron-ledger-preupdate.json", DRAFT = "iron-ledger-draft.json";
 /* Mirror writes are deliberately fire-and-forget (localStorage is the synchronous
    working copy), so give the promise queue a turn before asserting on the disk. */
 const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
@@ -262,6 +262,65 @@ function env({ ls = {}, files = {}, failRead = false, corruptMirror = false } = 
     after.Store.upsertWorkout({ id: "after1", date: "2026-12-31", entries: [] });
     await tick();
     eq("new sessions mirror normally after recovery", JSON.parse(after.disk[FILE]).workouts.length, 121);
+  }
+
+  console.log("--- the in-progress draft has its OWN key and its OWN device file ---");
+  {
+    /* The Log tab's draft used to live only in memory: an Android WebView
+       suspended/killed while the screen was locked lost a whole workout. It is
+       now mirrored to Store on every change under a dedicated key. A draft write
+       must never touch (or shrink) real history, and the device mirror is its
+       OWN file so a draft read can never be mistaken for the state mirror. */
+    const draft = { id: null, date: "2026-06-01", note: "legs", dateTouched: false,
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] };
+    const e = env({ ls: mkState(2, 2) });
+    e.Store.writeDraft(draft);
+    eq("the draft reads back exactly", e.Store.readDraftRaw(), draft);
+    eq("it lives under the dedicated key", "fitness-app-v1-draft" in e.store, true);
+    eq("a draft write does NOT touch the state mirror", JSON.parse(e.store["fitness-app-v1"]).workouts.length, 2);
+    const raw = e.store["fitness-app-v1-draft"];
+    eq("the payload is the draft only — no workouts", "workouts" in JSON.parse(raw), false);
+    eq("...and no profile", "profile" in JSON.parse(raw), false);
+    eq("...so the written bytes stay the size of the draft", raw === JSON.stringify(draft), true);
+
+    await tick(1700);                       // the native write is fire-and-forget
+    eq("it is mirrored to its own device file, not the state file", JSON.parse(e.disk[DRAFT]).entries.length, 1);
+    eq("the draft file is a different file from the state mirror", DRAFT !== FILE, true);
+
+    // the WebView store is wiped (a kill/app update) but the device file survives
+    delete e.store["fitness-app-v1-draft"];
+    const back = await e.Store.recoverDraft();
+    eq("recovered the draft from the device file", back, draft);
+    eq("...and it is back in localStorage for the Log tab to read", e.Store.readDraftRaw(), draft);
+  }
+
+  console.log("--- saving/deleting clears the draft everywhere (it cannot resurrect) ---");
+  {
+    const draft = { id: "w1", date: "2026-06-01", note: "", dateTouched: true,
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] };
+    const e = env({ ls: mkState(2, 2) });
+    e.Store.writeDraft(draft);
+    await tick(1700);
+    eq("draft is in localStorage", e.Store.readDraftRaw() !== null, true);
+    eq("...and mirrored to the device file", DRAFT in e.disk, true);
+
+    e.Store.clearDraft();                   // what save/delete/discard call
+    await tick(1700);
+    eq("clearing removes the localStorage draft", e.Store.readDraftRaw(), null);
+    eq("clearing removes the device file too", DRAFT in e.disk, false);
+    eq("recovery finds nothing after a clear", await e.Store.recoverDraft(), null);
+  }
+
+  console.log("--- a live localStorage draft is never clobbered by a stale mirror ---");
+  {
+    const freshDraft = { id: null, date: "2026-06-02", note: "fresh", dateTouched: true,
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 90, r: 5 }] }] };
+    const stale = JSON.stringify({ id: null, date: "2026-06-01", note: "stale", dateTouched: true,
+      entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 80, r: 5 }] }] });
+    const e = env({ ls: mkState(1, 1), files: { [DRAFT]: stale } });
+    e.Store.writeDraft(freshDraft);
+    eq("recovery is a no-op while localStorage already holds a draft", await e.Store.recoverDraft(), null);
+    eq("the live draft was NOT clobbered by the stale mirror", e.Store.readDraftRaw(), freshDraft);
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

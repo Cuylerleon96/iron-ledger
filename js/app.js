@@ -40,6 +40,52 @@
   let draft = null;          // workout being logged
   let libIndex = null;
 
+  /* ---------- the draft autosave (survives a lock / WebView kill / update) ----------
+     The Log tab's in-progress session lives in memory, so an Android WebView
+     that is suspended or killed while the screen is locked used to lose a whole
+     workout. Every change to `draft` now mirrors it to Store under a DEDICATED
+     key (localStorage + the native mirror file), and the Log tab rebuilds it on
+     open. WHAT is written and whether it is restored are pure decisions in
+     Engine.draftToStore / Engine.draftFromStore; this is just the wiring.
+     Discrete taps (add/remove a set or exercise, a date, a mode, a set type)
+     write IMMEDIATELY; free text (the note, a typed weight/reps) is debounced,
+     and the timer is flushed when the app goes to the background. */
+  let draftSaveTimer = null;
+  const draftNow = () => (typeof Engine !== "undefined" && Engine.draftToStore)
+    ? Engine.draftToStore(draft) : draft;
+
+  function persistDraft(immediate) {
+    const run = () => {
+      draftSaveTimer = null;
+      try { Store.writeDraft(draftNow()); }
+      catch (e) { console.warn("draft persist failed", e && e.message); }
+    };
+    if (immediate) {
+      if (draftSaveTimer) { clearTimeout(draftSaveTimer); draftSaveTimer = null; }
+      run();
+      return;
+    }
+    if (draftSaveTimer) clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(run, 250);
+  }
+
+  /* A saved, deleted or explicitly discarded session must leave NOTHING behind,
+     or a later launch would resurrect it. */
+  function dropDraft() {
+    if (draftSaveTimer) { clearTimeout(draftSaveTimer); draftSaveTimer = null; }
+    try { Store.clearDraft(); }
+    catch (e) { console.warn("draft clear failed", e && e.message); }
+  }
+
+  function restoreDraft() {
+    try {
+      const raw = Store.readDraftRaw();
+      if (!raw) return null;
+      return (typeof Engine !== "undefined" && Engine.draftFromStore)
+        ? Engine.draftFromStore(raw, today()) : null;
+    } catch (e) { console.warn("draft restore failed", e && e.message); return null; }
+  }
+
   /* One place decides how a tracking-mode override is persisted, so the Log
      screen and the exercise detail modal cannot drift apart. The Log control
      used to persist only when String(id).length > 2, which silently skipped
@@ -92,6 +138,7 @@
     Store.importJSON(text, mode);
     S = Store.state;
     draft = null;
+    dropDraft();
     buildIndex();
     render();
     return S;
@@ -753,7 +800,7 @@
   }
 
   function renderLog(host) {
-    if (!draft) draft = newDraft();
+    if (!draft) draft = restoreDraft() || newDraft();
     // an unsaved, untouched draft tracks the current date even if the app has
     // been sitting open across midnight
     if (!draft.id && !draft.dateTouched) draft.date = today();
@@ -782,21 +829,23 @@
       ${draft.id ? `<button class="btn danger" id="btn-del">Delete</button>` : ""}`;
     host.append(save);
 
-    $("#w-date").addEventListener("change", (e) => { draft.date = e.target.value; draft.dateTouched = true; });
-    $("#w-note").addEventListener("input", (e) => { draft.note = e.target.value; });
+    $("#w-date").addEventListener("change", (e) => { draft.date = e.target.value; draft.dateTouched = true; persistDraft(true); });
+    $("#w-note").addEventListener("input", (e) => { draft.note = e.target.value; persistDraft(); });
     $("#btn-add").addEventListener("click", () => exercisePicker((ex) => addEntry(ex)));
     $("#btn-import").addEventListener("click", importDialog);
     const rep = $("#btn-repeat");
     if (rep) rep.addEventListener("click", () => {
       const w = lastSession();
       draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
+      persistDraft(true);
       render(); toast("Started from " + w.date + " — edit and save", "good");
     });
     $("#btn-save").addEventListener("click", () => saveDraft());
     const del = $("#btn-del"); if (del) del.addEventListener("click", () => {
       // Irreversible and it can be a whole session of work, so confirm once.
       if (!confirm("Delete this session? This cannot be undone.")) return;
-      Store.deleteWorkout(draft.id); draft = newDraft(); toast("Session deleted", "warn"); render();
+      Store.deleteWorkout(draft.id); draft = newDraft(); dropDraft();
+      toast("Session deleted", "warn"); render();
     });
   }
 
@@ -823,6 +872,7 @@
       if (bw > 0) sets.forEach((s) => { s.bwKg = s.bwKg || bw; });
     }
     draft.entries.push({ id: ex.id, name: ex.n, mode, sets });
+    persistDraft(true);
     toast(last ? `Pre-filled ${sets.length} sets from ${last.date}` : `Added ${ex.n}`);
     render();
   }
@@ -908,9 +958,10 @@
     $(".mode-sel", card).addEventListener("change", (e) => {
       en.mode = e.target.value;
       setTrackMode(en.id, en.mode);
+      persistDraft(true);
       render();
     });
-    $(".rm", card).addEventListener("click", () => { draft.entries.splice(idx, 1); render(); });
+    $(".rm", card).addEventListener("click", () => { draft.entries.splice(idx, 1); persistDraft(true); render(); });
     const qi = $(".quick .inp", card);
     /* One button, two obvious uses: text in the box -> parse the shorthand and
        add it; box empty -> add a blank line you fill in yourself. It used to
@@ -918,16 +969,17 @@
        hand and no + to tap. A blank set is dropped on save, so an accidental tap
        costs nothing. */
     const doAdd = () => {
-      if (!qi.value.trim()) { en.sets.push({}); render(); return; }
+      if (!qi.value.trim()) { en.sets.push({}); persistDraft(true); render(); return; }
       const p = parseSet(qi.value, en.mode);
       if (!p) { toast("Couldn't read that — try 100x10", "warn"); return; }
-      en.sets.push(p); render();
+      en.sets.push(p); persistDraft(true); render();
     };
     $(".qadd", card).addEventListener("click", doAdd);
     const rd = $(".rest-default", card);
     rd.addEventListener("input", (e) => {
       const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
       en.restDefault = v;
+      persistDraft();
       // keep every set's placeholder in step so the effective value is always visible
       $$(".rest-wrap input", card).forEach((i) => { i.placeholder = v ? String(v) : "rest"; });
       updateEntryFoot(idx);
@@ -1008,6 +1060,7 @@
       const e1 = $(".e1", row);
       if (e1) { const val = Engine.est1RM(Engine.num(s.w), Engine.num(s.r)); e1.textContent = val ? fmtW(U.w(val)) + " e1RM" : ""; }
       updateEntryFoot(idx);
+      persistDraft();
     }));
     /* The set-type select changes what the set COUNTS for, so the footer is
        recomputed on change. An empty value means a straight working set, so the
@@ -1017,13 +1070,14 @@
       if (v) s.ty = v; else delete s.ty;
       row.classList.toggle("is-hard", v === "drop" || v === "failure");
       updateEntryFoot(idx);
+      persistDraft(true);
     });
     /* button.x, not .x: the multiplication sign used to share that class, and
        querySelector returns the FIRST match in document order — so this delete
        handler was bound to the "×" between weight and reps. Tapping the times
        sign silently deleted the set, while the visible ✕ delete button did
        nothing at all. The multiplier is .times now and this is unambiguous. */
-    $("button.x", row).addEventListener("click", () => { en.sets.splice(si, 1); render(); });
+    $("button.x", row).addEventListener("click", () => { en.sets.splice(si, 1); persistDraft(true); render(); });
     return row;
   }
 
@@ -1099,6 +1153,7 @@
     const newB = Engine.newAchievements(Store.state);
     Store.unlock(newB);
     draft = newDraft();
+    dropDraft();                                   // the session is committed: nothing left to restore
     let suffix = ` · ${entries.length} ${pl(entries.length, "exercise")} saved`;
     if (newB.length) suffix += ` · ${newB.length} badge${newB.length > 1 ? "s" : ""} unlocked!`;
     const line = el("span");
@@ -1187,6 +1242,7 @@
       const parsed = parseNotes($("#imp-ta").value);
       if (!parsed.length) { toast("Nothing to import from that text.", "warn"); return; }
       parsed.forEach((p) => draft.entries.push({ id: p.id, name: p.name, mode: p.mode, sets: p.sets }));
+      persistDraft(true);
       closeModal();
       toast(`Imported ${parsed.length} exercises — review before saving`, "good");
       render();
@@ -1310,10 +1366,12 @@
     $(".ed", card).addEventListener("click", () => {
       draft = JSON.parse(JSON.stringify(w));
       draft.dateTouched = true;          // editing keeps the workout's own date
+      persistDraft(true);
       setView("log");
     });
     $(".cp", card).addEventListener("click", () => {
       draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
+      persistDraft(true);
       setView("log"); toast("Loaded into a new session");
     });
     $(".nt", card).addEventListener("click", () =>
@@ -2533,7 +2591,7 @@
       if (Store.loadBackup()) { toast("Backup restored", "good"); render(); }
     });
     $("#d-reset", data).addEventListener("click", () => {
-      if (confirm("Delete all workouts, logs and profile on this device? Export first if unsure.")) { Store.reset(); S = Store.state; draft = null; toast("Reset", "warn"); render(); }
+      if (confirm("Delete all workouts, logs and profile on this device? Export first if unsure.")) { Store.reset(); S = Store.state; draft = null; dropDraft(); toast("Reset", "warn"); render(); }
     });
     const seed = $("#d-seed", data); if (seed) seed.addEventListener("click", () => { seedData(); render(); });
   }
@@ -2595,6 +2653,10 @@
       Store.setSaveErrorHandler(() => toast("Storage is full — that change may not have been saved. Export a backup.", "warn", 9000));
     }
     buildIndex();
+    // Rebuild an in-progress session left behind by a lock/WebView kill/update,
+    // so it is ready the moment the Log tab is opened (renderLog also restores,
+    // guarding the case where the draft was cleared while the app was running).
+    draft = restoreDraft() || draft;
     // sets logged before bodyweight scoring existed carry no stamp; fix them once
     // on load so a weighted crunch is not scored as though the body weighed nothing
     try { if (Engine.backfillBodyweight(S) > 0) Store.save(true); } catch (e) { console.warn("bodyweight backfill", e); }
@@ -2651,6 +2713,12 @@
           render();
         }
       } catch (e) { console.warn("device restore skipped:", e && e.message); }
+      // The draft's own mirror: only read if localStorage lost it (recoverDraft
+      // says so). If the Log tab is open and nothing is being edited, paint it.
+      try {
+        const dr = await Store.recoverDraft();
+        if (dr && view === "log" && !draft) render();
+      } catch (e) { console.warn("draft restore skipped:", e && e.message); }
       // A dated backup, at most once a day, ONLY after recovery has run — so it
       // can never capture an unrecovered (empty) state.
       try { await Store.autoBackup(); }
@@ -2665,7 +2733,14 @@
      days, so a cold-start-only check could miss several releases. */
   document.addEventListener("visibilitychange", () => {
     if (!document.visibilityState || document.visibilityState === "visible") autoUpdateCheck();
+    // Going to the background (a screen lock) is exactly when the WebView may be
+    // frozen or killed, so a debounced draft write is flushed NOW rather than
+    // waiting for its timer to fire in a process that may never run again.
+    if (document.visibilityState === "hidden" && draftSaveTimer && draft) persistDraft(true);
   });
+  if (typeof window !== "undefined" && window && typeof window.addEventListener === "function") {
+    window.addEventListener("pagehide", () => { if (draftSaveTimer && draft) persistDraft(true); });
+  }
 
   /* Android hardware back / edge-swipe: close the top surface, else let the
      OS exit. Must return a real boolean — the native callback compares it. */
@@ -2686,6 +2761,9 @@
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
+    /* draft autosave — exposed so a suite can read the live draft and drive the
+       real persist/restore path instead of a copy of it. */
+    persistDraft, getDraft: () => draft, restoreDraft,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     targetLabelFor, exDetailHTML, TARGET_NOTE, sexFieldHTML,
     sexUnset, bfFloorPct, bfFloorNoteHTML, attrExplain,
