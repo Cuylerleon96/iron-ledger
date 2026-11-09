@@ -1108,7 +1108,19 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
   eq("the stylesheet ships NO background-image property (nothing can draw without an asset)",
     /background-image\s*:/.test(block), false);
   eq("the header markup ships no image or url()", /<img|url\(/.test(header), false);
-  eq("no sprite asset exists in the repo", fs.existsSync(path.join(B, "img", "hero-sheet.png")), false);
+  /* RE-EXPRESSED (placeholder sheet landed): this block originally pinned "the
+     repo carries NO asset yet". The PLACEHOLDER sprite sheet now exists at the
+     ONE path js/hero.js names, so pin the asset instead: present, a real PNG,
+     and exactly the 4x3 GBA geometry the CSS arithmetic assumes (128x96). The
+     INERT-if-absent behaviour is still pinned by the CSS/markup checks above
+     (display:none default, no url() in the header, no background-image rule). */
+  const sheetPath = path.join(B, "img", "hero-sheet.png");
+  truthy("the placeholder sprite sheet exists at js/hero.js's SHEET path", fs.existsSync(sheetPath));
+  const png = fs.existsSync(sheetPath) ? fs.readFileSync(sheetPath) : Buffer.alloc(0);
+  truthy("...it starts with the PNG signature",
+    png.length > 24 && png.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])));
+  eq("...and is exactly 128x96 (4 columns x 3 rows of 32x32)",
+    png.length > 24 ? (png.readUInt32BE(16) + "x" + png.readUInt32BE(20)) : "missing", "128x96");
 
   /* (3) three row classes, each on its own steps() keyframes */
   ["idle", "lift", "celebrate"].forEach((row) => {

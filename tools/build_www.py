@@ -65,7 +65,11 @@ def build():
     for f in ("index.html", "manifest.webmanifest"):
         shutil.copy2(root / f, www / f)
 
-    for d in ("css", "js", "fonts", "icons"):
+    # `img/` carries runtime sprites the page loads relative to itself — the
+    # header harness (js/hero.js) fetches `img/hero-sheet.png`. It is copied
+    # like css/js/fonts/icons; anything the app needs at runtime must be here,
+    # or the asset ships nowhere and the harness silently stays inert.
+    for d in ("css", "js", "fonts", "icons", "img"):
         shutil.copytree(root / d, www / d)
 
     # Inject the real version into the COPIED bundle only; the source stays a

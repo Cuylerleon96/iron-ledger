@@ -1,11 +1,11 @@
 {
-  "versionCode": 90,
-  "versionName": "1.2.12",
+  "versionCode": 91,
+  "versionName": "1.2.13",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "ba58d5dfe8c3fc1105dbaf48df149465d9dbb0598109f2aae04e45657304e675",
-  "sizeBytes": 3912222,
+  "sha256": "7b3e10ddcaaf655e7cd067742cbb474587ad3f4bd62e887c7954f939a55588e9",
+  "sizeBytes": 3917106,
   "published": "2026-11-09",
   "notes": [
-    "A refreshed pixel logo mark in the header."
+    "A little slime now keeps you company in the header."
   ]
 }
