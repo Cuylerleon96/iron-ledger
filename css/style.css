@@ -743,6 +743,14 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   font-family: var(--px); font-size: .6rem; color: var(--gold);
   text-transform: uppercase; letter-spacing: .05em; margin-right: .3rem;
 }
+/* The source line: the entry is not finished without it, so it is styled as a
+   real part of the entry rather than small print. */
+.gloss-src {
+  font-size: .68rem; line-height: 1.5; color: #cfe0e8;
+  background: rgba(0, 0, 0, .2); border-left: 3px solid rgba(248, 208, 48, .55);
+  border-radius: 4px; padding: .4rem .5rem; word-break: break-word;
+}
+.n-words { line-height: 1.9; }
 .gloss-list { display: grid; gap: .3rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .gloss-item {
   font-family: var(--px); font-size: .6rem; text-align: left;

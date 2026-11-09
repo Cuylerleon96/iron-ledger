@@ -500,13 +500,41 @@ console.log("=== glossary: every term the UI shows has ONE entry, and every entr
   const welcome = fs.readFileSync(path.join(B, "js", "welcome.js"), "utf8");
   const engine = fs.readFileSync(path.join(B, "js", "engine.js"), "utf8");
   const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
-  const ui = [app, chart, welcome, engine, html].join("\n");
+  /* js/nutrition.js builds the html the user READS on the Nutrition tab, and
+     js/macros.js carries the phase labels/blurbs and the caveats that tab shows
+     verbatim — both are DISPLAY sources. The scope check below therefore spans
+     them: a term the user cannot see must not have an entry, and a term these
+     files put on screen must have one. */
+  const nutrition = fs.readFileSync(path.join(B, "js", "nutrition.js"), "utf8");
+  const macros = fs.readFileSync(path.join(B, "js", "macros.js"), "utf8");
+  const ui = [app, chart, welcome, engine, html, nutrition, macros].join("\n");
 
   // 1. no duplicate ids, and every entry carries both halves
   const ids = G.TERMS.map((t) => t.id);
   eq("glossary ids are unique", ids.length, new Set(ids).size);
   truthy("every entry has a plain explanation", G.TERMS.every((t) => t.plain && t.plain.length > 20));
   truthy("every entry has the real definition underneath", G.TERMS.every((t) => t.real && t.real.length > 20));
+  /* EVERY entry carries a source, and it is REAL text — an explanation without
+     its source is not finished. A term the app cannot source says so in the
+     entry rather than inventing a citation (see 'Body fat %'). */
+  truthy("every entry carries a non-empty source", G.TERMS.every((t) => typeof t.source === "string" && t.source.trim().length > 15));
+  eq("no entry has a blank source", G.TERMS.filter((t) => !t.source || !t.source.trim()).map((t) => t.id), []);
+  truthy("the source line is RENDERED in the entry, not just stored",
+    /class="gloss-src"/.test(G.entryHTML(G.get("rmr"))) && /PMID 2305711/.test(G.entryHTML(G.get("rmr"))));
+  /* Where the repo already owns the citation, the entry reuses it verbatim
+     rather than inventing a second one — so the two can be compared. */
+  const M = require(path.join(B, "js", "macros.js"));
+  truthy("the RMR entry reuses Macros.SOURCES.mifflin",
+    G.get("rmr").source.includes(M.SOURCES.mifflin));
+  truthy("the RMR entry reuses Macros.SOURCES.cunningham",
+    G.get("rmr").source.includes(M.SOURCES.cunningham));
+  truthy("the intake-floor entry reuses Macros.SOURCES.floor",
+    G.get("intake-floor").source.includes(M.SOURCES.floor));
+  truthy("the macro entry reuses Macros.SOURCES.protein / .fat / .carbs",
+    G.get("macros").source.includes(M.SOURCES.protein) && G.get("macros").source.includes(M.SOURCES.fat)
+      && G.get("macros").source.includes(M.SOURCES.carbs));
+  truthy("the activity-factor entry reuses Macros.SOURCES.activityLevel",
+    G.get("activity-factor").source.includes(M.SOURCES.activityLevel));
 
   // 2. the pinned list from the brief: at minimum these terms are covered
   const REQUIRED = [
@@ -517,6 +545,45 @@ console.log("=== glossary: every term the UI shows has ONE entry, and every entr
     "attr-STR", "attr-END", "attr-POW", "attr-MOB", "attr-CON", "attr-VIT",
   ];
   eq("every required term has an entry", REQUIRED.filter((id) => !G.has(id)), []);
+
+  /* The NUTRITION stage: every term the Nutrition tab, the Profile nutrition
+     fields and the food-logging UI DISPLAY resolves to an entry. This is the
+     inventory the stage was built from. */
+  const REQUIRED_NUTRITION = [
+    "kcal", "grams", "weight-units", "maintenance", "rmr", "activity-factor", "intake-floor",
+    "macros", "per-kg-bodyweight", "lean-mass", "body-fat-pct", "pace", "phase", "fibre",
+    "per-100-g", "portion", "amdr", "rda", "essential-fat", "deficit-surplus", "usda", "controller",
+  ];
+  eq("every displayed nutrition term has an entry", REQUIRED_NUTRITION.filter((id) => !G.has(id)), []);
+  /* ...and the jargon the tab itself puts on screen is TAPPABLE there (not only
+     reachable from the Profile list): nutrition.js links its own words through
+     tlink(), app.js links the food-logging abbreviations through term(). */
+  const TAB_HOOKS = ["kcal", "grams", "maintenance", "rmr", "activity-factor", "intake-floor",
+    "lean-mass", "per-kg-bodyweight", "amdr", "rda", "pace", "phase", "fibre", "per-100-g", "controller"];
+  const hookedInTab = (id) => new RegExp('tlink\\("' + id + '"').test(nutrition) || new RegExp('term\\("' + id + '"').test(app);
+  eq("the Nutrition tab hooks its jargon terms (tap-to-explain from the tab)",
+     TAB_HOOKS.filter((id) => !hookedInTab(id)), []);
+
+  /* The clinical words the earlier tone pass kept as ALIASES must still resolve:
+     they are how a renamed term's old wording lands on its entry. */
+  const CLINICAL_ALIASES = ["working sets", "raw sets", "effort sets", "1RM", "e1RM", "MEV", "MAV", "MRV",
+    "over MRV", "untrained", "MEV→MAV", "optimal", "below MEV", "landmarks"];
+  const aliasResolves = (w) => G.TERMS.some((t) => t.term === w || (t.aliases || []).indexOf(w) > -1);
+  eq("every clinical alias still resolves to an entry", CLINICAL_ALIASES.filter((w) => !aliasResolves(w)), []);
+
+  /* Every entry must describe something the app STILL HAS. Two checkable cases:
+     the per-exercise effort weight is a maths constant worked out from the
+     movement (never a control), and the day-run/streak display is gone. */
+  truthy("the effort-set entry says the effort weight is NOT something the user sets",
+    /not something you set/.test(G.get("effort-set").real));
+  eq("...and there is no user-set effort-weight control in the UI",
+    /effort weight\s*<|id="[^"]*effort[^"]*"|Effort weight\s*<input/i.test(app), false);
+  truthy("the constant really is derived in the engine (not read from state)",
+    /a maths constant/.test(fs.readFileSync(path.join(B, "js", "engine.js"), "utf8")));
+  eq("no entry describes the removed day-run/streak display",
+    G.TERMS.filter((t) => /streak|day[- ]run|days in a row/i.test([t.term, t.plain, t.real, (t.aliases || []).join(" ")].join(" "))).map((t) => t.id), []);
+  truthy("the set-type entry's control still exists (a real Drop/Failure select)",
+    /setty/.test(app) && /Set type/.test(app));
 
   // 3. every muscle-balance status word the engine can emit maps to an entry
   const STATUSES = ["room to grow", "building", "sweet spot", "over its limit", "not trained yet"];

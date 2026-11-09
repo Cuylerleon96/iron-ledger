@@ -21,6 +21,14 @@ const Nutrition = (() => {
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  /* A tappable term — the ONE explanation lives in js/glossary.js. This module
+     stays pure: when the glossary is not loaded (a bare test sandbox) every term
+     falls back to its plain text, so the wording the user reads is identical
+     either way and only the real app makes it openable. A term with no entry
+     renders as plain text, never as a dead control. */
+  const tlink = (id, text, cls) =>
+    (typeof Glossary !== "undefined" && Glossary.link) ? Glossary.link(id, text, cls) : esc(text);
+
   /* ---------- birth year ----------
      Four digits, not in the future, and within the last MAX_AGE years. Anything
      else is treated as UNSET, so no age is ever derived from nonsense. */
@@ -244,7 +252,7 @@ const Nutrition = (() => {
 
     const targetRows = targets.map((t) =>
       '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(t.label) + "</span>" +
-      '<span class="n-t-val">' + t.value + '<span class="n-t-unit"> ' + esc(t.unit) + "</span></span></div>" +
+      '<span class="n-t-val">' + t.value + '<span class="n-t-unit"> ' + tlink(t.unit === "kcal" ? "kcal" : "grams", t.unit) + "</span></span></div>" +
       '<p class="n-t-reason muted small">' + esc(t.reason) + "</p></div>").join("");
 
     const conflictHtml = conflict
@@ -252,27 +260,39 @@ const Nutrition = (() => {
         '<p class="small">' + esc(conflict.note) + "</p></aside>"
       : "";
 
+    /* The words this tab uses, each one tappable to its own explanation — so a
+       term on this screen is never left unexplained (glossary.js is the ONE
+       place an explanation lives). */
+    const wordsRow =
+      '<p class="muted small n-words" id="n-words">The words used here: ' +
+      [tlink("kcal", "kcal"), tlink("grams", "g"), tlink("maintenance", "maintenance"), tlink("rmr", "RMR"),
+       tlink("activity-factor", "activity factor"), tlink("intake-floor", "intake floor"),
+       tlink("lean-mass", "lean mass"), tlink("per-kg-bodyweight", "per kg of bodyweight"),
+       tlink("amdr", "AMDR"), tlink("rda", "RDA"), tlink("pace", "pace"), tlink("phase", "the phase names"),
+       tlink("controller", "the controller")]
+        .join(", ") + ".</p>";
+
     const html =
-      '<div class="card-head"><h3>Nutrition</h3><span class="muted">' + phase.label + '</span></div>' +
+      '<div class="card-head"><h3>Nutrition</h3><span class="muted">' + tlink("phase", phase.label) + '</span></div>' +
       '<p class="small n-age" id="n-age">Age ' + age + " — from the birth year in your Profile.</p>" +
-      '<label class="n-pace">Pace<select class="inp" id="n-phase">' + opts + "</select></label>" +
+      '<label class="n-pace">' + tlink("pace", "Pace") + '<select class="inp" id="n-phase">' + opts + "</select></label>" +
       '<p class="n-blurb muted small" id="n-blurb">' + esc(phase.blurb) + "</p>" +
       conflictHtml +
       '<div class="n-targets" id="n-targets">' + targetRows + "</div>" +
       '<p class="muted small n-rounding" id="n-rounding">' + esc(roundingNote) + "</p>" +
       '<div class="n-maint" id="n-maint">' +
         '<div class="card-head"><h3>Maintenance estimate</h3><span class="muted">a starting value</span></div>' +
-        "<p class=\"small\">RMR <b>" + maintenance.rmr + "</b> kcal/day — " + esc(maintenance.equation) + ".</p>" +
+        "<p class=\"small\">" + tlink("rmr", "RMR") + " <b>" + maintenance.rmr + "</b> " + tlink("kcal", "kcal/day") + " — " + esc(maintenance.equation) + ".</p>" +
         '<p class="small">' + esc(maintenance.why) + "</p>" +
-        '<p class="small">Activity factor <b>' + maintenance.activity.pal + "</b> (" +
+        '<p class="small">' + tlink("activity-factor", "Activity factor") + " <b>" + maintenance.activity.pal + "</b> (" +
           esc(maintenance.activity.text) + ").</p>" +
         '<p class="muted small">' + esc(maintenance.activity.basis) + ".</p>" +
         (maintenance.activity.disagreement
           ? '<p class="small n-disagree" id="n-activity-disagree">' + esc(maintenance.activity.disagreement) + "</p>"
           : "") +
         '<p class="muted small">' + esc(maintenance.activity.caveat) + "</p>" +
-        '<p class="small">Maintenance ≈ <b>' + maintenance.tdee + "</b> kcal/day — " + esc(maintenance.tdeeNote) + ".</p>" +
-        '<p class="small">Intake floor <b>' + maintenance.floor + "</b> kcal/day (" + esc(maintenance.floorLabel) + "). " +
+        '<p class="small">' + tlink("maintenance", "Maintenance") + " ≈ <b>" + maintenance.tdee + "</b> kcal/day — " + esc(maintenance.tdeeNote) + ".</p>" +
+        '<p class="small">' + tlink("intake-floor", "Intake floor") + " <b>" + maintenance.floor + "</b> kcal/day (" + esc(maintenance.floorLabel) + "). " +
           (maintenance.floorApplied
             ? "The floor is what's shown — the computed target came in below it."
             : "Not applied — your target sits above it.") + "</p>" +
@@ -281,6 +301,7 @@ const Nutrition = (() => {
             "higher floor — 1500 kcal/day, the value for men. Setting your sex in Profile may change this floor.</p>"
           : "") +
       "</div>" +
+      wordsRow +
       '<p class="muted small n-limits">' + esc(limits) + "</p>";
 
     return Object.assign(base, {

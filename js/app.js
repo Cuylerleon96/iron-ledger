@@ -1665,13 +1665,17 @@
 
   const setFoodStatus = (msg) => { const s = $("#food-status"); if (s) s.textContent = msg || ""; };
 
+  /* The macro line. kcal / g / fibre are the abbreviations a beginner may not
+     know, so each one opens its own explanation in the glossary (js/glossary.js
+     is the ONE place an explanation lives) — the food the user just logged is
+     where they are most likely to meet them. */
   function macroLine(macros) {
     macros = macros || {};
     const parts = [];
     Nutrition.NUTRIENTS.forEach((k) => {
       if (typeof macros[k] !== "number") return;        // absent nutrient: omitted
-      const unit = k === "kcal" ? "kcal" : "g";
-      const label = k === "kcal" ? "" : " " + (k === "carb" ? "carbs" : k);
+      const unit = k === "kcal" ? term("kcal", "kcal") : term("grams", "g");
+      const label = k === "kcal" ? "" : " " + (k === "fibre" ? term("fibre", "fibre") : (k === "carb" ? "carbs" : k));
       parts.push(fmtW(macros[k]) + " " + unit + label);
     });
     return parts.length ? parts.join(" · ") : "no nutrient data";
@@ -1713,7 +1717,7 @@
     const g = pickedGrams();
     if (g == null) { host.innerHTML = '<p class="muted small">Enter a portion in grams to see its macros.</p>'; return; }
     const macros = Food.gramsToMacros(foodUI.picked, g);
-    host.innerHTML = '<p class="food-preview-line">' + fmtW(g) + " g — " + esc(macroLine(macros)) + "</p>";
+    host.innerHTML = '<p class="food-preview-line">' + fmtW(g) + " g — " + macroLine(macros) + "</p>";
   }
 
   function renderFoodPick() {
@@ -1743,7 +1747,7 @@
     const noteHtml = note ? '<p class="food-note" id="food-note">' + esc(note) + "</p>" : "";
     host.innerHTML =
       '<div class="food-picked"><div class="card-head"><h3>' + esc(f.name) + '</h3><span class="muted">' +
-        (f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal / 100 g" : "") + "</span></div>" +
+        (f.per100 && typeof f.per100.kcal === "number" ? term("per-100-g", fmtW(f.per100.kcal) + " kcal / 100 g") : "") + "</span></div>" +
       '<div class="row"><label class="n-pace">Portion<select class="inp" id="food-measure">' + opts + "</select></label>" +
         portionInput +
         '<button class="btn primary" id="food-add">Add to today</button>' +
@@ -1801,7 +1805,7 @@
     list.innerHTML = items.length
       ? items.map((e) =>
           '<div class="pr-row has-del food-log-row"><span>' + esc(e.name) + "</span><span>" + fmtW(e.grams) + " g</span>" +
-          '<span class="muted">' + esc(macroLine(e.macros)) + "</span>" +
+          '<span class="muted">' + macroLine(e.macros) + "</span>" +
           '<button class="btn ghost tiny food-del" data-id="' + esc(e.id) + '" title="Remove" aria-label="Remove ' + esc(e.name) + '">✕</button></div>').join("")
       : '<p class="muted small">Nothing logged yet today.</p>';
 
@@ -1820,7 +1824,7 @@
         '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("") + "</div>" +
         '<p class="muted small">' + esc(Nutrition.intakeHeadline(rows, items.length, goal)) + "</p>";
     } else {
-      html = '<p class="muted small">Totals today: ' + esc(macroLine(totals)) + "</p>" +
+      html = '<p class="muted small">Totals today: ' + macroLine(totals) + "</p>" +
         '<p class="muted small">' + esc(Nutrition.intakeHeadline([], items.length, goal)) + "</p>";
     }
     tot.innerHTML = html;

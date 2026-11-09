@@ -1,11 +1,11 @@
 {
-  "versionCode": 68,
-  "versionName": "1.0.67",
+  "versionCode": 69,
+  "versionName": "1.0.68",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "72a405ba7be1f818a99410387fac9353e171cadd93b8ed23bca7d28de2c3ef5e",
-  "sizeBytes": 3868913,
+  "sha256": "08f578badbb4acccdffaf424203e98c5c8bffc43f287de33a4a2eb75913b3e2b",
+  "sizeBytes": 3877306,
   "published": "2026-11-08",
   "notes": [
-    "The exercise page teaches and shows your target; Track as and Log this now now live in the Log flow."
+    "Every nutrition word the app shows now explains itself, with the source behind it \u2014 tap kcal, g, RMR, maintenance, activity factor, the controller or any other term on the Nutrition tab."
   ]
 }
