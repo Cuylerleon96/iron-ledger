@@ -81,12 +81,12 @@ eq("Mifflin-FFM method tag", M.rmrMifflinFFM({ weightKg: 80, bodyFatPct: 20 }).m
 eq("Katch method tag", M.rmrKatch({ weightKg: 80, bodyFatPct: 20 }).method, "ffm-katch");
 eq("default FFM path IS cunningham", M.plan({ ...MAN, bodyFatPct: 20, goal: "maintain", pace: "maintain" }).bmr.method, "ffm-cunningham");
 eq("the basis string states the change to Cunningham", /Cunningham/.test(M.plan({ ...MAN, bodyFatPct: 20, goal: "maintain", pace: "maintain" }).bmr.basis), true);
-// the owner's REAL profile: LBM = 70*(1-0.12) = 55.164090
-//   Cunningham = 500 + 22*55.164090 = 1713.610  |  weight eq (178cm,30y) = 10*70466+6.25*178-5*30+5 = 1584.365
-const CU = { sex: "M", weightKg: 70, heightCm: 178, ageY: 30, bodyFatPct: 12 };
-near("the owner Cunningham RMR", M.rmrFFM(CU).kcal, 1713.61, 0.01);
-near("the owner weight-equation RMR", M.rmrMifflin(CU).kcal, 1594.365, 0.01);
-eq("Cunningham LIFTS the owner ABOVE the weight equation", M.rmr(CU).kcal > M.rmrMifflin(CU).kcal, true);
+// A synthetic profile: LBM = 70.5*(1-0.15) = 59.925
+//   Cunningham = 500 + 22*59.925 = 1818.35  |  weight eq (175cm,30y) = 10*70.5+6.25*175-5*30+5 = 1653.75
+const CU = { sex: "M", weightKg: 70.5, heightCm: 175, ageY: 30, bodyFatPct: 15 };
+near("subject Cunningham RMR", M.rmrFFM(CU).kcal, 1818.35, 0.01);
+near("subject weight-equation RMR", M.rmrMifflin(CU).kcal, 1653.75, 0.01);
+eq("Cunningham LIFTS the subject ABOVE the weight equation", M.rmr(CU).kcal > M.rmrMifflin(CU).kcal, true);
 eq("the old Mifflin-FFM default did the OPPOSITE (bias removed)", M.rmrMifflinFFM(CU).kcal < M.rmrMifflin(CU).kcal, true);
 
 console.log("\n--- (3) 1200/1500 floor clamps + flag ---");
@@ -249,15 +249,15 @@ eq("resolvePhase by goal alone -> recommended", M.resolvePhase({ goal: "gain" })
 eq("resolvePhase unknown key is reported", M.resolvePhase("nope").recognized, false);
 
 console.log("\n--- (12) goal-conflict check ---");
-// the owner's real profile: 70 -> 75 kg ; 12% -> 10% bf
-const CUYLER = { weightKg: 70, bodyFatPct: 12, goalWeightKg: 75, goalBodyFatPct: 10 };
-const gc = M.goalConflict(CUYLER);
-eq("the owner conflict FIRES", gc.conflict, true);
-eq("the owner conflict kind", gc.kind, "gain-while-cutting-fat");
-// current LBM = 70*0.88 = 55.164090 ; goal LBM = 75*0.90 = 65.317302
-// requiredLeanChangeKg = 10.153212
-near("requiredLeanChangeKg ~= +10.1 (within 0.2)", gc.requiredLeanChangeKg, 10.1, 0.2);
-near("requiredLeanChangeKg exact 10.1532", gc.requiredLeanChangeKg, 10.1532, 0.01);
+// synthetic profile: 70.5 -> 75 kg ; 15% -> 14% bf
+const SUBJECT = { weightKg: 70.5, bodyFatPct: 15, goalWeightKg: 75, goalBodyFatPct: 14 };
+const gc = M.goalConflict(SUBJECT);
+eq("the conflict FIRES", gc.conflict, true);
+eq("the conflict kind", gc.kind, "gain-while-cutting-fat");
+// current LBM = 70.5*0.85 = 59.925 ; goal LBM = 75*0.86 = 64.5
+// requiredLeanChangeKg = 4.575
+near("requiredLeanChangeKg ~= +4.6 (within 0.2)", gc.requiredLeanChangeKg, 4.6, 0.2);
+near("requiredLeanChangeKg exact 4.575", gc.requiredLeanChangeKg, 4.575, 0.01);
 eq("note mentions lean mass", /lean mass/i.test(gc.note), true);
 eq("note names which goal to lead", /lead with/i.test(gc.note), true);
 eq("note says the goals pull against each other", /pull against each other/i.test(gc.note), true);
@@ -280,7 +280,7 @@ eq("lose-weight/gain-fat kind", badpair.kind, "lose-while-gaining-fat");
 // the "large" threshold is labelled an arrangement
 eq("large threshold value", M.LARGE_LEAN_CHANGE_KG, 5);
 eq("large-threshold source says 'arrangement'", /arrangement/i.test(M.LARGE_LEAN_CHANGE_SOURCE), true);
-eq("the owner's required change is flagged large", gc.large, true);
+eq("the required change is under the 'large' threshold (5 kg)", gc.large, false);
 
 console.log("\n--- (13) training-informed activity factor ---");
 const af4 = M.activityFactor({}, { sessionsPerWeek: 4 });
@@ -321,16 +321,16 @@ console.log("\n--- (14) Nutrition tab view-model ---");
   const truthy = (label, got) => eq(label, !!got, true);   // this suite defines eq/near only
   const YEAR = 2026;
 
-  /* a real, complete profile — the shape the owner's own export carries */
-  const FULL = { name: "the owner", sex: "M", heightCm: 178, weightKg: 70,
-    bodyFatPct: 12, goalWeightKg: 75, goalBodyFatPct: 10, birthYear: 1994 };
+  /* a complete, synthetic profile — the shape the app's exported state carries */
+  const FULL = { name: "Test User", sex: "M", heightCm: 175, weightKg: 70.5,
+    bodyFatPct: 15, goalWeightKg: 75, goalBodyFatPct: 14, birthYear: 1990 };
   const training = { sessionsPerWeek: 4, cardioMinutesPerWeek: 0 };
 
   /* ---- (a) a profile WITH a birth year renders all four targets ---- */
   const v = N.view(FULL, { phase: null, year: YEAR, training });
   eq("with a birth year the tab is in the 'ok' state", v.state, "ok");
-  eq("age is derived from the birth year", v.age, YEAR - 1994);
-  eq("the html shows Age N", v.html.includes("Age " + (YEAR - 1994)), true);
+  eq("age is derived from the birth year", v.age, YEAR - 1990);
+  eq("the html shows Age N", v.html.includes("Age " + (YEAR - 1990)), true);
   eq("exactly four targets, in order", v.targets.map((t) => t.key), ["kcal", "protein", "fat", "carbs"]);
   truthy("every target carries a finite number", v.targets.every((t) => isFinite(t.value) && t.value > 0));
   truthy("every target carries a one-line reason", v.targets.every((t) => typeof t.reason === "string" && t.reason.length > 10));
@@ -349,8 +349,8 @@ console.log("\n--- (14) Nutrition tab view-model ---");
   truthy("the selected phase's blurb is shown beneath the picker", v.html.includes(MM.phaseFor(v.phase.key).blurb));
 
   /* ---- (c) the conflict note appears when goalConflict fires... ---- */
-  eq("the owner's profile fires a goal conflict", MM.goalConflict(FULL).conflict, true);
-  truthy("his conflict note is rendered prominently", v.html.includes("nutrition-conflict") && v.html.includes(MM.goalConflict(FULL).note));
+  eq("the profile fires a goal conflict", MM.goalConflict(FULL).conflict, true);
+  truthy("the conflict note is rendered prominently", v.html.includes("nutrition-conflict") && v.html.includes(MM.goalConflict(FULL).note));
   eq("the conflict object carries the engine's kind", v.conflict && v.conflict.kind, MM.goalConflict(FULL).kind);
   /* ...and NOT for a profile whose goals point the same way */
   const NOCONF = Object.assign({}, FULL, { weightKg: 90, goalWeightKg: 82, bodyFatPct: 24, goalBodyFatPct: 18 });

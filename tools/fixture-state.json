@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "profile": {
+    "name": "Test User",
+    "sex": "M",
+    "heightCm": 175,
+    "weightKg": 70.5,
+    "bodyFatPct": 15,
+    "goalWeightKg": 75,
+    "goalBodyFatPct": 14,
+    "birthYear": 1990,
+    "weeklyTarget": 3,
+    "units": "kg",
+    "activityLevel": "moderate",
+    "nutritionVitality": false
+  },
+  "nutrition": {
+    "phase": "lean-gain"
+  },
+  "workouts": [
+    {
+      "id": "seed-2026-11-06",
+      "date": "2026-11-06",
+      "note": "Synthetic session one",
+      "entries": [
+        {
+          "id": "s1",
+          "name": "Barbell Back Squat",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 60, "r": 8 },
+            { "w": 60, "r": 8 },
+            { "w": 70, "r": 6 }
+          ],
+          "restDefault": 90
+        },
+        {
+          "id": "s2",
+          "name": "Bench Press",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 50, "r": 10 },
+            { "w": 50, "r": 8 }
+          ],
+          "restDefault": 90
+        },
+        {
+          "id": "s3",
+          "name": "Deadlift",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 80, "r": 5 },
+            { "w": 90, "r": 3 }
+          ],
+          "restDefault": 120
+        }
+      ]
+    },
+    {
+      "id": "wm-fixture-2",
+      "date": "2026-11-08",
+      "note": "Synthetic session two",
+      "entries": [
+        {
+          "id": "s4",
+          "name": "Overhead Press",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 30, "r": 10, "rest": 90 },
+            { "w": 30, "r": 8, "rest": 90 }
+          ]
+        },
+        {
+          "id": "s5",
+          "name": "Dumbbell Row",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 25, "r": 12, "rest": 60 },
+            { "w": 25, "r": 10, "rest": 60 }
+          ]
+        },
+        {
+          "id": "s6",
+          "name": "Plank",
+          "mode": "time",
+          "sets": [
+            { "bwKg": 70.5, "t": 60 },
+            { "bwKg": 70.5, "t": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wm-fixture-3",
+      "date": "2026-11-10",
+      "note": "Synthetic session three",
+      "entries": [
+        {
+          "id": "s7",
+          "name": "Goblet Squat",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 20, "r": 12, "rest": 60 },
+            { "w": 20, "r": 12, "rest": 60 },
+            { "w": 24, "r": 10, "rest": 60 }
+          ]
+        },
+        {
+          "id": "s8",
+          "name": "Incline Dumbbell Press",
+          "mode": "weight_reps",
+          "sets": [
+            { "w": 18, "r": 12 },
+            { "w": 18, "r": 10 },
+            { "w": 18, "r": 10, "ty": "failure" }
+          ]
+        },
+        {
+          "id": "s9",
+          "name": "Side Plank",
+          "mode": "time",
+          "sets": [
+            { "bwKg": 70.5, "t": 40 },
+            { "bwKg": 70.5, "t": 40 }
+          ]
+        }
+      ]
+    }
+  ],
+  "bodylog": [
+    { "date": "2026-11-06", "weightKg": 70.5, "bodyFatPct": 15 }
+  ],
+  "profilelog": [
+    {
+      "date": "2026-11-06",
+      "heightCm": 175,
+      "birthYear": 1990,
+      "sex": "M",
+      "goalWeightKg": 75,
+      "goalBodyFatPct": 14,
+      "weeklyTarget": 3,
+      "activityLevel": "moderate"
+    },
+    {
+      "date": "2026-11-10",
+      "heightCm": 175,
+      "birthYear": 1990,
+      "sex": "M",
+      "goalWeightKg": 75,
+      "goalBodyFatPct": 14,
+      "weeklyTarget": 3,
+      "activityLevel": "moderate",
+      "nutritionVitality": false
+    }
+  ],
+  "intakelog": [
+    {
+      "id": "fixture-1",
+      "date": "2026-11-06",
+      "src": 1001,
+      "name": "Oatmeal with milk",
+      "grams": 250,
+      "macros": { "kcal": 320, "protein": 12, "fat": 6, "carb": 54, "fibre": 5 }
+    },
+    {
+      "id": "fixture-2",
+      "date": "2026-11-06",
+      "src": 1002,
+      "name": "Grilled chicken breast",
+      "grams": 180,
+      "macros": { "kcal": 297, "protein": 55.8, "fat": 6.5, "carb": 0, "fibre": 0 }
+    },
+    {
+      "id": "fixture-3",
+      "date": "2026-11-08",
+      "src": 1003,
+      "name": "Brown rice",
+      "grams": 200,
+      "macros": { "kcal": 246, "protein": 5.2, "fat": 1.8, "carb": 51.6, "fibre": 3.6 }
+    },
+    {
+      "id": "fixture-4",
+      "date": "2026-11-10",
+      "src": "0012345678905",
+      "name": "Greek yogurt",
+      "grams": 170,
+      "macros": { "kcal": 100, "protein": 17, "fat": 0.7, "carb": 6, "fibre": 0 }
+    }
+  ],
+  "overrides": {
+    "s7": { "mode": "weight_reps" }
+  },
+  "custom": [
+    {
+      "id": "s1",
+      "n": "Barbell Back Squat",
+      "c": "Legs",
+      "p": ["Quads"],
+      "s": ["Glutes", "Core"],
+      "e": ["Barbell"],
+      "m": "weight_reps",
+      "g": ["Legs", "Core"],
+      "d": "Synthetic custom exercise for the fixture."
+    },
+    {
+      "id": "s4",
+      "n": "Overhead Press",
+      "c": "Shoulders",
+      "p": ["Shoulders"],
+      "s": ["Triceps"],
+      "e": ["Barbell"],
+      "m": "weight_reps",
+      "g": ["Shoulders", "Arms"],
+      "d": "Synthetic custom exercise for the fixture."
+    }
+  ],
+  "achievements": {
+    "first": "2026-11-06",
+    "t10k": "2026-11-06",
+    "bigset": "2026-11-08",
+    "nightowl": "2026-11-06",
+    "firstweigh": "2026-11-06",
+    "firstlog": "2026-11-06",
+    "variety": "2026-11-10"
+  },
+  "targets": {},
+  "settings": {
+    "seeded": true,
+    "welcomeSeenVersion": "1"
+  }
+}

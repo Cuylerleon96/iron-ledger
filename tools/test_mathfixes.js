@@ -2126,13 +2126,13 @@ console.log("\n=== 50. Vitality is body-composition HEALTH first (a goal can onl
   const e = env();
   const vitOf = (over) => e.E.attributes(base(over), 28).VIT;
 
-  // (1) CUYLER'S REAL EXPORT — lean, healthy, goals SET, not yet moved. This is
-  // the reported defect: it read 17 / "Early days" before the fix because BOTH
-  // goal-gap parts scored 0 (current == start, so no movement yet). His own
-  // export is committed as tools/user-state.json for the regression.
-  const user = JSON.parse(fs.readFileSync(path.join(B, "tools/user-state.json"), "utf8"));
-  const cv = e.E.attributes(user, 28).VIT;
-  console.log(`        his export: VIT ${cv.score} (${cv.detail.basis})`);
+  // (1) A SYNTHETIC healthy subject — lean, healthy, goals SET, not yet moved.
+  // This reproduces the reported defect on fabricated data: it read 17 / "Early
+  // days" before the fix because BOTH goal-gap parts scored 0 (current == start,
+  // so no movement yet). The fixture is committed as tools/fixture-state.json.
+  const subject = JSON.parse(fs.readFileSync(path.join(B, "tools/fixture-state.json"), "utf8"));
+  const cv = e.E.attributes(subject, 28).VIT;
+  console.log(`        fixture subject: VIT ${cv.score} (${cv.detail.basis})`);
   truthy("a lean, healthy male WITH goals reads HIGH (>= 80), not the old 17", cv.score >= 80);
   eq("...and is not the old goal-gap 17", cv.score === 17, false);
   truthy("...the basis names the body parts used (body fat / BMI)",
