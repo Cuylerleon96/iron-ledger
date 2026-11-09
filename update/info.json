@@ -1,11 +1,11 @@
 {
-  "versionCode": 85,
-  "versionName": "1.2.7",
+  "versionCode": 86,
+  "versionName": "1.2.8",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "7bc97e972cd49ea2e987a4dfc9288f6572dc2fc47b05ce7f03026c001ce61e08",
-  "sizeBytes": 3905182,
+  "sha256": "ad64ae88c11966f2a7baaf914d70591ba2a0bd675e2a1ba54e211bca5e59f57f",
+  "sizeBytes": 3906597,
   "published": "2026-11-09",
   "notes": [
-    "Vitality now reflects your body composition - having a goal no longer drags it down."
+    "Drop and failure sets now earn extra XP for the extra effort - and the session history shows how much."
   ]
 }

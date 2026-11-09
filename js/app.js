@@ -155,7 +155,7 @@
   }
 
   /* The seed affordance is a manual load, not auto-seeding: show it whenever the
-     7 Nov session is not already in the log, so it is reachable on demand. */
+     demo session is not already in the log, so it is reachable on demand. */
   function shouldShowSeed() {
     const seedId = (typeof SEED_WORKOUT !== "undefined" && SEED_WORKOUT) ? SEED_WORKOUT.id : null;
     if (!seedId) return false;
@@ -1108,7 +1108,8 @@
       `<h3>+${fmt(sx.xp)} XP <span class="muted">(${esc(xpMultText(sx.mult))})</span></h3>
        <p class="muted small">${esc(w.date)} — base XP for the work logged, then one ${term("xp-multiplier", "XP multiplier")} on top.</p>
        <div class="xp-rows">
-         ${row("Base XP (tonnage, sets, exercises, PRs)", fmt(sx.base))}
+         ${row("Base XP (tonnage, sets, exercises, PRs)", fmt(sx.base - sx.effortXp))}
+         ${sx.hardSets ? row(`${term("hard-sets", "Hard sets")} — extra effort for ${sx.hardSets} set${sx.hardSets === 1 ? "" : "s"}`, "+" + fmt(sx.effortXp) + " XP") : ""}
          ${row("Improvement — a PR this session", xpMultText(f.improvement))}
          ${row("Consistency — weekly target met", xpMultText(f.consistency))}
          ${row("Volume — over-MRV reduction", xpMultText(f.volume))}
@@ -1347,11 +1348,13 @@
     let restSum2 = 0, restN2 = 0;
     (w.entries || []).forEach((en) => { const s = Engine.entryStats(en); restSum2 += s.totalRest; restN2 += s.restN; });
     const sessionRest = restN2 ? restSum2 / restN2 : null;
+    const sx = Engine.sessionXp(S, w);
     const card = el("section", { class: "card hist" });
     card.innerHTML = `
       <div class="hist-head">
         <div><b>${w.date}</b> <span class="muted">· ${(w.entries || []).length} ${pl((w.entries || []).length, "exercise")} · ${sets} ${pl(sets, "set")} · ${fmt(U.w(tonnage))} ${U.label()}${sessionRpe ? ` · avg RPE ${sessionRpe.toFixed(1)}` : ""}${sessionRest ? ` · rest ${fmtRest(sessionRest)}` : ""}</span>
-        ${w.note ? `<div class="muted small">${esc(w.note)}</div>` : ""}</div>
+        ${w.note ? `<div class="muted small">${esc(w.note)}</div>` : ""}
+        ${sx.hardSets ? `<div class="muted small">${term("hard-sets", "Hard sets")}: +${fmt(sx.effortXp)} XP for the extra effort</div>` : ""}</div>
         <div class="row"><button class="btn ghost tiny nt">Note</button><button class="btn ghost tiny ed">Edit</button><button class="btn ghost tiny cp">Repeat</button></div>
       </div>
       <div class="hist-body">
@@ -1362,7 +1365,7 @@
           return `<div class="hist-ex"><span class="hist-n">${esc(en.name)}</span><span class="hist-s">${esc(setsTxt + restTxt)}</span></div>`;
         }).join("")}
       </div>`;
-    $(".row", card).prepend(xpChip(w, Engine.sessionXp(S, w)));
+    $(".row", card).prepend(xpChip(w, sx));
     $(".ed", card).addEventListener("click", () => {
       draft = JSON.parse(JSON.stringify(w));
       draft.dateTouched = true;          // editing keeps the workout's own date
@@ -2502,7 +2505,7 @@
         ${Store.hasBackup() ? `<button class="btn ghost" id="d-bak">Restore last backup</button>` : ""}
         <button class="btn danger" id="d-reset">Reset everything</button>
       </div>
-      ${shouldShowSeed() ? `<div class="row"><button class="btn ghost" id="d-seed">Load my 7 Nov session</button></div>` : ""}`;
+      ${shouldShowSeed() ? `<div class="row"><button class="btn ghost" id="d-seed">Load the demo session</button></div>` : ""}`;
     host.append(data);
 
     $("#p-save", c).addEventListener("click", () => {
@@ -2602,7 +2605,7 @@
     (SEED_CUSTOM || []).forEach((c) => { if (!findEx(c.id)) Store.addCustom(c); });
     if (!S.workouts.find((w) => w.id === SEED_WORKOUT.id)) Store.upsertWorkout(JSON.parse(JSON.stringify(SEED_WORKOUT)));
     S.settings.seeded = true; Store.save(true); buildIndex();
-    toast("Loaded your 7 Nov session", "good");
+    toast("Demo session loaded", "good");
   }
 
   /* Pick a JSON file and import it, either merged (additive) or replacing
@@ -2665,7 +2668,7 @@
     /* No auto-seeding. This used to insert a real session on first run, so a
        brand-new account's charts, XP, badges, muscle bars and Discipline all
        counted a workout the user never did — data they did not enter, presented
-       as their own. The Profile button "Load my 7 Nov session" is shown whenever
+       as their own. The Profile button "Load the demo session" is shown whenever
        that session is not already logged (shouldShowSeed), so it is reachable on
        purpose and never imposed. The seeded flag is still set so nothing here
        ever auto-inserts. */

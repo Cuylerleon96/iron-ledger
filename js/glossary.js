@@ -47,6 +47,12 @@ const Glossary = (() => {
       source: "This app's own scoring rule, not a published standard. The factors themselves are our arrangement.",
     },
     {
+      id: "hard-sets", term: "Hard sets", aliases: ["Hard sets", "hard set", "extra effort"],
+      plain: "A drop set or a failure set is tougher than a straight set: you keep going past where you would normally stop. The app recognises that extra effort — those sets count for more toward a muscle group's weekly volume, and they earn a little extra XP for the session. Nothing is ever taken away for a set you push hard on.",
+      real: "A set logged as a drop set (\u00d71.25) or a failure set (\u00d71.2) counts as more than one working set on the muscle-balance effort path, and earns extra session XP proportional to that multiplier above a straight set. The extra XP is capped per session, so marking every set as a hard set cannot inflate it — past the cap an extra hard set adds nothing. The session breakdown and the History card show how much extra the hard sets earned.",
+      source: "This app's own scoring rule, not a published standard. The set-type multipliers and the per-session cap are deliberate heuristics — our arrangement, not measured values — kept in one place so they can be tuned.",
+    },
+    {
       id: "volume", term: "Volume", aliases: ["volume", "weekly volume", "sets per week"],
       plain: "How much training you did — the work you gave a muscle, counted in sets. More is not automatically better: there is a range that builds muscle and a point past which it only costs you recovery.",
       real: "Volume here is completed working sets per muscle group, per week. A set counts when it is a real, finished set for that movement; the muscle-balance card weights each set by the movement's effort factor before comparing it to your landmarks.",

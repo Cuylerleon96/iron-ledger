@@ -419,20 +419,27 @@ const Engine = (() => {
     return n;
   }
 
+  /* A set counts only when it records actual work. A bodyweight movement is valid
+     on reps alone — the weight box holds only what is strapped on, so requiring
+     it would discard every unweighted set. Shared by entryStats and the session
+     XP's effort term so the two cannot disagree about which sets are real. */
+  function validSet(s, mode, bw) {
+    if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw);
+    if (mode === "reps") return num(s.r) > 0;
+    if (mode === "time") return num(s.t) > 0;
+    if (mode === "distance_time") return num(s.d) > 0 || num(s.t) > 0;
+    if (mode === "weight_time") return num(s.t) > 0;
+    if (mode === "weight_distance") return num(s.d) > 0;
+    return false;
+  }
+
   function entryStats(entry) {
     const mode = entry.mode || "weight_reps";
     const bw = isBodyweight(entry.name);
-    const valid = (entry.sets || []).filter((s) => {
-      // a bodyweight movement is valid on reps alone — the weight box holds only
-      // what is strapped on, so requiring it discarded every unweighted set
-      if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw);
-      if (mode === "reps") return num(s.r) > 0;
-      if (mode === "time") return num(s.t) > 0;
-      if (mode === "distance_time") return num(s.d) > 0 || num(s.t) > 0;
-      if (mode === "weight_time") return num(s.t) > 0;
-      if (mode === "weight_distance") return num(s.d) > 0;
-      return false;
-    });
+    /* A set only counts when it records actual work. This predicate is the ONE
+       place that is decided, so entryStats and sessionXp's effort term cannot
+       disagree about which sets are real. */
+    const valid = (entry.sets || []).filter((s) => validSet(s, mode, bw));
     const sets = valid;
     let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, bestReps = 0, tonnage = 0, rpeSum = 0, rpeN = 0;
     let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0, effSets = 0;
@@ -1986,6 +1993,23 @@ const Engine = (() => {
                            // logs 4-6 exercises (his export: 4 and 6), so nothing
                            // normal is touched; past the cap an extra entry adds
                            // nothing.
+    /* --- effort XP: a HARD set pays extra, and that extra is CAPPED. ---
+       A drop or failure set is harder than a straight one, so — alongside the
+       muscle-group effort path — it earns a little extra XP for the extra
+       effort. HARD sets are paid in ADDITION to the flat per-set term, so this
+       only ever grows a session; it never takes XP away.
+       BOTH numbers are deliberate heuristics, NOT measurements: the smallest
+       values that make the extra effort visible, chosen to sit well under a PR
+       so effort can never out-earn getting stronger. This is the one place to
+       tune them.
+       HARD_SET_CAP is the same farm-proofing as XP.ENTRY_CAP: past the cap an
+       extra hard set adds nothing, so a session cannot be farmed by marking
+       every set "failure". A realistic session has a handful of hard sets; the
+       cap only bites a session built to game the term. */
+    HARD_SET_XP: 20,       // extra XP per hard set, PER UNIT of extra effort —
+                           // the set-type multiplier's excess over a straight
+                           // set (drop 1.25 -> 5 XP, failure 1.2 -> 4 XP)
+    HARD_SET_CAP: 6,       // ...paid for at most this many hard sets per session
   };
 
   /* Monday-start week key for a date. Pure in the date itself, so XP does not
@@ -2087,6 +2111,26 @@ const Engine = (() => {
 
     let tonnage = 0, sets = 0;
     for (const en of w.entries || []) { const s = entryStats(en); tonnage += s.tonnage; sets += s.sets; }
+    /* Hard sets (a drop or failure type) pay extra for the extra effort. The
+       extra is proportional to each set's effort multiplier above a straight set
+       (drop 1.25 pays 5 XP, failure 1.2 pays 4) and is CAPPED at XP.HARD_SET_CAP
+       sets — the same farm-proofing as the entry term, so marking every set
+       "failure" cannot inflate a session. Paid per valid set, in log order, so
+       the cap keeps the first XP.HARD_SET_CAP hard sets and ignores the rest.
+       This only ever ADDS to the base, so XP can only grow as sets are added. */
+    let hardSets = 0, effortXp = 0;
+    for (const en of w.entries || []) {
+      const mode = en.mode || "weight_reps";
+      const bw = isBodyweight(en.name);
+      for (const s of en.sets || []) {
+        if (!validSet(s, mode, bw)) continue;
+        const eff = setEffort(s);
+        if (eff <= 1) continue;                       // a straight set pays the flat term only
+        hardSets++;
+        if (hardSets <= XP.HARD_SET_CAP) effortXp += Math.round(XP.HARD_SET_XP * (eff - 1));
+      }
+    }
+    const hardPaid = Math.min(hardSets, XP.HARD_SET_CAP);
     const nPr = prs[w.date] || 0;
     /* The per-entry term is CAPPED (XP.ENTRY_CAP). It is paid per exercise logged,
        but only up to a realistic session's worth; beyond that an extra entry adds
@@ -2094,7 +2138,8 @@ const Engine = (() => {
        actually did is still rewarded through tonnage and the per-set term, and its
        overreaching is priced by the volume factor — see the XP block above. */
     const base = XP.SESSION + Math.round(tonnage / 1000) + sets * 2
-               + Math.min((w.entries || []).length, XP.ENTRY_CAP) * 5 + nPr * XP.PR;
+               + Math.min((w.entries || []).length, XP.ENTRY_CAP) * 5 + nPr * XP.PR
+               + effortXp;
 
     const improvement = nPr > 0 ? XP.IMPROVEMENT : 1;
     const target = num(state.profile.weeklyTarget) || 4;
@@ -2112,6 +2157,9 @@ const Engine = (() => {
     return {
       xp: Math.round(base * raw), base, mult: r3(raw), capped: improvement * consistency * volume > XP.CAP,
       prs: nPr, overMrv: split.over > 0,
+      /* The effort part of the base, and how many hard sets actually paid for it
+         (capped). The UI reads these to show the extra explicitly. */
+      effortXp, hardSets: hardPaid,
       factors: { improvement, consistency: r3(consistency), volume: r3(volume) },
     };
   }

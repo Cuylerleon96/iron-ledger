@@ -72,7 +72,9 @@ console.log("\n=== summary + weak points ===");
 {
   const sm = E.summary(st);
   eq("level", sm.level.level, 2);
-  eq("total XP", sm.xp, 357);
+  /* 357 -> 361: the fixture's one failure set now earns its extra-effort XP
+     (+4 = round(HARD_SET_XP 20 * (1.2 - 1))), the deliberately-added term. */
+  eq("total XP", sm.xp, 361);
   eq("title", sm.title, "Rookie");
   eq("density %", sm.density, 36);
   eq("streak days", sm.streak.days, 1);

@@ -2172,5 +2172,55 @@ console.log("\n=== 50. Vitality is body-composition HEALTH first (a goal can onl
   eq("...and its basis says 'no data'", bare.detail.basis, "no data");
 }
 
+console.log("\n=== 51. drop/failure sets earn EXTRA XP, capped, and the session shows it ===");
+{
+  /* The set-type multipliers fed the muscle-group effort path ONLY; a failure set
+     paid nothing extra in `sessionXp`, which counted the raw set COUNT. A drop or
+     failure set now earns extra XP for the extra effort — proportional to the
+     set-type multiplier above a straight set — and is CAPPED per session (the
+     same farm-proofing as XP.ENTRY_CAP), so marking every set "failure" cannot
+     inflate it. The term only ADDS to the base, so XP never goes down. */
+  const e = env();
+  const sx = (sets) => { const s = base({ workouts: [wk(iso(1), sets)] }); return e.E.sessionXp(s, s.workouts[0]); };
+  const straight = sx([{ w: 100, r: 10 }, { w: 100, r: 10 }]);
+  const oneFail = sx([{ w: 100, r: 10 }, { w: 100, r: 10, ty: "failure" }]);
+  const oneDrop = sx([{ w: 100, r: 10 }, { w: 100, r: 10, ty: "drop" }]);
+
+  eq("the effort constants live in the XP block", [typeof e.E.XP.HARD_SET_XP, typeof e.E.XP.HARD_SET_CAP], ["number", "number"]);
+  eq("the cap is a real, small number", e.E.XP.HARD_SET_CAP, 6);
+  eq("a straight session carries no extra effort", [straight.effortXp, straight.hardSets], [0, 0]);
+  truthy("a failure set pays extra XP for the extra effort", oneFail.effortXp > 0);
+  truthy("...and its session earns MORE than the same sets all straight", oneFail.xp > straight.xp);
+  eq("the extra is proportional to the multiplier above a straight set (failure 1.2)",
+    oneFail.effortXp, Math.round(e.E.XP.HARD_SET_XP * (1.2 - 1)));
+  eq("...a drop set (1.25) pays at least as much, and is never less", oneDrop.effortXp >= oneFail.effortXp, true);
+  eq("the breakdown reports the hard sets that paid", oneFail.hardSets, 1);
+  truthy("the base grew by the effort XP", oneFail.base - straight.base >= oneFail.effortXp);
+
+  /* The cap: N failure sets pay for at most HARD_SET_CAP of them. */
+  const failSession = (n) => sx(Array.from({ length: n }, () => ({ w: 100, r: 10, ty: "failure" })));
+  const atCap = failSession(e.E.XP.HARD_SET_CAP);
+  const overCap = failSession(e.E.XP.HARD_SET_CAP + 5);
+  eq("the cap holds: only HARD_SET_CAP sets pay", overCap.hardSets, e.E.XP.HARD_SET_CAP);
+  eq("...so the extra XP stops at the cap", overCap.effortXp, atCap.effortXp);
+  truthy("a farmer marking EVERY set 'failure' is NOT paid linearly",
+    failSession(40).effortXp === failSession(e.E.XP.HARD_SET_CAP).effortXp);
+
+  /* Monotonicity: adding a set can only ever ADD XP. */
+  truthy("XP only GROWS when a straight set is added", sx([{ w: 100, r: 10 }, { w: 100, r: 10 }, { w: 100, r: 10 }]).xp >= straight.xp);
+  const grown = sx([{ w: 100, r: 10 }, { w: 100, r: 10 }, { w: 100, r: 10, ty: "failure" }]);
+  truthy("...and a hard set added on top grows it further", grown.xp >= oneFail.xp);
+
+  /* The UI: the History session detail shows the extra, in encouraging words, and
+     the glossary explains the term (no dead control). */
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const GL = require(path.join(B, "js", "glossary.js"));
+  truthy("history reads the hard-set breakdown from sessionXp", /const sx = Engine\.sessionXp\(S, w\)/.test(appSrc) && /sx\.hardSets \?/.test(appSrc));
+  truthy("the history detail spells the extra out", appSrc.includes("XP for the extra effort"));
+  truthy("the XP breakdown reports the effort row", /fmt\(sx\.base - sx\.effortXp\)/.test(appSrc) && /term\("hard-sets", "Hard sets"\)/.test(appSrc));
+  truthy("'Hard sets' is the term used, not 'failed'", appSrc.includes("Hard sets") && !/Hard sets[^<]*failed/i.test(appSrc));
+  truthy("the hard-set term has ONE glossary entry", GL.has("hard-sets"));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -558,7 +558,7 @@ console.log("\n--- (17) goal-aware totals wording + the rounding note ---");
   /* ---- the SAME goal drives the targets AND the wording: they cannot disagree.
           Here the profile's own weights say GAIN, but the phase PICKED is a cut,
           so the wording must follow the PHASE. ---- */
-  const MANP = { sex: "M", weightKg: 80, heightCm: 180, birthYear: 1985 };
+  const MANP = { sex: "M", weightKg: 80, heightCm: 180, birthYear: 1990 };
   const gv = P.view(MANP, { phase: "lean-gain", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
   const cv = P.view(MANP, { phase: "cut-standard", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
   eq("a gain phase reports its goal on the view model", gv.phase.goal, "gain");
@@ -580,13 +580,16 @@ console.log("\n--- (17) goal-aware totals wording + the rounding note ---");
   truthy("...and says both numbers are right", /only the rounding differs/.test(P.MACRO_ROUNDING_NOTE));
   truthy("...and it is rendered on the tab", gv.html.includes(P.MACRO_ROUNDING_NOTE.slice(0, 40)));
   truthy("...inside the n-rounding element", gv.html.includes('id="n-rounding"'));
-  /* the owner's own arithmetic: 145 P / 75 F / 230 C = 2175 kcal against a 2170 target */
+  /* The fixture's OWN arithmetic, re-derived after its birth year was changed to
+     a neutral value (1996 -> 1990; age 30 -> 36), so the plan it produces no
+     longer encodes a real birth year: 145 P / 75 F / 230 C = 2175 kcal against a
+     2170 target. */
   const mv = P.view(MANP, { phase: "maintain", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
-  eq("maintain plan target kcal 2170", mv.plan.target.kcal, 2140);
+  eq("maintain plan target kcal 2170", mv.plan.target.kcal, 2100);
   eq("maintain plan protein 130 g", mv.plan.protein.g, 130);
   eq("maintain plan fat 65 g", mv.plan.fat.g, 65);
-  eq("maintain plan carbs 260 g", mv.plan.carbs.g, 260);
-  eq("the grams add to 2175 kcal (145*4 + 75*9 + 230*4)", 145 * 4 + 75 * 9 + 230 * 4, 2175);
+  eq("maintain plan carbs 250 g", mv.plan.carbs.g, 250);
+  eq("the grams add to 2105 kcal (145*4 + 75*9 + 230*4)", 130 * 4 + 65 * 9 + 250 * 4, 2105);
   truthy("the note spells out THIS plan's 2175-vs-2170 arithmetic",
     /145 g protein \+ 75 g fat \+ 230 g carbs = 2175 kcal against the 2170 kcal target/.test(mv.roundingNote));
   truthy("...and calls the 5 kcal difference out", /5 kcal apart/.test(mv.roundingNote));
