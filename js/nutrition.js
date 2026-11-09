@@ -415,6 +415,20 @@ const Nutrition = (() => {
     return kcal.logged + " kcal logged today — a target is a guide, not a rule, so take it at your own pace.";
   }
 
+  /* The History tab's day-card headline. A PAST day must never be read with
+     today's wording ("…to land on target TODAY" is wrong for 2026-11-08), so this
+     is deliberately a separate, neutral summary of what was logged that day —
+     no "today", no goal-chasing instruction, no failure framing. A lightly-logged
+     day is stated as the plain fact it is. Shape: "<kcal> kcal logged across N
+     items." (or the item-count line when there is no calorie row yet). */
+  function historyHeadline(rows, count) {
+    if (!count) return "Nothing logged on this day.";
+    const items = count + (count === 1 ? " item" : " items");
+    const kcal = (rows || []).find((r) => r.key === "kcal");
+    if (!kcal) return "Logged " + items + " on this day.";
+    return kcal.logged + " kcal logged across " + items + ".";
+  }
+
   /* ---------- the rounding note (honesty) ----------
      The macro grams are each rounded on their own to 5 g and the calorie target
      to 10 kcal, so adding the grams up can land a few kcal away from the target
@@ -462,8 +476,122 @@ const Nutrition = (() => {
     return lines.length ? lines.join(" ") : null;
   }
 
+  /* ---------- the tracker strip (Change A) ----------
+     Today's totals read against the tab's targets, as the gauges shown at the
+     TOP of the Nutrition tab. PURE: the totals, the targets and the vitality
+     result are all ARGUMENTS. The wording is intakeSummary's own (so the strip
+     and the Today card cannot disagree), and each fill is the share of the
+     target logged so far, capped at 100% — never a red or warning fill, and the
+     bar is never framed as a failure however full or empty it is. */
+  function tracker(totals, targets, opts) {
+    opts = opts || {};
+    const goal = goalWord(opts.goal);
+    const rows = intakeSummary(targets, totals, goal).map((r) => ({
+      key: r.key, label: r.label, unit: r.unit, logged: r.logged, target: r.target,
+      text: r.text, goal: r.goal,
+      pct: r.target > 0 ? Math.max(0, Math.min(100, Math.round((r.logged / r.target) * 100))) : null,
+    }));
+    return {
+      goal,
+      hasTargets: !!(targets && targets.length),
+      rows,
+      vitality: vitalityPart(opts.vitality, opts.vitalityOptOut),
+    };
+  }
+
+  /* The day's Vitality contribution, stated honestly in three states, and NEVER
+     a number when there is none (opted out, or too few logged days). It never
+     reads as a judgement — a blank day is simply not counted. */
+  function vitalityPart(vit, optedOut) {
+    if (optedOut) return { state: "off", value: null, weight: null, days: null,
+      text: "Nutrition is kept off your Vitality stats — that's your setting in Profile." };
+    if (!vit || typeof vit.v !== "number") return { state: "not-yet", value: null, weight: null, days: null,
+      text: "Nutrition joins Vitality once a few days are logged — a blank day is never counted as a zero." };
+    return { state: "on", value: vit.v, weight: vit.w, days: vit.days,
+      text: "Nutrition is part of Vitality: " + vit.days + " " + (vit.days === 1 ? "logged day" : "logged days") +
+        " in this window, contributing " + Math.round(vit.v) + "/100 toward its " +
+        Math.round(vit.w * 100) + "% share." };
+  }
+
+  /* ---------- the weekly adherence bar (Change A) ----------
+     Sessions logged this week against the profile's weekly target, plus how many
+     Monday-start weeks have MET it. The weeks-at-target count is Engine's own
+     (weeksAtTarget) — passed in, so this stays PURE and the XP/badges cannot
+     disagree with what is shown. NOTHING here counts consecutive days. */
+  function adherence(i) {
+    i = i || {};
+    const target = Math.max(1, parseInt(i.weeklyTarget, 10) || 4);
+    const sessions = Math.max(0, parseInt(i.sessionsThisWeek, 10) || 0);
+    const weeks = Math.max(0, parseInt(i.weeksAtTarget, 10) || 0);
+    const loggedDays = Math.max(0, parseInt(i.loggedDaysThisWeek, 10) || 0);
+    const pct = Math.max(0, Math.min(100, Math.round((sessions / target) * 100)));
+    const weekWord = (n) => n + " " + (n === 1 ? "week" : "weeks");
+    const text = (sessions >= target ? "Target met this week — " : "") +
+      sessions + " of " + target + " sessions logged this week · " + weekWord(weeks) + " on target so far" +
+      (i.loggedDaysThisWeek == null ? "" :
+        " · food logged on " + loggedDays + " " + (loggedDays === 1 ? "day" : "days") + " this week") + ".";
+    return { target, sessions, weeksAtTarget: weeks,
+      loggedDaysThisWeek: i.loggedDaysThisWeek == null ? null : loggedDays, pct, text };
+  }
+
+  /* ---------- a set of entries' food total (pure twin of Store.dayTotals) ----------
+     Used by the History tab's Nutrition view so it can be tested without Store.
+     A nutrient present in NO entry is ABSENT (never 0); a real 0 is summed as 0. */
+  function sumMacros(entries) {
+    const t = {};
+    (entries || []).forEach((e) => {
+      const m = (e && e.macros) || {};
+      NUTRIENTS.forEach((k) => {
+        const v = num(m[k]);
+        if (v == null) return;
+        t[k] = round2((t[k] || 0) + v);
+      });
+    });
+    return t;
+  }
+
+  /* ---------- the History tab's Nutrition view (Change B) ----------
+     Distinct CALENDAR DAYS carrying at least one food entry, NEWEST FIRST,
+     honouring the SAME from/to date filter the exercise history uses (the
+     free-text box here filters the food name). A day with nothing logged is
+     simply ABSENT from the list — never a zero-calorie day. */
+  function loggedDays(intakelog, filter) {
+    filter = filter || {};
+    const from = filter.from || null, to = filter.to || null;
+    const q = String(filter.q == null ? "" : filter.q).trim().toLowerCase();
+    const by = {};
+    (intakelog || []).forEach((e) => {
+      if (!e || !e.date) return;
+      const d = String(e.date);
+      if (from && d < from) return;
+      if (to && d > to) return;
+      if (q) {
+        const n = (e.name != null ? String(e.name) : (e.src != null ? String(e.src) : "")).toLowerCase();
+        if (n.indexOf(q) < 0) return;
+      }
+      (by[d] = by[d] || []).push(e);
+    });
+    return Object.keys(by).sort().reverse().map((date) => ({
+      date, items: by[date].length, totals: sumMacros(by[date]),
+    }));
+  }
+
+  /* Each logged day read against the tab's targets, worded with the SAME
+     intakeSummary rows the Nutrition tab uses, so the per-target lines agree.
+     The DAY headline is its own summary (historyHeadline) — NOT the Today card's
+     intakeHeadline, which is written for the current day and says "today".
+     `targets` may be null (no birth year yet): the day is then listed with its
+     item count and no target numbers at all. */
+  function nutritionHistory(intakelog, filter, targets, goal) {
+    return loggedDays(intakelog, filter).map((day) => {
+      const rows = intakeSummary(targets, day.totals, goal);
+      return Object.assign({}, day, { rows, headline: historyHeadline(rows, day.items) });
+    });
+  }
+
   return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE,
-    NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline,
+    NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline, historyHeadline,
+    tracker, vitalityPart, adherence, sumMacros, loggedDays, nutritionHistory,
     MACRO_ROUNDING_NOTE, roundingNoteFor, alternateNote, FOOD_LABEL };
 })();
 if (typeof module !== "undefined") module.exports = Nutrition;

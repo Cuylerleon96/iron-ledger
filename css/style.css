@@ -825,6 +825,23 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .food-note { font-size: .68rem; line-height: 1.35; color: var(--cream); text-shadow: var(--outline-sm); margin: .25rem 0 .1rem; }
 .food-list { margin: .3rem 0; }
 
+/* ---- Nutrition: the tracker strip + weekly adherence bar (Change A) ----
+   The gauges reuse the dashboard's .bar-track / .bar-fill, but the fill is the
+   app's neutral teal rather than the green/orange progress pair: nothing here is
+   red or warning, because an ordinary day's eating is not a fault. */
+.ntrack-row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: .45rem; font-size: .64rem; }
+.ntrack-row .bar-track { height: 12px; }
+.ntrack-row .bar-val { min-width: 96px; }
+.ntrack-row .bar-fill { background: linear-gradient(180deg, var(--teal-4), var(--teal-2) 65%, var(--teal-1)); }
+.ntrack-cap { margin: .1rem 0 .45rem; line-height: 1.45; }
+.ntrack-hint { line-height: 1.45; }
+.ntrack-vit {
+  display: flex; align-items: baseline; gap: .35rem; flex-wrap: wrap;
+  margin-top: .5rem; border-top: 2px dotted rgba(255, 255, 255, .14); padding-top: .4rem;
+}
+.ntrack-vit-lab { font-family: var(--pxd); font-size: .58rem; color: var(--purple); text-shadow: var(--outline-sm); }
+.ntrack-vit-val { font-family: var(--pxd); font-size: .8rem; color: var(--cream); text-shadow: var(--outline-sm); }
+
 /* ---- Barcode scanner (modal surface) ----
    The camera preview is the one thing that must be visible; everything else is
    plain, honest text. Colours come from the existing theme vars. */

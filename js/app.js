@@ -1319,11 +1319,18 @@
 
   function renderHistory(host) {
     const total = (S.workouts || []).length;
+    const intakes = S.intakelog || [];
+    const totalDays = Nutrition.loggedDays(intakes, {}).length;   // distinct logged days, all-time
+    let mode = "exercise";
     const head = el("section", { class: "card" });
     head.innerHTML = `
-      <div class="card-head"><h3>History</h3><span class="muted" id="hist-count">${total} ${pl(total, "session")}</span></div>
+      <div class="card-head"><h3>History</h3><span class="muted" id="hist-count"></span></div>
+      <div class="seg" id="hist-seg" role="group" aria-label="History view">
+        <button type="button" class="on" data-mode="exercise" aria-pressed="true">Exercise logs</button>
+        <button type="button" data-mode="nutrition" aria-pressed="false">Nutrition logs</button>
+      </div>
       <div class="row">
-        <input class="inp" id="hist-q" placeholder="Filter by exercise…" aria-label="Filter history by exercise name">
+        <input class="inp" id="hist-q" placeholder="Filter by exercise…" aria-label="Filter history">
         <input class="inp" type="date" id="hist-from" aria-label="Filter history from this date">
         <input class="inp" type="date" id="hist-to" aria-label="Filter history to this date">
         <button class="btn ghost tiny" id="hist-clear">Clear</button>
@@ -1337,10 +1344,28 @@
 
     const paint = () => {
       const f = readFilter();
-      const ws = Engine.filterSessions(S, f);
       const active = !!(String(f.q).trim() || f.from || f.to);
-      $("#hist-count", head).textContent = active ? `${ws.length} of ${total} sessions` : `${total} ${pl(total, "session")}`;
       list.innerHTML = "";
+
+      /* Change B — the Nutrition view: the LOGGED DAYS from the intake log,
+         newest first, each read against the tab's targets with the SAME wording
+         the Nutrition tab uses. The same date-range filter drives it. */
+      if (mode === "nutrition") {
+        const days = Nutrition.nutritionHistory(intakes, f, _nutriView && _nutriView.targets,
+          (_nutriView && _nutriView.phase && _nutriView.phase.goal) || "maintain");
+        $("#hist-count", head).textContent = active
+          ? `${days.length} of ${totalDays} ${pl(totalDays, "logged day", "logged days")}`
+          : `${totalDays} ${pl(totalDays, "logged day", "logged days")}`;
+        if (!days.length) {
+          list.append(el("p", { class: "muted pad" }, totalDays ? "No logged days match the filter." : "No food logged yet — log a meal on the Nutrition tab."));
+          return;
+        }
+        days.forEach((d) => list.append(nutritionDayCard(d)));
+        return;
+      }
+
+      const ws = Engine.filterSessions(S, f);
+      $("#hist-count", head).textContent = active ? `${ws.length} of ${total} sessions` : `${total} ${pl(total, "session")}`;
       if (!ws.length) {
         list.append(el("p", { class: "muted pad" }, total ? "No sessions match the filter." : "No sessions logged yet."));
         return;
@@ -1348,7 +1373,22 @@
       ws.forEach((w) => list.append(sessionCard(w)));
     };
 
+    /* Switching views reuses the filters but drops the exercise-only "Copy
+       notes" control, which has nothing to copy from a food log. */
+    const setMode = (m) => {
+      mode = m;
+      $$("button", $("#hist-seg", head)).forEach((b) => {
+        const on = b.dataset.mode === m;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      $("#hist-q", head).placeholder = m === "nutrition" ? "Filter by food…" : "Filter by exercise…";
+      $("#hist-notes", head).style.display = m === "nutrition" ? "none" : "";
+      paint();
+    };
+
     // every control does something; emptying them restores the full list
+    $$("button", $("#hist-seg", head)).forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
     $("#hist-q", head).addEventListener("input", paint);
     $("#hist-from", head).addEventListener("change", paint);
     $("#hist-to", head).addEventListener("change", paint);
@@ -1360,7 +1400,26 @@
       // exactly what is shown: the same filter drives the export
       copyNoteText(Engine.exportNotesShorthand(S, readFilter()), "Copied every session shown, in your notes format");
     });
-    paint();
+    setMode("exercise");
+  }
+
+  /* One logged DAY in the History tab's Nutrition view: the day's date, its item
+     count, and its totals read against the targets. The headline is the day's own
+     factual summary (Nutrition.historyHeadline) — NOT the Today card's wording,
+     which is written for the current day and would read "today" on a past date.
+     A lightly-logged day is information, not failure, so nothing here is coloured
+     as a warning. */
+  function nutritionDayCard(day) {
+    const c = el("section", { class: "card" });
+    const rows = day.rows.map((r) =>
+      '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(r.label) + "</span>" +
+      '<span class="n-t-val">' + fmt(r.logged) + '<span class="n-t-unit"> / ' + r.target + " " + esc(r.unit) + "</span></span></div>" +
+      '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("");
+    c.innerHTML =
+      '<div class="card-head"><h3>' + esc(day.date) + '</h3><span class="muted">' + day.items + " " + pl(day.items, "item") + "</span></div>" +
+      (rows ? '<div class="n-targets">' + rows + "</div>" : "") +
+      '<p class="muted small">' + esc(day.headline) + "</p>";
+    return c;
   }
 
   function setText(s, mode) {
@@ -1817,6 +1876,7 @@
   }
 
   function renderToday() {
+    renderTracker();                                   // Change A: keep the top strip live
     const list = $("#food-list"), tot = $("#today-totals"), cnt = $("#today-count");
     if (!list || !tot) return;
     const date = today();
@@ -1896,6 +1956,75 @@
     return c;
   }
 
+  /* Change A — the gauges under the search: today's totals against the targets,
+     plus the day's Vitality contribution. Its own body node (#tracker-body) is
+     repainted by renderToday(), so adding or removing a food anywhere on the tab
+     moves the strip immediately. The heavy wording lives in Nutrition.tracker so
+     it is testable without a DOM. */
+  function trackerStrip() {
+    const c = el("section", { class: "card", id: "tracker" });
+    c.innerHTML =
+      '<div class="card-head"><h3>Today vs targets</h3><span class="muted">a guide, not a rule</span></div>' +
+      '<div class="bar-host" id="tracker-body"></div>';
+    renderTracker();
+    return c;
+  }
+
+  function vitalityStripHtml(v) {
+    return '<div class="ntrack-vit">' +
+      '<span class="ntrack-vit-lab">' + term("attr-VIT", "Vitality") + "</span>" +
+      (v.value == null ? "" : ' <span class="ntrack-vit-val">' + Math.round(v.value) + "</span>") +
+      ' <span class="muted small">' + esc(v.text) + "</span></div>";
+  }
+
+  function trackerHtml(vm) {
+    if (!vm.hasTargets) {
+      return '<p class="muted small">Macro targets appear once your birth year is set in Profile — ' +
+        "a target is a guide, never a grade.</p>" + vitalityStripHtml(vm.vitality);
+    }
+    const rows = vm.rows.map((r) =>
+      '<div class="bar-row ntrack-row"><span class="bar-lab">' + esc(r.label) + "</span>" +
+      '<span class="bar-track"><i class="bar-fill" style="width:' + (r.pct == null ? 0 : r.pct) + '%"></i></span>' +
+      '<span class="bar-val">' + fmt(r.logged) + " / " + r.target + " " + esc(r.unit) + "</span></div>" +
+      '<p class="muted small ntrack-cap">' + esc(r.text) + "</p>").join("");
+    return rows +
+      '<p class="muted small ntrack-hint">Each bar is how much of that target is logged so far today — ' +
+      "a guide, not a score.</p>" + vitalityStripHtml(vm.vitality);
+  }
+
+  function renderTracker() {
+    const host = $("#tracker-body");
+    if (!host) return;
+    const targets = _nutriView && _nutriView.targets;
+    const goal = (_nutriView && _nutriView.phase && _nutriView.phase.goal) || "maintain";
+    const totals = Store.dayTotals(today());
+    const vit = Engine.nutritionVitality(S, today());
+    const optedOut = !!(S.profile && S.profile.nutritionVitality === false);
+    host.innerHTML = trackerHtml(Nutrition.tracker(totals, targets, { goal, vitality: vit, vitalityOptOut: optedOut }));
+  }
+
+  /* Change A — the weekly adherence bar at the foot of the tab. Uses the engine's
+     ONE sessions-vs-target measure (weeksAtTarget) and the current week's count,
+     never consecutive days. */
+  function adherenceCard() {
+    const c = el("section", { class: "card", id: "adherence" });
+    const wp = weekProgress(S);
+    const wk = Engine.weekKeyOf(Engine.dstr(new Date()));
+    const daysThisWeek = new Set((S.intakelog || [])
+      .filter((e) => e && e.date && Engine.weekKeyOf(e.date) === wk).map((e) => e.date)).size;
+    const vm = Nutrition.adherence({
+      weeklyTarget: S.profile.weeklyTarget, sessionsThisWeek: wp.done,
+      weeksAtTarget: Engine.weeksAtTarget(S), loggedDaysThisWeek: daysThisWeek,
+    });
+    c.innerHTML =
+      '<div class="card-head"><h3>Weekly adherence</h3><span class="muted">sessions vs your weekly target</span></div>' +
+      '<div class="bar-row ntrack-row"><span class="bar-lab">This week</span>' +
+      '<span class="bar-track"><i class="bar-fill" style="width:' + vm.pct + '%"></i></span>' +
+      '<span class="bar-val">' + vm.sessions + " / " + vm.target + "</span></div>" +
+      '<p class="muted small ntrack-cap">' + esc(vm.text) + "</p>";
+    return c;
+  }
+
   function renderNutrition(host) {
     const training = Nutrition.trainingFor(S.workouts, today(), (id) => Engine.exMode(S, id));
     const v = Nutrition.view(S.profile, {
@@ -1906,6 +2035,13 @@
       bodylog: S.bodylog || [],
     });
     _nutriView = v;
+    /* Change A — layout: the LOG-FOOD block (search + portion picker + "Scan a
+       barcode") now sits at the TOP, so the search is reachable without a scroll.
+       Under it, the tracker strip reads today's totals against the targets;
+       the detailed targets card and today's log follow below, and the weekly
+       adherence bar closes the page. */
+    host.append(intakeCard());
+    host.append(trackerStrip());
     const c = el("section", { class: "card", id: "nutrition" });
     c.innerHTML = v.html;
     host.append(c);
@@ -1923,7 +2059,7 @@
     // Food logging works whether or not targets are shown (targets need a birth
     // year, but a person can log a meal either way).
     host.append(todayCard());
-    host.append(intakeCard());
+    host.append(adherenceCard());
     /* todayCard() calls renderToday() while the card is still DETACHED, and
        renderToday() looks its own nodes up from the document (`$("#food-list")`),
        so on first paint it found nothing and returned early — the Today card

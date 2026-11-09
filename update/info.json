@@ -1,11 +1,11 @@
 {
-  "versionCode": 77,
-  "versionName": "1.1.2",
+  "versionCode": 78,
+  "versionName": "1.2.0",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "b9035638dc0c1868eac62826ec73af7b3b0df66599155bda80f64a18ce04f527",
-  "sizeBytes": 3895715,
+  "sha256": "c5c6237a77409a47b1a3fc4f788fa56ce35a1ccf5c991c0e5ddb62bd9d6e3c5f",
+  "sizeBytes": 3900004,
   "published": "2026-11-09",
   "notes": [
-    "Sessions reward steady training more than sheer volume."
+    "Nutrition gets a tracker strip with your day's progress, and a History tab that shows what you logged on past days."
   ]
 }
