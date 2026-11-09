@@ -50,7 +50,7 @@ const Glossary = (() => {
     {
       id: "effort-set", term: "Effort sets (vs raw sets)", aliases: ["effort sets", "raw sets", "working set", "working sets"],
       plain: "A raw set is just a set you did. An effort set is that same set weighted by how demanding the movement is — a heavy squat counts for more than a leg extension. The muscle-balance card shows both so you can see the difference.",
-      real: "Each logged set is multiplied by the movement's effort weight (its `g`/effort factor, shown as \"Effort weight\" on the exercise screen, 1.00 = baseline) to give an effort set. Raw sets are the unweighted count. Totals are effort sets per week against the muscle group's MEV / MAV / MRV landmarks.",
+      real: "Each logged set is multiplied by the movement's effort weight (its `g`/effort factor, 1.00 = baseline) to give an effort set — a fixed coefficient worked out from the movement itself, not something you set. Raw sets are the unweighted count. Totals are effort sets per week against the muscle group's MEV / MAV / MRV landmarks.",
     },
     {
       id: "set-type", term: "Set type", aliases: ["Set type", "Drop set", "Failure set"],

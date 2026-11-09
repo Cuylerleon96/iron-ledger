@@ -1489,8 +1489,8 @@ const Engine = (() => {
 
   function exerciseWeight(state, id) {
     const info = exInfo(state, id);
-    const o = (state.overrides && state.overrides[id]) || {};
-    if (o.weight != null && isFinite(num(o.weight)) && num(o.weight) > 0) return num(o.weight);
+    // The movement's effort weight is a maths constant: derived here from the
+    // factor table below, never read from a per-exercise override.
     // recruitment: an isolation set drives one joint and nothing else, so it is
     // worth less than a compound set; more muscles driven is worth more
     const groups = exGroups(state, id).length;

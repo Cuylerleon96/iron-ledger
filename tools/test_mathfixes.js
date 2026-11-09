@@ -223,9 +223,11 @@ console.log("\n=== 9. per-exercise weighting: a set is not a set ===");
   truthy("a leg press is not mistaken for an isolation", !e.E.isIsolation(st, "x5"));
   truthy("a pec deck IS an isolation", e.E.isIsolation(st, "x4"));
   truthy("free weight outranks the same lift on a machine", w("x3") > w("x7"));
-  // and the override wins
+  // and the effort weight is a maths constant now: a stored override is IGNORED
+  // and the value derived from the movement's own attributes is always used.
   const ov = base({ custom, overrides: { x2: { weight: 1.3 } } });
-  eq("an explicit override wins", e.E.exerciseWeight(ov, "x2"), 1.3);
+  eq("a stored weight override no longer wins", e.E.exerciseWeight(ov, "x2"), w("x2"));
+  eq("...the derived value is used, not the stored one", e.E.exerciseWeight(ov, "x2"), 0.85);
   // and the score actually uses it
   // 4 sets, not 20: at 20 both are far past MRV where the score is meant to DECLINE
   // (peak at the optimum), so the comparison has to be made inside the useful range
@@ -1125,13 +1127,19 @@ console.log("\n=== 36. deleting a custom exercise leaves no stray keys, and pins
   e.S.reset();
   e.S.addCustom({ id: "uz", n: "Typo Press", c: "Chest", p: ["Chest"], s: [], e: ["Machine"], m: "weight_reps", g: ["Chest"], d: "" });
   e.S.setTarget("uz", 60);                              // per-exercise goal
-  e.S.setOverride("uz", { mode: "weight_reps", weight: 0.9 }); // mode + effort weight
+  // mode + a stale effort weight: the mode override is honoured, but the weight
+  // is a maths constant now and must be ignored by the engine.
+  e.S.setOverride("uz", { mode: "weight_reps", weight: 0.9 });
   e.S.upsertWorkout({ id: "wz", date: "2026-11-01", entries: [{ id: "uz", name: "Typo Press", mode: "weight_reps", sets: [{ w: 40, r: 10, rpe: 8 }] }] });
   const other = (s) => JSON.stringify({ bodylog: s.bodylog, achievements: s.achievements, profile: s.profile, settings: s.settings });
   const otherBefore = other(e.S.state);
   const workoutsBefore = JSON.parse(JSON.stringify(e.S.state.workouts));
   eq("setup: target was set", !!e.S.state.targets["uz"], true);
   eq("setup: override was set", JSON.stringify(e.S.state.overrides["uz"]), JSON.stringify({ mode: "weight_reps", weight: 0.9 }));
+  // captured BEFORE the delete: the value the engine actually uses, derived from
+  // the movement's attributes, immune to the stale 0.9 stored above.
+  const derivedEw = e.E.exerciseWeight(e.S.state, "uz");
+  truthy("setup: the engine ignores the stored 0.9 and derives the movement's weight", derivedEw !== 0.9);
 
   e.S.deleteCustom("uz");
 
@@ -1141,12 +1149,16 @@ console.log("\n=== 36. deleting a custom exercise leaves no stray keys, and pins
   eq("(a) ...and no override key is left for the dead id", Object.keys(e.S.state.overrides), []);
   eq("(c) nothing outside the logged entries changed", other(e.S.state), otherBefore);
 
-  // (c) the ONE intended change: group + effort weight pinned on the entry
+  // (c) the ONE intended change: group + the DERIVED effort weight pinned on the
+  // entry — the stored 0.9 override no longer moves the weight, so the pinned
+  // value is the movement's own derived coefficient.
   const expected = JSON.parse(JSON.stringify(workoutsBefore));
   expected[0].entries[0].g = ["Chest"];
-  expected[0].entries[0].ew = 0.9;
-  eq("(c) the only change to any session is the pinned group + effort weight",
+  expected[0].entries[0].ew = derivedEw;
+  eq("(c) the only change to any session is the pinned group + derived effort weight",
      JSON.parse(JSON.stringify(e.S.state.workouts)), expected);
+  eq("(c) ...and the pinned weight is the derived one, not the stored override",
+     e.S.state.workouts[0].entries[0].ew, derivedEw);
 
   // (b) the logged set still counts as Chest, and NOT as Core
   const mg = e.E.muscleGroups(e.S.state, 4000);
@@ -1555,6 +1567,41 @@ console.log("\n=== 45. celebrations fire only after a save, and collapse into ON
   eq("three things earned at once yield exactly ONE celebration", h3.opened.length - n0, 1);
   eq("...listing all three", (h3.opened[h3.opened.length - 1].innerHTML.match(/class="celeb-line"/g) || []).length, 3);
   eq("...dismissed in a single tap", (h3.opened[h3.opened.length - 1].innerHTML.match(/id="celeb-ok"/g) || []).length, 1);
+}
+
+console.log("\n=== 39. the per-exercise effort weight is a maths constant, not a user field ===");
+{
+  /* the owner: the effort ratio "should be baked in with the math, not changeable
+     by the user." The detail sheet no longer offers it, the engine no longer
+     reads any stored override, and migrate strips the orphan field. */
+  const e = env();
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  eq("the detail sheet has no effort-weight input", /dt-wt/.test(src), false);
+  eq("...and no reset button", /dt-wreset/.test(src), false);
+  eq("...and no 'Effort weight' label", /Effort weight/.test(src), false);
+  eq("...and no handler writing a weight override", /setOverride\(id, \{ weight/.test(src), false);
+
+  // the engine ignores a stored weight — in the accessor AND the volume maths
+  const custom = [{ id: "cw", n: "Leg Extension", c: "Legs", g: ["Legs"], p: ["Quads"], s: [], e: [], m: "weight_reps" }];
+  const sets = [{ w: 30, r: 12 }, { w: 30, r: 12 }, { w: 30, r: 12 }];
+  const ent = () => ({ id: "cw", name: "Leg Extension", mode: "weight_reps", sets: JSON.parse(JSON.stringify(sets)) });
+  const clean = base({ custom, workouts: [{ id: "w1", date: iso(1), entries: [ent()] }] });
+  const dirty = base({ custom, overrides: { cw: { weight: 1.34 } }, workouts: [{ id: "w1", date: iso(1), entries: [ent()] }] });
+  eq("a stored weight does not change the computed exercise weight",
+     e.E.exerciseWeight(dirty, "cw"), e.E.exerciseWeight(clean, "cw"));
+  eq("...and does not move the muscle-group effort maths",
+     e.E.muscleGroups(dirty, 28).Legs, e.E.muscleGroups(clean, 28).Legs);
+
+  // mode and g overrides are untouched by this change
+  eq("a mode override still works", e.E.exMode(base({ custom, overrides: { cw: { mode: "time" } } }), "cw"), "time");
+  eq("a group override still works", e.E.exGroups(base({ custom, overrides: { cw: { g: ["Arms"] } } }), "cw"), ["Arms"]);
+
+  // migrate strips weight, leaves mode/g alone
+  const mig = e.S.migrate({ version: 1, createdAt: "2026-01-01T00:00:00.000Z", workouts: [], bodylog: [], custom: [],
+    overrides: { a: { weight: 1.2 }, b: { mode: "time", g: ["Legs"] }, c: { weight: 0.8, mode: "reps" } } });
+  eq("migrate drops a weight-only override entirely", "a" in mig.overrides, false);
+  eq("migrate keeps mode and g untouched", JSON.stringify(mig.overrides.b), JSON.stringify({ mode: "time", g: ["Legs"] }));
+  eq("migrate strips weight but keeps the sibling mode", JSON.stringify(mig.overrides.c), JSON.stringify({ mode: "reps" }));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

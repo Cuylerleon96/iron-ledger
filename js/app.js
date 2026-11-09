@@ -1446,13 +1446,6 @@
         ${cmp ? `<span class="chip ${cmp.est1RM.pct > 0 ? "up" : cmp.est1RM.pct < 0 ? "down" : ""}">${cmp.est1RM.pct >= 0 ? "▲" : "▼"} ${cmp.est1RM.pct.toFixed(1)}% vs last</span>` : ""}
       </div>
       <div class="row">
-        <label class="mini-lab">Effort weight
-          <input class="inp num" id="dt-wt" type="number" step="0.05" min="0.6" max="1.35"
-                 value="${Engine.exerciseWeight(S, id)}" style="width:78px"
-                 title="How much a set of this is worth versus a baseline set. Derived from the movement itself — muscle recruitment, equipment and range. 1.00 is baseline."></label>
-        <button class="btn ghost tiny" id="dt-wreset" title="Back to the derived value">Reset</button>
-      </div>
-      <div class="row">
         <label class="mini-lab">Track as
           <select class="mini" id="dt-mode">${["weight_reps", "reps", "time", "weight_time", "distance_time", "weight_distance"]
             .map((m) => `<option value="${m}" ${m === Engine.exMode(S, id) ? "selected" : ""}>${m.replace("_", " × ")}</option>`).join("")}</select>
@@ -1472,15 +1465,6 @@
     openModal(box, "wide");
     $("#dt-x").addEventListener("click", closeModal);
     $("\#dt-mode").addEventListener("change", (e) => { setTrackMode(id, e.target.value); toast("Tracking mode updated"); render(); });
-    const wt = $("#dt-wt", box);
-    if (wt) wt.addEventListener("change", () => {
-      const v = parseFloat(wt.value);
-      if (!isFinite(v) || v <= 0) { Store.setOverride(id, { weight: null }); toast("Effort weight reset to the derived value"); }
-      else { Store.setOverride(id, { weight: Math.max(0.6, Math.min(1.35, v)) }); toast("Effort weight set", "good"); }
-      render();
-    });
-    const wr = $("#dt-wreset", box);
-    if (wr) wr.addEventListener("click", () => { Store.setOverride(id, { weight: null }); toast("Effort weight reset"); render(); });
     const tset = $("#dt-tset", box);
     if (tset) tset.addEventListener("click", () => {
       const raw = $("#dt-tgt", box).value;

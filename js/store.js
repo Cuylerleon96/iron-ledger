@@ -93,6 +93,20 @@ const Store = (() => {
     out.bodylog = (Array.isArray(out.bodylog) ? out.bodylog : []).filter((b) => b && b.date).sort(byDate);
     out.custom = Array.isArray(out.custom) ? out.custom : [];
     out.overrides = out.overrides || {};
+    // The per-exercise effort weight is a maths constant again (derived from the
+    // factor table in the engine), never a user-editable field. A state written
+    // by an older build may still carry an orphan `weight` here — strip it at the
+    // same single point every load passes through, leaving `mode` and `g` alone.
+    // An override left with no fields at all is dropped, so no dead key remains.
+    for (const k of Object.keys(out.overrides)) {
+      const o = out.overrides[k];
+      if (o && typeof o === "object" && "weight" in o) {
+        const next = Object.assign({}, o);
+        delete next.weight;
+        if (Object.keys(next).length) out.overrides[k] = next;
+        else delete out.overrides[k];
+      }
+    }
     out.achievements = out.achievements || {};
     out.targets = out.targets || {};
     // The dated profile log, sorted at the same single point every load passes
@@ -353,8 +367,9 @@ const Store = (() => {
   function deleteCustom(id) {
     allowShrink = true;
     /* Capture what this exercise's logged work ACTUALLY trained — its muscle
-       group(s) and effort weight — from the live definition and override, BEFORE
-       either is removed. */
+       group(s) and effort weight — from the live definition, BEFORE either is
+       removed. (The effort weight is a maths constant now, derived from the
+       factor table; only `mode` and `g` can live in an override.) */
     const eng = (typeof Engine !== "undefined") ? Engine : null;
     const groups = eng
       ? eng.exGroups(state, id)
