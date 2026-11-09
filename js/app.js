@@ -1906,6 +1906,21 @@
   }
 
   /* ================= profile ================= */
+  /* The Profile sex control. Modelled on the Activity level control below it:
+     "Not set" is a real, first-class choice (value ""), listed first and selected
+     when the profile has no sex — so an unset sex shows "Not set", never a silent
+     "Male". Saving "Not set" stores null (see the save handler). The engine then
+     uses the sex-free lean-mass equation when a body-fat % is known, or refuses
+     and names both ways out when neither is set. */
+  function sexFieldHTML(p) {
+    const v = p && (p.sex === "M" || p.sex === "F") ? p.sex : "";
+    return '<select class="inp" id="p-sex">' +
+      `<option value="" ${v === "" ? "selected" : ""}>Not set</option>` +
+      `<option value="M" ${v === "M" ? "selected" : ""}>Male</option>` +
+      `<option value="F" ${v === "F" ? "selected" : ""}>Female</option>` +
+      "</select>";
+  }
+
   function renderProfile(host) {
     const p = S.profile;
     const c = el("section", { class: "card" });
@@ -1913,8 +1928,8 @@
       <div class="card-head"><h3>Profile</h3></div>
       <div class="form-grid">
         <label>Name<input class="inp" id="p-name" value="${esc(p.name)}"></label>
-        <label>Sex<select class="inp" id="p-sex"><option value="M" ${p.sex === "M" ? "selected" : ""}>Male</option><option value="F" ${p.sex === "F" ? "selected" : ""}>Female</option></select></label>
-        <p class="muted small grid-note" id="p-sex-note">An input to the calorie formula, not a question about who you are — this term shifts the estimate by about 166 kcal/day. If you'd rather not set it, add a body-fat % and the lean-mass equation is used instead.</p>
+        <label>Sex${sexFieldHTML(p)}</label>
+        <p class="muted small grid-note" id="p-sex-note">An input to the calorie formula, not a question about who you are — it shifts the estimate by about 166 kcal/day. Not set is a fine choice: with a body-fat % the lean-mass equation is used instead, which needs no sex. With neither set, the app asks for one of the two rather than guess.</p>
         <label>Birth year<input class="inp" id="p-by" type="number" inputmode="numeric" min="1900" max="${new Date().getFullYear()}" placeholder="e.g. 1990" value="${p.birthYear ?? ""}"></label>
         <label>Height (cm)<input class="inp" id="p-h" type="number" value="${p.heightCm ?? ""}"></label>
         <label>Bodyweight (${U.label()})<input class="inp" id="p-w" type="number" step="0.1" value="${p.weightKg ? U.w(p.weightKg).toFixed(1) : ""}"></label>
@@ -2032,7 +2047,11 @@
       }
       const before = Engine.summary(S);      // level/title before this save, for the celebration
       p.birthYear = by;
-      p.name = g("#p-name"); p.sex = g("#p-sex");
+      p.name = g("#p-name");
+      // "Not set" (the empty option) stores as null — genuinely unset, never
+      // coerced to "M". The engine then uses the sex-free lean-mass path when a
+      // body-fat % is known, and refuses (naming both ways out) when neither is.
+      p.sex = g("#p-sex") || null;
       p.heightCm = parseFloat(g("#p-h")) || null;
       // Weight and body fat are not stored on the profile directly — they are
       // logged. Saving here records today's check-in, so there is exactly one
@@ -2256,6 +2275,6 @@
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
-    targetLabelFor, exDetailHTML, TARGET_NOTE,
+    targetLabelFor, exDetailHTML, TARGET_NOTE, sexFieldHTML,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

@@ -9,7 +9,10 @@ const Store = (() => {
     version: 1,
     createdAt: new Date().toISOString(),
     profile: {
-      name: "", sex: "M", heightCm: null,
+      // sex is unset on a fresh profile, NOT silently "M" — the Profile control
+      // offers "Not set" (as Activity level does), and the engine plans without
+      // sex when a body-fat % is known. A stored "M" from an older build is kept.
+      name: "", sex: null, heightCm: null,
       weightKg: null, bodyFatPct: null, goalWeightKg: null, goalBodyFatPct: null,
       birthYear: null, weeklyTarget: 4, units: "kg",
       // The user's DECLARED activity level (sedentary/light/moderate/very-active).

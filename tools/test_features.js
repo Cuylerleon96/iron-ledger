@@ -941,5 +941,51 @@ console.log("=== the exercise sheet teaches; the logging controls live in the Lo
     !/onclick:/.test(src) && /chip\.addEventListener\("click", \(\) => exDetail\(id\)\)/.test(src));
 }
 
+console.log("=== the Profile sex control offers a neutral 'Not set' choice ===");
+{
+  // Load the real app.js behind a stub DOM (as the cue section does) and call the
+  // control's own builder, so this tests the markup the Profile screen renders.
+  const mkNode = () => ({ innerHTML: "", className: "", dataset: {}, style: {}, children: [],
+    addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+    append() {}, prepend() {}, remove() {}, click() {}, focus() {}, contains: () => false,
+    querySelector: () => mkNode(), querySelectorAll: () => [],
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false } });
+  const uiStore = {};
+  const ui = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+    setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+    document: { addEventListener() {}, removeEventListener() {}, querySelector: () => mkNode(), querySelectorAll: () => [],
+      getElementById: () => mkNode(), createElement: () => mkNode(), createElementNS: () => mkNode(), body: mkNode(),
+      visibilityState: "visible", activeElement: null },
+    navigator: { clipboard: { writeText: async () => {} } },
+    localStorage: { getItem: (k) => (k in uiStore ? uiStore[k] : null), setItem: (k, v) => { uiStore[k] = String(v); }, removeItem: (k) => { delete uiStore[k]; } },
+    Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+  };
+  ui.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+  ui.window = ui; ui.globalThis = ui; vm.createContext(ui);
+  vm.runInContext('localStorage.setItem("fitness-app-v1", JSON.stringify({version:1,createdAt:"2026-01-01T00:00:00.000Z",profile:{name:"C",sex:null,heightCm:180,weightKg:82,weeklyTarget:4,units:"kg"},workouts:[],bodylog:[],overrides:{},custom:[],achievements:{},settings:{seeded:true}}));', ui);
+  vm.runInContext(["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/chart.js", "js/app.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n") + "\n;globalThis.__X={App};", ui, { filename: "ui.js" });
+  const A = ui.__X.App;
+
+  const unset = A.sexFieldHTML({ sex: null });
+  const male = A.sexFieldHTML({ sex: "M" });
+  const female = A.sexFieldHTML({ sex: "F" });
+
+  eq("the control is a select with id p-sex", /<select class="inp" id="p-sex">/.test(unset), true);
+  eq("it OFFERS a neutral 'Not set' option (empty value)", /<option value=""[^>]*>Not set<\/option>/.test(unset), true);
+  eq("'Not set' is listed FIRST", unset.indexOf("Not set") < unset.indexOf("Male"), true);
+  eq("Male and Female are still offered", /<option value="M"[^>]*>Male<\/option>/.test(unset) && /<option value="F"[^>]*>Female<\/option>/.test(unset), true);
+  eq("an unset profile selects 'Not set' (never a silent Male)", /<option value="" selected>Not set<\/option>/.test(unset), true);
+  eq("...and Male is NOT the selected option", /value="M" selected/.test(unset), false);
+  eq("a legacy empty-string sex reads as 'Not set'", /<option value="" selected>Not set<\/option>/.test(A.sexFieldHTML({ sex: "" })), true);
+  eq("a male profile selects Male, not 'Not set'", /<option value="M" selected>Male<\/option>/.test(male) && /value="" selected/.test(male), false);
+  eq("a female profile selects Female", /<option value="F" selected>Female<\/option>/.test(female), true);
+  // the save path stores the empty choice as null, never coercing it to "M"
+  truthy("the save handler stores 'Not set' as null", /p\.sex = g\("#p-sex"\) \|\| null;/.test(fs.readFileSync(path.join(B, "js", "app.js"), "utf8")));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

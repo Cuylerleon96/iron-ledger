@@ -1,11 +1,11 @@
 {
-  "versionCode": 69,
-  "versionName": "1.0.68",
+  "versionCode": 70,
+  "versionName": "1.0.69",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "08f578badbb4acccdffaf424203e98c5c8bffc43f287de33a4a2eb75913b3e2b",
-  "sizeBytes": 3877306,
+  "sha256": "dfaad905d049848e42c5c6bbb7c7d53f22c5b6f03e470939b4361528fb117e62",
+  "sizeBytes": 3877749,
   "published": "2026-11-08",
   "notes": [
-    "Every nutrition word the app shows now explains itself, with the source behind it \u2014 tap kcal, g, RMR, maintenance, activity factor, the controller or any other term on the Nutrition tab."
+    "Profile's sex field now offers a neutral 'Not set' choice \u2014 with a body-fat % your targets still work, using the lean-mass equation."
   ]
 }

@@ -181,5 +181,65 @@ console.log("--- export -> import round-trips the profile log ---");
   eq("export -> import round-trips the profile log", JSON.stringify(Store.state.profilelog), before);
 }
 
+console.log("--- sex may be genuinely UNSET (the Profile 'Not set' choice) ---");
+{
+  // A fresh env built from a given persisted state, so we can prove a save ->
+  // reload round-trip. `ls` is returned so the caller can read what was written.
+  const freshEnv = (seed) => {
+    const ls = { _d: {}, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = v; }, removeItem(k) { delete this._d[k]; } };
+    if (seed) ls.setItem("fitness-app-v1", JSON.stringify(seed));
+    const c = { console, module: { exports: {} }, localStorage: ls, Date, Math, JSON, Object, Array, Set, Map,
+      isFinite, parseFloat, parseInt, Number, String, setTimeout, clearTimeout, Blob: class {}, URL: {} };
+    c.globalThis = c; vm.createContext(c);
+    vm.runInContext(src + "\n;globalThis.__X={Engine,Store};", c, { filename: "bundle.js" });
+    return { Engine: c.__X.Engine, Store: c.__X.Store, ls };
+  };
+
+  // (1) a fresh install's default sex is unset, NOT silently "M"
+  eq("a brand-new profile's sex is unset (null), not silently 'M'", freshEnv().Store.state.profile.sex, null);
+
+  // (2) choosing "Not set" persists through save -> reload -> snapshot
+  const f1 = freshEnv();
+  f1.Store.state.profile.heightCm = 178; f1.Store.state.profile.birthYear = 1990;
+  f1.Store.state.profile.sex = null;              // exactly what the save handler writes for "Not set"
+  f1.Store.recordProfileLog();
+  f1.Store.save(true);
+  eq("the persisted state carries sex:null, not 'M'", JSON.parse(f1.ls.getItem("fitness-app-v1")).profile.sex, null);
+  const f2 = freshEnv(JSON.parse(f1.ls.getItem("fitness-app-v1")));
+  eq("reload keeps sex unset", f2.Store.state.profile.sex, null);
+  const snap = f2.Store.state.profilelog[f2.Store.state.profilelog.length - 1];
+  eq("the profile-history snapshot records sex:null (no invented 'M')", snap.sex, null);
+  eq("profileAsOf with no date returns null sex, not 'M'", f2.Engine.profileAsOf(f2.Store.state, null).sex, null);
+  eq("profileAsOf at a date AFTER the snapshot still returns null sex", f2.Engine.profileAsOf(f2.Store.state, "2099-01-01").sex, null);
+
+  // (3) migrate() neither injects nor drops the sex value
+  eq("migrate() leaves a state without sex unset (does not inject 'M')",
+    f2.Store.migrate({ version: 1, createdAt: "2026-01-01T00:00:00.000Z", profile: { name: "L", heightCm: 180, weightKg: 80, bodyFatPct: 15 }, workouts: [], bodylog: [] }).profile.sex, null);
+  eq("migrate() keeps an explicitly stored sex",
+    f2.Store.migrate({ profile: { sex: "M" }, workouts: [], bodylog: [] }).profile.sex, "M");
+
+  // (4) import/merge fill-if-unset: it RESTORES an unset local sex from the file
+  //     (copying the user's own backed-up value), and never invents one.
+  const f3 = freshEnv();
+  f3.Store.importJSON(JSON.stringify({ version: 1, createdAt: "2026-01-01T00:00:00.000Z",
+    profile: { name: "C", sex: "F", heightCm: 170, weightKg: 70, units: "kg" }, workouts: [], bodylog: [],
+    overrides: {}, custom: [], achievements: {}, settings: { seeded: true } }), "merge");
+  eq("merge fills an unset local sex from the imported file (a restore, not a hard-coded 'M')", f3.Store.state.profile.sex, "F");
+  const f4 = freshEnv();
+  f4.Store.importJSON(JSON.stringify({ version: 1, createdAt: "2026-01-01T00:00:00.000Z",
+    profile: { name: "C", heightCm: 170, weightKg: 70, units: "kg" }, workouts: [], bodylog: [],
+    overrides: {}, custom: [], achievements: {}, settings: { seeded: true } }), "merge");
+  eq("a file with no sex leaves the local sex unset", f4.Store.state.profile.sex, null);
+
+  // (5) an unchanged re-save with sex still unset writes no spurious snapshot row
+  const f5 = freshEnv();
+  f5.Store.state.profile.sex = null;
+  f5.Store.recordProfileLog();
+  const rows1 = f5.Store.state.profilelog.length;
+  const again = f5.Store.recordProfileLog();
+  eq("re-saving with sex still unset writes no second snapshot row", f5.Store.state.profilelog.length, rows1);
+  eq("...and reports no change", again, false);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

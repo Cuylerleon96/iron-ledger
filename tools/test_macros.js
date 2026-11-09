@@ -632,6 +632,12 @@ eq("...rmrFFM takes no sex input (identical with sex M or F)",
 eq("...the CONSERVATIVE higher floor (1500) is used", noSexBf.target.floor, 1500);
 eq("...and that assumption is reported to the caller", noSexBf.target.floorAssumed, true);
 eq("...the floor's sex is the male value", noSexBf.target.floorSex, "M");
+/* A SET sex is never flagged as assumed, and the floor follows it: 1500 for M,
+   1200 for F — the conservative higher value is used ONLY when sex is unset. */
+eq("a set sex is not flagged as assumed", M.plan({ sex: "M", weightKg: 80, heightCm: 180, ageY: 30 }).target.floorAssumed, false);
+eq("...the M floor follows the sex (1500)", M.plan({ sex: "M", weightKg: 80, heightCm: 180, ageY: 30 }).target.floor, 1500);
+eq("...the F floor follows the sex (1200)", M.plan({ sex: "F", weightKg: 80, heightCm: 180, ageY: 30 }).target.floor, 1200);
+eq("...the F plan reports floorSex 'F'", M.plan({ sex: "F", weightKg: 80, heightCm: 180, ageY: 30 }).target.floorSex, "F");
 
 const noSexNoBf = M.plan({ weightKg: 80, heightCm: 180, ageY: 30, goal: "maintain", pace: "maintain" });
 eq("no sex AND no body-fat % STILL refuses", noSexNoBf.refused, true);
