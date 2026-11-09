@@ -6,6 +6,7 @@
   "sizeBytes": 3908736,
   "published": "2026-11-09",
   "notes": [
-    "Session XP now scales with the work you actually log - no cap on how many exercises or sets a real session has."
+    "Session XP now scales with the work you actually log - no cap on how many exercises or sets a real session has.",
+    "Timed sets now have a hold timer: tap Start when the hold begins and tap again to stop - the seconds you held are written straight into the set."
   ]
 }
