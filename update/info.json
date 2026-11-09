@@ -1,11 +1,11 @@
 {
-  "versionCode": 89,
-  "versionName": "1.2.11",
+  "versionCode": 90,
+  "versionName": "1.2.12",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "7f1a2318dba0cd873251dcab0603eaefc55f616794681a08e65c01570ae47169",
-  "sizeBytes": 3912102,
+  "sha256": "ba58d5dfe8c3fc1105dbaf48df149465d9dbb0598109f2aae04e45657304e675",
+  "sizeBytes": 3912222,
   "published": "2026-11-09",
   "notes": [
-    "Timed holds now have a timer you can set a length for, with a soft cue when you reach it - or leave the length off and it just counts up until you stop it."
+    "A refreshed pixel logo mark in the header."
   ]
 }

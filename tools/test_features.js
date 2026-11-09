@@ -512,6 +512,56 @@ console.log("=== accessibility wiring (static: source + markup present) ===");
     !/\.lvl-lab[^}]*font-size: \.42rem/.test(css) && !/\.mraw \{[^}]*font-size: 9px/.test(css));
 }
 
+console.log("=== brand glyph: a GBA pixel mark inside the untouched gold tile ===");
+{
+  const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(B, "css", "style.css"), "utf8");
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  /* The brand mark was the ink diamond character, which reads ambiguously and is
+     not in the app's Gen-3 pixel idiom. It is now an inline SVG on a tiny integer
+     grid, so it is chunky pixel art at any size, bundles no asset and adds no
+     dependency. The mark itself is "A3" from the rendered candidate sheet: two
+     tall 2x5 weight plates with a bolt-cap pixel above and below each inner
+     column, joined by a 3x1 bar -- the sheet's A3_boltcaps. */
+  truthy("the old ambiguous diamond glyph is gone from the markup", !html.includes("\u25c6"));
+  truthy("the tile is still a plain decorative logo span", /<span class="logo">/.test(html));
+  truthy("the brand text is untouched beside it", /<span class="brand-txt">Iron Ledger<\/span>/.test(html));
+  const logo = (html.match(/<span class="logo">([\s\S]*?)<\/span>/) || [])[1] || "";
+  truthy("the glyph is an inline svg", /^<svg[\s\S]*<\/svg>$/.test(logo));
+  truthy("it loads no external asset (no href/src/url/img)", !/href=|src=|url\(|<img/.test(logo));
+  truthy("it is drawn with shape-rendering=crispEdges (no blurry scaling)", /shape-rendering="crispEdges"/.test(logo));
+  truthy("its colour is the tile's existing ink (currentColor)", /fill="currentColor"/.test(logo));
+  truthy("it is decorative, not interactive (aria-hidden, no role)",
+    /aria-hidden="true"/.test(logo) && !/role=|tabindex=|onclick=/.test(logo));
+  /* The 20x20 gold chip is untouched: only the glyph inside it changed. */
+  const logoCss = (css.match(/\.logo \{([\s\S]*?)\}/) || [])[1] || "";
+  truthy("the 20x20 gold chip is unchanged", /width: 20px; height: 20px/.test(logoCss));
+  truthy("the cream 2px border is unchanged", /border: 2px solid var\(--cream\)/.test(logoCss));
+  truthy("the radius and gold shadow are unchanged",
+    /border-radius: 4px/.test(logoCss) && /box-shadow: 0 0 0 1px var\(--gold-d\)/.test(logoCss));
+  /* The integer grid IS the point: 16 CSS px on a 2.625 DPR phone is 42 device px
+     = 7 cells of exactly 6 device px, so crispEdges lands every cell on a whole
+     device pixel (no blurry fractional scaling). */
+  eq("the mark is an integer 7x7 grid", (logo.match(/viewBox="0 0 (\d+) (\d+)"/) || []).slice(1).map(Number), [7, 7]);
+  truthy("it is sized 16x16 CSS px (42 device px at 2.625 DPR = 7 cells x 6)", /width="16" height="16"/.test(logo));
+  const rects = [...logo.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"\/>/g)]
+    .map((m) => m.slice(1).map(Number));
+  truthy("the mark has drawn pixels", rects.length >= 2);
+  truthy("every rect sits on whole grid cells (chunky, no fractional geometry)",
+    rects.every((r) => r.every(Number.isInteger)));
+  truthy("every rect stays inside the 7x7 grid",
+    rects.every(([x, y, w, h]) => x >= 0 && y >= 0 && x + w <= 7 && y + h <= 7));
+  truthy("no stroke anywhere (a stroked edge would anti-alias)", !/stroke=/.test(logo));
+  eq("the implemented mark is A3 (tall capped plates + a connecting bar)",
+    rects, [[0, 1, 2, 5], [5, 1, 2, 5], [2, 3, 3, 1],
+            [1, 0, 1, 1], [1, 6, 1, 1], [5, 0, 1, 1], [5, 6, 1, 1]]);
+  const brand = (html.match(/<div class="brand">[\s\S]*?<\/div>/) || [])[0] || "";
+  truthy("the brand markup carries no click handler", !/onclick=/.test(brand));
+  truthy("the brand markup carries no interactive role/tabindex/button",
+    !/role=|tabindex=|<button/.test(brand));
+  truthy("no JS binds a handler to the brand or the tile", !/\.brand|\.logo\b/.test(app));
+  truthy("the tile is never given a pointer/hand cursor", !/\.logo\b[^}]*cursor: pointer/.test(css));
+}
 
 console.log("=== glossary: every term the UI shows has ONE entry, and every entry is shown ===");
 {
