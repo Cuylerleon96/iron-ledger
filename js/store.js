@@ -52,6 +52,12 @@ const Store = (() => {
     custom: [],        // user-created exercises
     achievements: {},  // id -> ISO date
     targets: {},       // exId -> { value, set } — a goal for one exercise
+    // The barcode lookup cache: GTIN -> the record js/food.js's barcode store
+    // holds ({barcode,name,per100,measures,source}), so a second scan of the same
+    // product is instant and offline. A "not in the database" answer is cached
+    // too (source "off-missing"), so a dead end is not re-fetched. js/food.js
+    // performs no I/O and owns no persistence; this is where its store lives.
+    barcodes: {},
     settings: { seeded: false },
   });
 
@@ -118,6 +124,11 @@ const Store = (() => {
     }
     out.achievements = out.achievements || {};
     out.targets = out.targets || {};
+    // The barcode cache is an object keyed by GTIN. A state written before the
+    // field existed gets an empty one; a non-object (corrupt) value is replaced
+    // rather than trusted, the same defensive shape the other maps get.
+    out.barcodes = (out.barcodes && typeof out.barcodes === "object" && !Array.isArray(out.barcodes))
+      ? out.barcodes : {};
     // The dated profile log, sorted at the same single point every load passes
     // through. A state written before this field existed has none — seed exactly
     // one row from the current profile (see seedProfileLog) so a past month still
@@ -336,6 +347,17 @@ const Store = (() => {
     return totals;
   }
 
+  /* ---------- barcode lookup cache ----------
+     js/food.js owns the barcode DATA but performs no I/O and holds no
+     persistence of its own; this is where its store lives. barcodeStore() hands
+     food.js the exact store object it expects, backed by the SAME object that is
+     saved — so a cached lookup is on disk the moment save() runs, and the second
+     scan of a product is instant and offline. */
+  function barcodeStore() {
+    if (!state.barcodes || typeof state.barcodes !== "object" || Array.isArray(state.barcodes)) state.barcodes = {};
+    return { seq: 0, userFoods: [], barcodes: state.barcodes };
+  }
+
   /* Snapshot the profile ONLY when one of the tracked fields actually changed,
      compared against the newest row. Two identical saves leave ONE row; a real
      change appends a second. Returns true when a row was written. weightKg and
@@ -463,6 +485,11 @@ const Store = (() => {
       });
       Object.keys(incoming.targets || {}).forEach((k) => {
         if (!state.targets[k]) state.targets[k] = incoming.targets[k];
+      });
+      // Barcode lookups union by GTIN — a re-import can add products the device
+      // hasn't seen, but never overwrite one already cached here.
+      Object.keys(incoming.barcodes || {}).forEach((k) => {
+        if (!state.barcodes[k]) state.barcodes[k] = incoming.barcodes[k];
       });
       // Only fill what is unset, so importing an old file can never clobber a
       // newer local edit.
@@ -619,7 +646,7 @@ const Store = (() => {
   return {
     get state() { return state; },
     save, upsertWorkout, deleteWorkout, workoutById, addBodyLog, deleteBodyLog,
-    logIntake, removeIntake, intakesOn, dayTotals,
+    logIntake, removeIntake, intakesOn, dayTotals, barcodeStore,
     addCustom, updateCustom, deleteCustom, setOverride, unlock,
     exportJSON, importJSON, exportCSV, reset, loadBackup, hasBackup, uid, migrate,
     bootstrapNative, recover, snapshotPreUpdate, recoverFromSnapshot, richness,

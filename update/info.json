@@ -1,11 +1,11 @@
 {
-  "versionCode": 74,
-  "versionName": "1.0.73",
+  "versionCode": 75,
+  "versionName": "1.1.0",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "0b4e2e36d8c20dffaa59a1eb045d61e08e4760805060ef79b1c1b3125543379f",
-  "sizeBytes": 3885230,
-  "published": "2026-11-08",
+  "sha256": "4950fd313a812f0d9356ddd0b8f00914d8c097a5b1446b5b0cef23e82b1e310c",
+  "sizeBytes": 3895214,
+  "published": "2026-11-09",
   "notes": [
-    "Strength now adjusts for age, so an older lifter is rated against the masters standard for their age instead of a 20-year-old's."
+    "Scan a food barcode to log it \u2014 the camera runs on your phone, and the barcode number is looked up in Open Food Facts."
   ]
 }

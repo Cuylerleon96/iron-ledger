@@ -824,3 +824,20 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 /* the absorbed-alternate disagreement: one plain line, not a warning colour */
 .food-note { font-size: .68rem; line-height: 1.35; color: var(--cream); text-shadow: var(--outline-sm); margin: .25rem 0 .1rem; }
 .food-list { margin: .3rem 0; }
+
+/* ---- Barcode scanner (modal surface) ----
+   The camera preview is the one thing that must be visible; everything else is
+   plain, honest text. Colours come from the existing theme vars. */
+.scan-entry { margin: .45rem 0 0; }
+.modal-box.narrow .scanner-wrap { display: block; }
+.scanner { display: grid; gap: .5rem; }
+.scanner .scan-lead { font-size: .7rem; color: var(--cream); text-shadow: var(--outline-sm); }
+.scanner .scan-why { font-size: .7rem; line-height: 1.45; color: var(--cream); text-shadow: var(--outline-sm); }
+.scan-video {
+  width: 100%; height: auto; max-height: 46vh; display: block; object-fit: cover;
+  background: #000; border: 2px solid var(--ink); border-radius: 6px;
+}
+.scan-check { line-height: 1.4; }
+.scan-privacy { line-height: 1.4; border-top: 1px solid rgba(255, 255, 255, .14); padding-top: .45rem; }
+.scan-row { gap: .4rem; }
+.scan-alt { margin: .1rem 0 0; }

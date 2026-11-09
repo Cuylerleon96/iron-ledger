@@ -129,6 +129,12 @@
      must hand focus back to whatever opened it — otherwise a keyboard or screen
      reader user is dropped at the top of the page with no way back. */
   let modalOpener = null;
+  // A surface that owns a resource while it is open (the barcode scanner holds
+  // the camera) registers how to release it; ANY route out of the modal — the ✕,
+  // Escape, a backdrop tap, the Android back button — runs it. Without this the
+  // camera track would leak whenever the scanner was closed a way the scanner
+  // itself didn't know about.
+  let modalCloseHook = null;
   const focusablesIn = (root) => $$(
     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
     root
@@ -151,6 +157,7 @@
     else { box.setAttribute("tabindex", "-1"); if (box.focus) box.focus(); }
   }
   const closeModal = () => {
+    if (modalCloseHook) { const f = modalCloseHook; modalCloseHook = null; try { f(); } catch (e) { console.warn("modal close hook failed:", e && e.message); } }
     $("#modal").classList.add("hidden");
     document.body.classList.remove("modal-open");
     // Return focus to the control that opened the dialog, when it is still here.
@@ -1865,11 +1872,18 @@
       '<p class="muted small">Search the offline food database and add a portion to today. Nothing is uploaded.</p>' +
       '<div class="row"><input class="inp" id="food-q" placeholder="Search foods (e.g. banana)" value="' + esc(foodUI.q) + '">' +
         '<button class="btn" id="food-search">Search</button></div>' +
-      '<div id="food-results"></div><div id="food-pick"></div>';
+      '<div id="food-results"></div><div id="food-pick"></div>' +
+      /* The scanner is a real, working alternative to typing. Scanning is unable
+         on some devices (no Play Services, non-secure context); that is explained
+         in the scanner itself rather than hidden here — the button always opens
+         and the scanner says honestly why it can or cannot run. */
+      '<p class="scan-entry"><button class="btn ghost tiny" id="scan-open">Scan a barcode</button>' +
+        '<span class="muted small"> </span></p>';
     const input = $("#food-q", c);
     const go = () => { foodUI.q = input.value; searchFoods(); };
     $("#food-search", c).addEventListener("click", go);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    $("#scan-open", c).addEventListener("click", () => openScanner());
     $("#food-results", c).addEventListener("click", (e) => {
       const b = e.target.closest(".food-row");
       if (!b || !foodUI.results) return;
@@ -1916,6 +1930,225 @@
        showed an empty totals area until a food was added or removed. Repaint once
        the card is actually in the document. */
     renderToday();
+  }
+
+  /* ================= barcode scanner =================
+     A modal surface over the Nutrition tab. Everything that can be reasoned about
+     without a phone — the capability gate, the Open Food Facts lookup, the content
+     of every screen — lives in the PURE js/barcode.js. This is only the camera and
+     DOM wiring, and none of it runs until the user opens the scanner, so a device
+     without the API never even reaches getUserMedia.
+
+     THROTTLING: detect() is NOT run per animation frame. A 300 ms interval calls
+     it about three times a second, guarded by a busy flag, so a slow decode cannot
+     stack up work. RELEASE: the MediaStreamTrack is stopped on EVERY route out of
+     the modal (see modalCloseHook in closeModal) — a leaked camera drains the
+     battery and is a privacy problem. */
+  const SCAN_TICK_MS = 300;
+  let scanState = null;      // the screen the modal is on
+  let scanCap = null;        // the last capability verdict (for "scan another")
+  let scanStream = null;     // the live MediaStream (must be released)
+  let scanTimer = null;      // the detect() interval
+  let scanDetector = null;
+  let scanBusy = false;
+
+  function renderScanner() {
+    const host = $("#scanner-body");
+    if (!host) return;
+    host.innerHTML = Barcode.panelHtml(scanState || { screen: "checking" });
+    wireScanner();
+  }
+
+  function wireScanner() {
+    const b = $("#scanner-body");
+    if (!b) return;
+    const on = (id, fn) => { const n = $("#" + id, b); if (n) n.addEventListener("click", fn); };
+    on("scan-start", startScanCamera);
+    on("scan-stop", () => { stopScanLoop(); scanState = { screen: "ready", cap: scanCap }; renderScanner(); });
+    on("scan-retry", () => startScanCamera());
+    on("scan-settings", showCameraSettingsHelp);
+    on("scan-manual", searchByNameInstead);
+    on("scan-again", () => { stopScanLoop(); scanState = { screen: "ready", cap: scanCap }; renderScanner(); });
+    on("scan-add", addScannedProduct);
+    on("scan-close", closeModal);
+  }
+
+  /* Open with a state object to skip the real check and paint mock capability
+     values — that is the seam the render harness uses (and it never touches the
+     camera). With no argument the app runs the honest browser capability check.
+     Exposed on window.App so the check is exercised end-to-end, not copied. */
+  function openScanner(forced) {
+    const box = el("div", { class: "scanner-wrap" }, '<div id="scanner-body"></div>');
+    openModal(box, "narrow");
+    modalCloseHook = stopScanner;                  // release the camera on ANY close
+    scanState = forced || { screen: "checking" };
+    scanCap = null;
+    renderScanner();
+    if (!forced) runScanCapabilityCheck();
+  }
+
+  function runScanCapabilityCheck() {
+    Barcode.capability().then((cap) => {
+      if (!scanState || scanState.screen !== "checking") return;      // closed meanwhile
+      scanCap = cap;
+      scanState = cap.available ? { screen: "ready", cap } : { screen: "unsupported", cap };
+      renderScanner();
+    }).catch(() => {
+      if (!scanState || scanState.screen !== "checking") return;
+      const cap = { available: false, reason: "error", hasDetector: false, isSecureContext: false,
+        message: "Could not check this device for barcode support." };
+      scanCap = cap;
+      scanState = { screen: "unsupported", cap };
+      renderScanner();
+    });
+  }
+
+  /* Ask the Permissions API BEFORE getUserMedia: a "denied" state means Android
+     will not prompt again, so requesting anyway is exactly the nag loop. Only
+     "prompt" / "granted" go on to the real request. */
+  function cameraPermission() {
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        return navigator.permissions.query({ name: "camera" })
+          .then((st) => (st && st.state) || null).catch(() => null);
+      }
+    } catch (e) { /* older WebView: fall through to the request itself */ }
+    return Promise.resolve(null);
+  }
+
+  async function startScanCamera() {
+    stopScanLoop();
+    scanState = { screen: "requesting" };
+    renderScanner();
+    const perm = await cameraPermission();
+    if (!scanState || scanState.screen !== "requesting") return;       // closed meanwhile
+    if (perm === "denied") { scanState = { screen: "denied", permanent: true }; renderScanner(); return; }
+    let stream;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no camera API");
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    } catch (err) {
+      scanState = deniedStateFor(err);                                 // never crashes the app
+      renderScanner();
+      return;
+    }
+    if (!scanState || scanState.screen !== "requesting") {             // closed while the prompt was up
+      try { stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+      return;
+    }
+    scanStream = stream;
+    scanState = { screen: "scanning" };
+    renderScanner();                                                   // paints #scan-video
+    const video = $("#scan-video");
+    if (video) {
+      video.srcObject = stream;
+      try { await video.play(); } catch (e) { /* autoplay may already be running */ }
+    }
+    try { scanDetector = new BarcodeDetector({ formats: Barcode.NEEDED_FORMATS }); }
+    catch (e) { scanDetector = (typeof BarcodeDetector === "function") ? new BarcodeDetector() : null; }
+    if (scanDetector) startScanLoop();
+    else {
+      scanState = { screen: "unsupported", cap: { reason: "detector-failed",
+        message: "The barcode detector could not start on this device." } };
+      renderScanner();
+    }
+  }
+
+  /* Classify a getUserMedia failure into a screen. A dismissed prompt and a hard
+     denial both arrive as NotAllowedError, so neither is treated as permanent
+     here; retry is only ever offered on an explicit tap, never automatically. */
+  function deniedStateFor(err) {
+    const name = (err && err.name) || "";
+    const msg = String((err && err.message) || err);
+    if (name === "NotAllowedError" || name === "SecurityError" || /denied|not allowed|permission/i.test(msg)) {
+      return { screen: "denied", permanent: false, detail: name };
+    }
+    if (name === "NotFoundError" || name === "OverconstrainedError" || name === "NotReadableError") {
+      return { screen: "unsupported", cap: { reason: "no-camera", message: "No usable camera was found on this device." } };
+    }
+    return { screen: "denied", permanent: false, detail: name || msg };
+  }
+
+  function startScanLoop() { stopScanLoop(); scanTimer = setInterval(scanTick, SCAN_TICK_MS); }
+  function stopScanLoop() { if (scanTimer) { clearInterval(scanTimer); scanTimer = null; } scanBusy = false; }
+
+  async function scanTick() {
+    if (scanBusy || !scanDetector) return;
+    if (!scanState || scanState.screen !== "scanning") return;
+    const video = $("#scan-video");
+    if (!video || video.readyState < 2) return;                        // nothing to decode yet
+    scanBusy = true;
+    try {
+      const codes = await scanDetector.detect(video);
+      if (codes && codes.length) {
+        const gtin = Barcode.normalizeGtin(codes[0].rawValue);
+        if (gtin) { stopScanLoop(); await lookupGtin(gtin); return; }
+      }
+    } catch (e) { /* one bad frame must not kill the loop */ }
+    finally { scanBusy = false; }
+  }
+
+  /* Cache first (instant, offline), then Open Food Facts. The result is cached by
+     Barcode.resolve into Store's barcode store, which is the persisted state — so
+     save() is what makes the second scan offline. */
+  async function lookupGtin(gtin) {
+    const store = (typeof Store !== "undefined" && Store.barcodeStore) ? Store.barcodeStore()
+      : { seq: 0, userFoods: [], barcodes: {} };
+    let r;
+    try { r = await Barcode.resolve(store, gtin, fetchJson); }
+    catch (e) { r = { state: "error", gtin: gtin, error: String((e && e.message) || e) }; }
+    if (r && r.cached === false && typeof Store !== "undefined" && Store.save) Store.save(true);
+    if (!scanState) return;                                            // closed during the lookup
+    if (r.state === "found") scanState = { screen: "found", gtin: r.gtin, record: r.record, cached: r.cached };
+    else if (r.state === "notfound") scanState = { screen: "notfound", gtin: r.gtin, cached: r.cached };
+    else if (r.state === "not-gtin") scanState = { screen: "error", gtin: r.gtin, message: "That code isn't a food barcode (GTIN)." };
+    else scanState = { screen: "error", gtin: r.gtin, message: r.error || "The lookup didn't complete." };
+    renderScanner();
+  }
+
+  /* An 8 s cap so a stalled request cannot leave the scanner hanging. */
+  function fetchJson(url) {
+    const ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctl) { try { ctl.abort(); } catch (e) {} } }, 8000);
+    return fetch(url, ctl ? { signal: ctl.signal } : {}).then(
+      (res) => { clearTimeout(timer); return res; },
+      (err) => { clearTimeout(timer); throw err; });
+  }
+
+  function addScannedProduct() {
+    const rec = scanState && scanState.record;
+    if (!rec) return;
+    foodUI.picked = { name: rec.name, per100: Object.assign({}, rec.per100),
+      measures: (rec.measures || []).slice(), code: rec.barcode };
+    foodUI.measure = ""; foodUI.qty = "1"; foodUI.grams = "";
+    closeModal();                                                      // releases the camera
+    setView("nutrition");
+    renderFoodPick();
+    toast("Scanned " + rec.name);
+  }
+
+  function searchByNameInstead() {
+    closeModal();
+    setView("nutrition");
+    const q = $("#food-q");
+    if (q) { try { q.focus(); } catch (e) {} if (q.scrollIntoView) q.scrollIntoView({ block: "center" }); }
+  }
+
+  /* No settings-deep-link plugin is installed, and none may be added — so give the
+     exact manual path instead of a control that would do nothing. */
+  function showCameraSettingsHelp() {
+    toast("Android Settings → Apps → Iron Ledger → Permissions → Camera", "warn", 6000);
+  }
+
+  function stopScanner() {
+    stopScanLoop();
+    if (scanStream) {
+      try { scanStream.getTracks().forEach((t) => t.stop()); } catch (e) { /* already ended */ }
+      scanStream = null;
+    }
+    scanDetector = null;
+    scanState = null;
+    scanCap = null;
   }
 
   /* ================= profile ================= */
@@ -2309,5 +2542,6 @@
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     targetLabelFor, exDetailHTML, TARGET_NOTE, sexFieldHTML,
     sexUnset, bfFloorPct, bfFloorNoteHTML, attrExplain,
+    openScanner,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

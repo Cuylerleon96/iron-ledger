@@ -852,5 +852,161 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
   eq('the day total is the sum of the snapshots (nothing lost to the collapse)', MS.dayTotals(day3).kcal, 50);
 }
 
-console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
-process.exit(fail ? 1 : 0);
+/* ---------- (h) barcode scanner (js/barcode.js) ----------
+   The capability gate, the GTIN -> local cache -> Open Food Facts -> log path
+   (with a MOCKED fetch), the graceful 404, and the content of EVERY scanner
+   screen. js/barcode.js is pure and injectable, so all of it runs headless.
+   The live CAMERA is not exercised here — no harness can. */
+(async () => {
+  const ls = {};
+  const c7 = { console, module: { exports: {} }, JSON, Math, Object, Array, Number, String,
+    Boolean, RegExp, Error, Promise, isFinite, parseFloat, parseInt, Map, Set, setTimeout, clearTimeout, Date,
+    localStorage: { getItem: (k) => (k in ls ? ls[k] : null), setItem: (k, v) => { ls[k] = String(v); }, removeItem: (k) => { delete ls[k]; } } };
+  c7.globalThis = c7; vm.createContext(c7);
+  vm.runInContext(['js/food.js', 'js/barcode.js', 'js/store.js']
+    .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n;\n')
+    + '\n;globalThis.__B={Food,Barcode,Store};', c7, { filename: 'barcode-bundle.js' });
+  const M = c7.__B, Bc = M.Barcode, Fd = M.Food, St = M.Store;
+  console.log('        barcode module surface:', Object.keys(Bc).join(', '));
+
+  /* ---- the capability gate: available / unavailable / missing-format ---- */
+  const d1 = Bc.decide({ hasDetector: false, isSecureContext: true }, null);
+  ok('gate: no detector -> unavailable (reason no-detector)', d1.available === false && d1.reason === 'no-detector', d1);
+  ok('gate: the no-detector reason names Google Play Services', /Play Services/.test(d1.message), d1.message);
+  const d2 = Bc.decide({ hasDetector: true, isSecureContext: false }, ['ean_13', 'upc_a']);
+  ok('gate: a non-secure context -> unavailable (reason insecure-context)', d2.available === false && d2.reason === 'insecure-context', d2);
+  const d3 = Bc.decide({ hasDetector: true, isSecureContext: true }, ['qr_code', 'code_128']);
+  ok('gate: no food format -> unavailable (reason missing-format)', d3.available === false && d3.reason === 'missing-format', d3);
+  eq('gate: the missing-format verdict names the formats it needs', d3.missing.join(','), 'ean_13,upc_a');
+  const d4 = Bc.decide({ hasDetector: true, isSecureContext: true }, ['qr_code', 'ean_13', 'upc_a', 'code_128']);
+  ok('gate: EAN-13 + UPC-A present -> available', d4.available === true && d4.reason === 'ok', d4);
+  const d5 = Bc.decide({ hasDetector: true, isSecureContext: true }, ['ean_13']);
+  ok('gate: EAN-13 alone still counts as available', d5.available === true && d5.supported.join(',') === 'ean_13', d5);
+  const d6 = Bc.decide({ hasDetector: true, isSecureContext: true, formatsError: 'boom' }, null);
+  ok('gate: getSupportedFormats throwing -> unavailable (reason formats-error)', d6.available === false && d6.reason === 'formats-error', d6);
+  const re1 = Bc.readEnv({ BarcodeDetector: function () {}, isSecureContext: true });
+  ok('readEnv: reads typeof BarcodeDetector + isSecureContext', re1.hasDetector === true && re1.isSecureContext === true, re1);
+  const re2 = Bc.readEnv({ isSecureContext: 'yes' });
+  ok('readEnv: a non-true secure flag is NOT secure (strict === true)', re2.hasDetector === false && re2.isSecureContext === false, re2);
+
+  /* ---- the GTIN ---- */
+  eq('normalizeGtin strips separators from a scanned EAN-13', Bc.normalizeGtin(' 5 901234 123457 '), '5901234123457');
+  eq('normalizeGtin pads a 12-digit UPC-A to the 13-digit EAN key', Bc.normalizeGtin('012345678905'), '0012345678905');
+  eq('normalizeGtin keeps a 13-digit code unchanged', Bc.normalizeGtin('5901234123457'), '5901234123457');
+  eq('normalizeGtin keeps a valid EAN-8', Bc.normalizeGtin('96385074'), '96385074');
+  eq('normalizeGtin rejects a length that is not a GTIN', Bc.normalizeGtin('12345'), null);
+  eq('the Open Food Facts URL is exactly the v2 product endpoint', Bc.offUrl('5901234123457'),
+    'https://world.openfoodfacts.org/api/v2/product/5901234123457.json');
+
+  /* ---- Open Food Facts -> the app's barcode record ---- */
+  const offBody = { status: 1, product: { product_name: 'Nutella', serving_size: '15 g', serving_quantity: 15,
+    nutriments: { 'energy-kcal_100g': 539, proteins_100g: 6.3, fat_100g: 30.9, carbohydrates_100g: 57.5, fiber_100g: 0 } } };
+  const pp = Bc.parseProduct('3017620422003', offBody);
+  ok('parseProduct: an OFF body -> a found record named from the product', pp.state === 'found' && pp.record.name === 'Nutella', pp);
+  eq('...with kcal per 100 g', pp.record.per100.kcal, 539);
+  eq('...and the macros per 100 g', [pp.record.per100.protein, pp.record.per100.fat, pp.record.per100.carb].join(','), '6.3,30.9,57.5');
+  eq('...and a real 0 is kept (fibre)', pp.record.per100.fibre, 0);
+  eq('...and a serving measure is built from serving_quantity', pp.record.measures[0] && pp.record.measures[0].grams, 15);
+  eq('...the record feeds the food module (gramsToMacros at 30 g)', Fd.gramsToMacros(pp.record, 30).kcal, 161.7);
+  ok('parseProduct: status 0 -> not found', Bc.parseProduct('1', { status: 0, status_verbose: 'product not found' }).state === 'notfound');
+  ok('parseProduct: no product object -> not found', Bc.parseProduct('1', { status: 1 }).state === 'notfound');
+  ok('parseProduct: a product with no name is not usable -> not found', Bc.parseProduct('1', { status: 1, product: { nutriments: {} } }).state === 'notfound');
+  const kj = Bc.parseProduct('1', { status: 1, product: { product_name: 'Juice', nutriments: { energy_100g: 180 } } });
+  eq('parseProduct: kJ energy is converted to kcal', kj.record.per100.kcal, 43.02);
+  ok('parseProduct: an absent nutrient is ABSENT, not 0', !('fibre' in kj.record.per100) && ('kcal' in kj.record.per100), kj.record.per100);
+
+  /* ---- resolve: local cache -> Open Food Facts -> cache (MOCKED fetch) ---- */
+  const store = Fd.createStore();
+  const urls = [];
+  const mkFetch = (status, body) => (url) => { urls.push(url); return Promise.resolve({ status, json: () => Promise.resolve(body) }); };
+  const r1 = await Bc.resolve(store, '3017620422003', mkFetch(200, offBody));
+  ok('resolve: a known GTIN -> found, straight from the network', r1.state === 'found' && r1.record.name === 'Nutella' && r1.cached === false, r1);
+  eq('resolve: it asked Open Food Facts at the EXACT URL', urls[0], 'https://world.openfoodfacts.org/api/v2/product/3017620422003.json');
+  ok('resolve: the result is cached in the barcode store', !!Fd.getBarcode(store, '3017620422003'));
+  const r2 = await Bc.resolve(store, '3017620422003', mkFetch(200, offBody));
+  ok('resolve: the SECOND lookup is served from cache (offline)', r2.state === 'found' && r2.cached === true);
+  eq('resolve: the cache hit made NO network call', urls.length, 1);
+
+  const urls404 = [];
+  const g404 = (url) => { urls404.push(url); return Promise.resolve({ status: 404, json: () => Promise.resolve({ status: 0 }) }); };
+  const r3 = await Bc.resolve(store, '9999999999999', g404);
+  ok('resolve: a 404 -> notfound, handled gracefully', r3.state === 'notfound' && r3.cached === false, r3);
+  ok('resolve: the 404 is REMEMBERED as a tombstone', Bc.isMiss(Fd.getBarcode(store, '9999999999999')));
+  const r4 = await Bc.resolve(store, '9999999999999', g404);
+  ok('resolve: re-scanning a known-missing code does NOT re-fetch it', r4.state === 'notfound' && r4.cached === true && urls404.length === 1, { r4, calls: urls404.length });
+
+  let n0 = 0;
+  const g0 = () => { n0++; return Promise.resolve({ status: 200, json: () => Promise.resolve({ status: 0, status_verbose: 'product not found' }) }); };
+  const r5 = await Bc.resolve(store, '1111111111116', g0);
+  ok('resolve: HTTP 200 with OFF status 0 -> not found', r5.state === 'notfound', r5);
+  await Bc.resolve(store, '1111111111116', g0);
+  eq('resolve: ...and it too is cached (no second call)', n0, 1);
+
+  const g500 = () => Promise.resolve({ status: 500, json: () => Promise.resolve(null) });
+  const r6 = await Bc.resolve(store, '2222222222222', g500);
+  ok('resolve: a server error -> error state (NOT not-found)', r6.state === 'error', r6);
+  ok('resolve: a transient error is NOT cached (a retry can work)', Fd.getBarcode(store, '2222222222222') === null);
+  const r7 = await Bc.resolve(store, '3333333333339', () => Promise.reject(new Error('offline')));
+  ok('resolve: a network failure -> error state', r7.state === 'error' && /offline/.test(r7.error), r7);
+  ok('resolve: a network failure is not cached', Fd.getBarcode(store, '3333333333339') === null);
+  ok('resolve: a code that is not a GTIN -> not-gtin', (await Bc.resolve(store, 'abc', g0)).state === 'not-gtin');
+
+  /* ---- every screen's content (pure render; NO camera) ---- */
+  const unsup = Bc.panelHtml({ screen: 'unsupported', cap: d3 });
+  ok('unsupported: renders the explanation AND a manual route, NOT a broken control',
+    /Scanning isn/.test(unsup) && /id="scan-manual"/.test(unsup) && !/id="scan-start"/.test(unsup),
+    { manual: /id="scan-manual"/.test(unsup), start: /id="scan-start"/.test(unsup) });
+  ok('unsupported: carries the privacy wording', unsup.indexOf(Bc.PRIVACY) >= 0);
+  ok('unsupported: shows its work (the device check)', /Device check:/.test(unsup));
+  ok('unsupported (no detector): names Play Services in the reason', /Play Services/.test(Bc.panelHtml({ screen: 'unsupported', cap: d1 })));
+  const ready = Bc.panelHtml({ screen: 'ready', cap: d4 });
+  ok('ready: offers the camera AND the manual fallback', /id="scan-start"/.test(ready) && /id="scan-manual"/.test(ready));
+  ok('ready: shows the device check too', /Device check:/.test(ready));
+  const deniedP = Bc.panelHtml({ screen: 'denied', permanent: true });
+  ok('denied (never-ask): routes to Settings with plain wording', /id="scan-settings"/.test(deniedP) && /Settings/.test(deniedP) && /won't ask again/.test(deniedP));
+  ok('denied (never-ask): NO Try-again button (cannot nag in a loop)', !/id="scan-retry"/.test(deniedP));
+  const deniedD = Bc.panelHtml({ screen: 'denied', permanent: false });
+  ok('denied (dismissed): offers Try again AND Settings', /id="scan-retry"/.test(deniedD) && /id="scan-settings"/.test(deniedD));
+  const nf = Bc.panelHtml({ screen: 'notfound', gtin: '9999999999999' });
+  ok('notfound: says it is not in Open Food Facts and offers manual logging', /isn't in Open Food Facts/.test(nf) && /id="scan-manual"/.test(nf));
+  ok('notfound: shows the barcode number', nf.indexOf('9999999999999') >= 0);
+  ok('notfound (cached): says it was checked before', /checked this one before/.test(Bc.panelHtml({ screen: 'notfound', gtin: '1', cached: true })));
+  const found = Bc.panelHtml({ screen: 'found', gtin: '3017620422003', record: pp.record, cached: false });
+  ok('found: names the product and offers Add to today', /Nutella/.test(found) && /id="scan-add"/.test(found));
+  ok('found: shows the per-100 g line', /539 kcal/.test(found));
+  ok('found: credits Open Food Facts', /from Open Food Facts/.test(found));
+  ok('checking: says it is checking', /Checking this device/.test(Bc.panelHtml({ screen: 'checking' })));
+  ok('scanning: renders the video element the camera feeds', /id="scan-video"/.test(Bc.panelHtml({ screen: 'scanning' })));
+  const errh = Bc.panelHtml({ screen: 'error', message: 'HTTP 500' });
+  ok('error: states the lookup failed and offers a retry', /look that up/.test(errh) && /id="scan-retry"/.test(errh));
+
+  /* ---- persistence: the cache lives in the SAVED state ---- */
+  ok('Store.state carries a barcodes map', !!(St.state.barcodes && typeof St.state.barcodes === 'object'));
+  ok('Store.barcodeStore() is backed by the saved state object (same reference)', St.barcodeStore().barcodes === St.state.barcodes);
+  Fd.saveBarcode(St.barcodeStore(), { barcode: '7777777777770', name: 'Y', per100: { kcal: 2 }, measures: [], source: 'off' });
+  ok('cache-first: a save through Store.barcodeStore() lands in Store.state', !!St.state.barcodes['7777777777770']);
+  const migrated = St.migrate({ version: 1, createdAt: '2026-01-01T00:00:00.000Z', profile: {}, workouts: [], bodylog: [],
+    custom: [], achievements: {}, overrides: {}, targets: {}, settings: {},
+    barcodes: { '5901234123457': { barcode: '5901234123457', name: 'X', per100: { kcal: 1 }, measures: [], source: 'off' } } });
+  ok('migrate: an existing barcode cache survives a load', !!migrated.barcodes['5901234123457']);
+  const legacy = St.migrate({ version: 1, createdAt: '2026-01-01T00:00:00.000Z', profile: {}, workouts: [], bodylog: [],
+    custom: [], achievements: {}, overrides: {}, targets: {}, settings: {} });
+  ok('migrate: a state predating the field gets an empty barcodes map', !!legacy.barcodes && Object.keys(legacy.barcodes).length === 0);
+
+  /* ---- capability(): the real async wiring ---- */
+  const fk = function () {};
+  fk.getSupportedFormats = () => Promise.resolve(['qr_code', 'ean_13']);
+  const capOk = await Bc.capability({ BarcodeDetector: fk, isSecureContext: true });
+  ok('capability(): reads the real wiring and reports available', capOk.available === true && capOk.supported.join(',') === 'ean_13', capOk);
+  eq('capability(): reports the raw formats it saw (honest)', (capOk.formats || []).join(','), 'qr_code,ean_13');
+  eq('capability(): reports isSecureContext as read', capOk.isSecureContext, true);
+  const fbad = function () {};
+  fbad.getSupportedFormats = () => Promise.reject(new Error('no gms'));
+  const capBad = await Bc.capability({ BarcodeDetector: fbad, isSecureContext: true });
+  ok('capability(): a throwing getSupportedFormats -> formats-error', capBad.available === false && capBad.reason === 'formats-error', capBad);
+  const capNo = await Bc.capability({ isSecureContext: true });
+  ok('capability(): no detector -> unavailable', capNo.available === false && capNo.reason === 'no-detector');
+
+  console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
+})();
