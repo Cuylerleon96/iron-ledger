@@ -1876,45 +1876,33 @@
   }
 
   function renderToday() {
-    renderTracker();                                   // Change A: keep the top strip live
-    const list = $("#food-list"), tot = $("#today-totals"), cnt = $("#today-count");
-    if (!list || !tot) return;
-    const date = today();
-    const items = Store.intakesOn(date);
-    if (cnt) cnt.textContent = items.length + (items.length === 1 ? " item" : " items");
-    list.innerHTML = items.length
-      ? items.map((e) =>
-          '<div class="pr-row has-del food-log-row"><span>' + esc(e.name) + "</span><span>" + fmtW(e.grams) + " g</span>" +
-          '<span class="muted">' + macroLine(e.macros) + "</span>" +
-          '<button class="btn ghost tiny food-del" data-id="' + esc(e.id) + '" title="Remove" aria-label="Remove ' + esc(e.name) + '">✕</button></div>').join("")
-      : '<p class="muted small">Nothing logged yet today.</p>';
-
-    const totals = Store.dayTotals(date);
-    const targets = _nutriView && _nutriView.targets;
-    /* The TONE of the wording is driven by the SAME goal the targets were built
-       from — the current phase's goal, not a re-derived one — so the number and
-       the sentence can never disagree. */
-    const goal = (_nutriView && _nutriView.phase && _nutriView.phase.goal) || "maintain";
-    let html;
-    if (targets && targets.length) {
-      const rows = Nutrition.intakeSummary(targets, totals, goal);
-      html = '<div class="n-targets">' + rows.map((r) =>
-        '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(r.label) + "</span>" +
-        '<span class="n-t-val">' + fmt(r.logged) + '<span class="n-t-unit"> / ' + r.target + " " + esc(r.unit) + "</span></span></div>" +
-        '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("") + "</div>" +
-        '<p class="muted small">' + esc(Nutrition.intakeHeadline(rows, items.length, goal)) + "</p>";
-    } else {
-      html = '<p class="muted small">Totals today: ' + macroLine(totals) + "</p>" +
-        '<p class="muted small">' + esc(Nutrition.intakeHeadline([], items.length, goal)) + "</p>";
+    renderMacroCard();                                 // the no-bar macro card at the top
+    const list = $("#food-list"), cnt = $("#today-count");
+    if (list) {
+      const date = today();
+      const items = Store.intakesOn(date);
+      if (cnt) cnt.textContent = items.length + (items.length === 1 ? " item" : " items");
+      list.innerHTML = items.length
+        ? items.map((e) =>
+            '<div class="pr-row has-del food-log-row"><span>' + esc(e.name) + "</span><span>" + fmtW(e.grams) + " g</span>" +
+            '<span class="muted">' + macroLine(e.macros) + "</span>" +
+            '<button class="btn ghost tiny food-del" data-id="' + esc(e.id) + '" title="Remove" aria-label="Remove ' + esc(e.name) + '">✕</button></div>').join("")
+        : '<p class="muted small">Nothing logged yet today.</p>';
     }
-    tot.innerHTML = html;
+    /* The weekly-adherence card reads today's intakelog too, so it must repaint
+       with the rest of the tab — otherwise adding a food left it showing a stale
+       "0 days this week". */
+    renderAdherence();
   }
 
   function todayCard() {
     const c = el("section", { class: "card", id: "today" });
+    /* The macro rows that used to live under the log now sit in the no-bar macro
+       card ABOVE this one, so the tab shows them exactly once. This card keeps the
+       item log and its "Today — N items — date" header. */
     c.innerHTML =
       '<div class="card-head"><h3>Today</h3><span class="muted"><span id="today-count"></span> · ' + esc(today()) + "</span></div>" +
-      '<div class="food-list" id="food-list"></div><div id="today-totals"></div>';
+      '<div class="food-list" id="food-list"></div>';
     $("#food-list", c).addEventListener("click", (e) => {
       const b = e.target.closest(".food-del");
       if (!b) return;
@@ -1956,17 +1944,18 @@
     return c;
   }
 
-  /* Change A — the gauges under the search: today's totals against the targets,
-     plus the day's Vitality contribution. Its own body node (#tracker-body) is
-     repainted by renderToday(), so adding or removing a food anywhere on the tab
-     moves the strip immediately. The heavy wording lives in Nutrition.tracker so
-     it is testable without a DOM. */
-  function trackerStrip() {
-    const c = el("section", { class: "card", id: "tracker" });
+  /* The day's macros, DIRECTLY under Log food: the four targets as plain rows —
+     the SAME visual shape as the old Today-card macro rows — with NO gauge or
+     progress bar anywhere. Its body node (#macro-body) is repainted by
+     renderToday(), so adding or removing a food moves every number immediately,
+     and the day's Vitality line now lives here too (it moved up with the macros).
+     The wording lives in Nutrition.macroCard so it is testable without a DOM. */
+  function macroCard() {
+    const c = el("section", { class: "card", id: "macros" });
     c.innerHTML =
       '<div class="card-head"><h3>Today vs targets</h3><span class="muted">a guide, not a rule</span></div>' +
-      '<div class="bar-host" id="tracker-body"></div>';
-    renderTracker();
+      '<div id="macro-body"></div>';
+    renderMacroCard();
     return c;
   }
 
@@ -1977,37 +1966,51 @@
       ' <span class="muted small">' + esc(v.text) + "</span></div>";
   }
 
-  function trackerHtml(vm) {
+  /* The no-bar macro card's body: label + right-aligned "logged / target unit",
+     the reason sub-line, the day's headline, then the Vitality line. No
+     bar-track / bar-fill is emitted — the whole point of the redesign. */
+  function macroCardHtml(vm) {
     if (!vm.hasTargets) {
       return '<p class="muted small">Macro targets appear once your birth year is set in Profile — ' +
-        "a target is a guide, never a grade.</p>" + vitalityStripHtml(vm.vitality);
+        "a target is a guide, never a grade.</p>" +
+        '<p class="muted small">' + esc(vm.headline) + "</p>" + vitalityStripHtml(vm.vitality);
     }
     const rows = vm.rows.map((r) =>
-      '<div class="bar-row ntrack-row"><span class="bar-lab">' + esc(r.label) + "</span>" +
-      '<span class="bar-track"><i class="bar-fill" style="width:' + (r.pct == null ? 0 : r.pct) + '%"></i></span>' +
-      '<span class="bar-val">' + fmt(r.logged) + " / " + r.target + " " + esc(r.unit) + "</span></div>" +
-      '<p class="muted small ntrack-cap">' + esc(r.text) + "</p>").join("");
-    return rows +
-      '<p class="muted small ntrack-hint">Each bar is how much of that target is logged so far today — ' +
-      "a guide, not a score.</p>" + vitalityStripHtml(vm.vitality);
+      '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(r.label) + "</span>" +
+      '<span class="n-t-val">' + fmt(r.logged) + '<span class="n-t-unit"> / ' + r.target + " " + esc(r.unit) + "</span></span></div>" +
+      '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("");
+    return '<div class="n-targets">' + rows + "</div>" +
+      '<p class="muted small">' + esc(vm.headline) + "</p>" + vitalityStripHtml(vm.vitality);
   }
 
-  function renderTracker() {
-    const host = $("#tracker-body");
+  function renderMacroCard() {
+    const host = $("#macro-body");
     if (!host) return;
     const targets = _nutriView && _nutriView.targets;
     const goal = (_nutriView && _nutriView.phase && _nutriView.phase.goal) || "maintain";
-    const totals = Store.dayTotals(today());
-    const vit = Engine.nutritionVitality(S, today());
+    const date = today();
+    const totals = Store.dayTotals(date);
+    const count = Store.intakesOn(date).length;
+    const vit = Engine.nutritionVitality(S, date);
     const optedOut = !!(S.profile && S.profile.nutritionVitality === false);
-    host.innerHTML = trackerHtml(Nutrition.tracker(totals, targets, { goal, vitality: vit, vitalityOptOut: optedOut }));
+    host.innerHTML = macroCardHtml(Nutrition.macroCard(totals, targets, { goal, count, vitality: vit, vitalityOptOut: optedOut }));
   }
 
   /* Change A — the weekly adherence bar at the foot of the tab. Uses the engine's
      ONE sessions-vs-target measure (weeksAtTarget) and the current week's count,
-     never consecutive days. */
-  function adherenceCard() {
-    const c = el("section", { class: "card", id: "adherence" });
+     never consecutive days. Its body node (#adherence-body) is repainted by
+     renderToday(), so a freshly logged food updates the card's logged-days count
+     live instead of leaving a stale "0 days this week". */
+  function adherenceHtml(vm) {
+    return '<div class="bar-row ntrack-row"><span class="bar-lab">This week</span>' +
+      '<span class="bar-track"><i class="bar-fill" style="width:' + vm.pct + '%"></i></span>' +
+      '<span class="bar-val">' + vm.sessions + " / " + vm.target + "</span></div>" +
+      '<p class="muted small ntrack-cap">' + esc(vm.text) + "</p>";
+  }
+
+  function renderAdherence() {
+    const host = $("#adherence-body");
+    if (!host) return;
     const wp = weekProgress(S);
     const wk = Engine.weekKeyOf(Engine.dstr(new Date()));
     const daysThisWeek = new Set((S.intakelog || [])
@@ -2016,12 +2019,15 @@
       weeklyTarget: S.profile.weeklyTarget, sessionsThisWeek: wp.done,
       weeksAtTarget: Engine.weeksAtTarget(S), loggedDaysThisWeek: daysThisWeek,
     });
+    host.innerHTML = adherenceHtml(vm);
+  }
+
+  function adherenceCard() {
+    const c = el("section", { class: "card", id: "adherence" });
     c.innerHTML =
       '<div class="card-head"><h3>Weekly adherence</h3><span class="muted">sessions vs your weekly target</span></div>' +
-      '<div class="bar-row ntrack-row"><span class="bar-lab">This week</span>' +
-      '<span class="bar-track"><i class="bar-fill" style="width:' + vm.pct + '%"></i></span>' +
-      '<span class="bar-val">' + vm.sessions + " / " + vm.target + "</span></div>" +
-      '<p class="muted small ntrack-cap">' + esc(vm.text) + "</p>";
+      '<div id="adherence-body"></div>';
+    renderAdherence();
     return c;
   }
 
@@ -2035,13 +2041,14 @@
       bodylog: S.bodylog || [],
     });
     _nutriView = v;
-    /* Change A — layout: the LOG-FOOD block (search + portion picker + "Scan a
-       barcode") now sits at the TOP, so the search is reachable without a scroll.
-       Under it, the tracker strip reads today's totals against the targets;
+    /* Layout: the LOG-FOOD block (search + portion picker + "Scan a barcode")
+       sits at the TOP, so the search is reachable without a scroll. DIRECTLY
+       under it, the no-bar macro card reads today's totals against the targets
+       (no gauge; it now also carries the day's headline and the Vitality line);
        the detailed targets card and today's log follow below, and the weekly
        adherence bar closes the page. */
     host.append(intakeCard());
-    host.append(trackerStrip());
+    host.append(macroCard());
     const c = el("section", { class: "card", id: "nutrition" });
     c.innerHTML = v.html;
     host.append(c);

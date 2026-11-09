@@ -1,11 +1,11 @@
 {
-  "versionCode": 78,
-  "versionName": "1.2.0",
+  "versionCode": 79,
+  "versionName": "1.2.1",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "c5c6237a77409a47b1a3fc4f788fa56ce35a1ccf5c991c0e5ddb62bd9d6e3c5f",
-  "sizeBytes": 3900004,
+  "sha256": "0a76d643d05c002387671c13c7432db1587a10658386c804f0cdf43b346abd0f",
+  "sizeBytes": 3900615,
   "published": "2026-11-09",
   "notes": [
-    "Nutrition gets a tracker strip with your day's progress, and a History tab that shows what you logged on past days."
+    "The Nutrition tab now shows your day's macros as clear rows right under the search, and a few colours that read like warnings are now calm."
   ]
 }

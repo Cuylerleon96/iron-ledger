@@ -1,5 +1,5 @@
 /* Nutrition UI view-model suite — the Change A/B pure logic added to
-   js/nutrition.js: the tracker strip (top gauges), the day's Vitality line, the
+   js/nutrition.js: the day's no-bar macro card, the day's Vitality line, the
    weekly adherence measure, and the History tab's Nutrition view
    (loggedDays / nutritionHistory). Runs the REAL module in a vm sandbox — these
    paths need no Macros, Food or Store, so the module is loaded alone.
@@ -32,35 +32,44 @@ const TARGETS = [
 ];
 const TOTALS = { kcal: 1560, protein: 96, fat: 52, carb: 180 };
 
-/* ---------- the tracker strip view-model (Change A) ---------- */
+/* ---------- the day's macro card: the no-bar replacement for the gauge strip ---------- */
 {
-  const vm = N.tracker(TOTALS, TARGETS, { goal: "gain" });
-  eq("tracker: one gauge per target", vm.rows.length, 4);
-  ok("tracker: hasTargets true when targets exist", vm.hasTargets === true);
-  eq("tracker: calories pct = round(1560/2140*100)", vm.rows[0].pct, 73);
-  eq("tracker: protein pct = round(96/130*100)", vm.rows[1].pct, 74);
-  eq("tracker: fat pct = round(52/65*100)", vm.rows[2].pct, 80);
+  const vm = N.macroCard(TOTALS, TARGETS, { goal: "gain", count: 3 });
+  eq("macroCard: one row per target", vm.rows.length, 4);
+  ok("macroCard: hasTargets true when targets exist", vm.hasTargets === true);
+  eq("macroCard: the calories row reads the log total", vm.rows[0].logged, 1560);
+  eq("macroCard: the protein row reads the log total", vm.rows[1].logged, 96);
+  eq("macroCard: the fat row reads the log total", vm.rows[2].logged, 52);
   /* the tab's "carbs" target reads the log's "carb" key */
-  eq("tracker: carbs gauge reads the log's carb total", vm.rows[3].logged, 180);
-  eq("tracker: carbs pct = round(180/260*100)", vm.rows[3].pct, 69);
-  eq("tracker: goal is passed through", vm.rows[0].goal, "gain");
-  eq("tracker: row text is intakeSummary's own wording",
+  eq("macroCard: the carbs row reads the log's carb total", vm.rows[3].logged, 180);
+  eq("macroCard: the carbs row keeps its target (logged / target line)", vm.rows[3].target, 260);
+  eq("macroCard: goal is passed through", vm.rows[0].goal, "gain");
+  eq("macroCard: row text is intakeSummary's own wording",
     vm.rows[0].text, N.intakeSummary(TARGETS, TOTALS, "gain")[0].text);
+  /* THE POINT OF THE CHANGE: no gauge, so a row carries no fill percentage */
+  ok("macroCard: a row carries NO gauge percentage (no bar anywhere)",
+    vm.rows.every((r) => r.pct === undefined));
+  /* the day's headline moved up with the macros, so the Today card need not repeat it */
+  eq("macroCard: the day's headline rides along",
+    vm.headline, N.intakeHeadline(N.intakeSummary(TARGETS, TOTALS, "gain"), 3, "gain"));
 
-  /* at or above every target: capped at 100%, stated neutrally */
-  const over = N.tracker({ kcal: 3000, protein: 140, fat: 70, carb: 300 }, TARGETS, { goal: "lose" });
-  ok("tracker: a full-or-over day caps the fill at 100%", over.rows.every((r) => r.pct === 100));
-  ok("tracker: nothing reads as failure (no over/exceeded/too much/fail)",
+  /* at or above every target: stated neutrally, never a failure */
+  const over = N.macroCard({ kcal: 3000, protein: 140, fat: 70, carb: 300 }, TARGETS, { goal: "lose", count: 4 });
+  ok("macroCard: nothing reads as failure (no over/exceeded/too much/fail)",
     over.rows.every((r) => !/over|exceed|too much|fail|warning|missed/i.test(r.text)));
 
-  /* a zero target cannot divide: pct is null, not Infinity/NaN */
-  const z = N.tracker({ kcal: 100 }, [{ key: "kcal", label: "Calories", value: 0, unit: "kcal" }], {});
-  eq("tracker: a zero target yields a null pct (no divide-by-zero)", z.rows[0].pct, null);
+  /* a zero target cannot divide: the gauge that used to divide it is gone, and the
+     row is still well-formed (a finite logged value, the real 0 target, real text) */
+  const z = N.macroCard({ kcal: 100 }, [{ key: "kcal", label: "Calories", value: 0, unit: "kcal" }], { count: 1 });
+  ok("macroCard: a zero target still yields a well-formed row (no divide, no NaN)",
+    z.rows[0].target === 0 && isFinite(z.rows[0].logged) && /100/.test(z.rows[0].text));
 
-  /* no targets at all (no birth year): no gauges, no numbers */
-  const none = N.tracker({}, null, { goal: "maintain" });
-  eq("tracker: no targets -> no rows", none.rows.length, 0);
-  ok("tracker: no targets -> hasTargets false", none.hasTargets === false);
+  /* no targets at all (no birth year): no rows, no numbers */
+  const none = N.macroCard({}, null, { goal: "maintain", count: 0 });
+  eq("macroCard: no targets -> no rows", none.rows.length, 0);
+  ok("macroCard: no targets -> hasTargets false", none.hasTargets === false);
+  eq("macroCard: no targets -> the day's headline is still there",
+    none.headline, N.intakeHeadline([], 0, "maintain"));
 }
 
 /* ---------- the day's Vitality line ---------- */
@@ -82,13 +91,13 @@ const TOTALS = { kcal: 1560, protein: 96, fat: 52, carb: 180 };
   ok("vitalityPart: singular day is worded as one day",
     /1 logged day\b/.test(N.vitalityPart({ w: 0.3, v: 50, days: 1 }, false).text));
 
-  /* the strip wires the vitality state through */
-  eq("tracker: vitality rides along (on)",
-    N.tracker(TOTALS, TARGETS, { vitality: { w: 0.3, v: 77, days: 8 } }).vitality.state, "on");
-  eq("tracker: vitality rides along (off when opted out)",
-    N.tracker(TOTALS, TARGETS, { vitalityOptOut: true }).vitality.state, "off");
-  eq("tracker: vitality still reported when there are no targets",
-    N.tracker({}, null, {}).vitality.state, "not-yet");
+  /* the card wires the vitality state through */
+  eq("macroCard: vitality rides along (on)",
+    N.macroCard(TOTALS, TARGETS, { vitality: { w: 0.3, v: 77, days: 8 } }).vitality.state, "on");
+  eq("macroCard: vitality rides along (off when opted out)",
+    N.macroCard(TOTALS, TARGETS, { vitalityOptOut: true }).vitality.state, "off");
+  eq("macroCard: vitality still reported when there are no targets",
+    N.macroCard({}, null, {}).vitality.state, "not-yet");
 }
 
 /* ---------- the weekly adherence measure (Change A) ---------- */

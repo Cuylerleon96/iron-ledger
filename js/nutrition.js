@@ -476,25 +476,22 @@ const Nutrition = (() => {
     return lines.length ? lines.join(" ") : null;
   }
 
-  /* ---------- the tracker strip (Change A) ----------
-     Today's totals read against the tab's targets, as the gauges shown at the
-     TOP of the Nutrition tab. PURE: the totals, the targets and the vitality
-     result are all ARGUMENTS. The wording is intakeSummary's own (so the strip
-     and the Today card cannot disagree), and each fill is the share of the
-     target logged so far, capped at 100% — never a red or warning fill, and the
-     bar is never framed as a failure however full or empty it is. */
-  function tracker(totals, targets, opts) {
+  /* ---------- the day's macro card (the no-bar replacement for the gauges) ----------
+     Today's totals read against the tab's targets as PLAIN ROWS — the same shape
+     the Today card's own macro rows use (label + "logged / target unit" + a reason
+     sub-line) — with NO gauge or progress bar of any kind. PURE: the totals, the
+     targets, the day's item count and the vitality result are all ARGUMENTS. The
+     row wording is intakeSummary's own (so this card and the History view cannot
+     disagree) and the headline is the day's own (intakeHeadline). */
+  function macroCard(totals, targets, opts) {
     opts = opts || {};
     const goal = goalWord(opts.goal);
-    const rows = intakeSummary(targets, totals, goal).map((r) => ({
-      key: r.key, label: r.label, unit: r.unit, logged: r.logged, target: r.target,
-      text: r.text, goal: r.goal,
-      pct: r.target > 0 ? Math.max(0, Math.min(100, Math.round((r.logged / r.target) * 100))) : null,
-    }));
+    const rows = intakeSummary(targets, totals, goal);
     return {
       goal,
       hasTargets: !!(targets && targets.length),
       rows,
+      headline: intakeHeadline(rows, opts.count || 0, goal),
       vitality: vitalityPart(opts.vitality, opts.vitalityOptOut),
     };
   }
@@ -591,7 +588,7 @@ const Nutrition = (() => {
 
   return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE,
     NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline, historyHeadline,
-    tracker, vitalityPart, adherence, sumMacros, loggedDays, nutritionHistory,
+    macroCard, vitalityPart, adherence, sumMacros, loggedDays, nutritionHistory,
     MACRO_ROUNDING_NOTE, roundingNoteFor, alternateNote, FOOD_LABEL };
 })();
 if (typeof module !== "undefined") module.exports = Nutrition;

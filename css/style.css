@@ -262,7 +262,12 @@ main > * { min-width: 0; }
 .attr-row .up { color: var(--red-l); font-weight: 700; }
 .attr-row .down { color: var(--sky); font-weight: 700; }
 .attr-row .flat { color: #8fa8b0; }
-.status-roomtogrow, .status-nottrainedyet { color: #ffb3a3; }
+/* "room to grow" and "not trained yet" are ORDINARY states, not faults — the
+   glossary entry itself says room-to-grow "is not a warning". A red-family tint
+   here contradicted that copy and the standing no-shaming rule, so these two
+   read in calm, cool tones instead. Same information, no alarm. */
+.status-roomtogrow { color: var(--sky); }
+.status-nottrainedyet { color: var(--cream-dim); }
 .status-building { color: var(--gold); }
 .status-sweetspot { color: var(--green-l); }
 .status-overitslimit { color: var(--orange); }
@@ -288,7 +293,10 @@ main > * { min-width: 0; }
   background: #0a1c1a; border: 2px solid var(--cream); box-shadow: 0 0 0 1px var(--ink);
 }
 .bar-fill { display: block; height: 100%; background: linear-gradient(180deg, var(--green-l), var(--green) 60%, #4a9828); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); transition: width .6s steps(14); }
-.bar-fill.low { background: linear-gradient(180deg, var(--gold-l), var(--orange) 60%, #c06000); }
+/* A below-MEV bar is information, not a warning: the calm teal the nutrition
+   gauges already use rather than the gold/orange progress pair. The bar's length
+   and the MEV marker still carry every fact it did before. */
+.bar-fill.low { background: linear-gradient(180deg, var(--teal-4), var(--teal-2) 65%, var(--teal-1)); }
 .bar-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, .75); }
 .bar-val { text-align: right; white-space: nowrap; text-shadow: var(--outline-sm); }
 
@@ -304,12 +312,16 @@ main > * { min-width: 0; }
   background: rgba(0, 0, 0, .32); padding: .5rem .65rem; margin-bottom: .45rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
 }
-.weak.high { border-left-color: var(--red); }
+/* Weak points are ADVICE, ordered by priority — never a red alarm for ordinary
+   training (an untrained group or a lagging one is normal, especially early).
+   Brightness and the !/•/· glyph carry the order; the hue stays in the app's
+   warm accent instead of a warning colour. */
+.weak.high { border-left-color: var(--gold-l); }
 .weak.med { border-left-color: var(--gold); }
 .weak.low { border-left-color: var(--sky); }
 .weak-h { font-size: .7rem; font-weight: 700; display: flex; gap: .4rem; align-items: baseline; text-shadow: var(--outline-sm); }
 .sev { font-weight: 700; }
-.sev.high { color: var(--red-l); } .sev.med { color: var(--gold); } .sev.low { color: var(--sky); }
+.sev.high { color: var(--gold-l); } .sev.med { color: var(--gold); } .sev.low { color: var(--sky); }
 .weak p { font-size: .64rem; }
 .fix { color: var(--green-l) !important; font-weight: 700; }
 
@@ -442,7 +454,9 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 }
 .fresh-chip.ready  { background: rgba(120,200,80,.22); border-color: rgba(120,200,80,.6); }
 .fresh-chip.mid    { background: rgba(248,208,48,.18); border-color: rgba(248,208,48,.5); }
-.fresh-chip.worked { background: rgba(240,80,60,.18);  border-color: rgba(240,80,60,.5); }
+/* "worked" = trained recently. Ordinary, and the card itself says this reads
+   recency, not a recovery verdict — so a cool tone, not an alarm red. */
+.fresh-chip.worked { background: rgba(88,200,248,.16); border-color: rgba(88,200,248,.5); }
 .fresh-chip.none   { opacity: .55; }
 
 .deload { font-size: .64rem; line-height: 1.5; margin: .45rem 0 .15rem; }
