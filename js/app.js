@@ -1792,10 +1792,12 @@
     if (g == null) { toast("Enter a portion in grams.", "warn"); return; }
     const entry = Nutrition.intakeEntry(f, g, {});      // snapshots name + macros
     if (!entry) { toast("Pick a portion to log that food.", "warn"); return; }
+    const before = Engine.summary(S);                   // level/title BEFORE this log
     Store.logIntake(entry);                             // Store stamps LOCAL today
     toast("Added " + esc(entry.name) + " · " + fmtW(g) + " g");
     foodUI.picked = null; foodUI.measure = ""; foodUI.qty = "1"; foodUI.grams = "";
     renderFoodPick(); renderToday();
+    awardBadges(before);                                // a logged food can earn a badge
   }
 
   function renderToday() {
@@ -1954,6 +1956,8 @@
         <p class="muted small grid-note">A starting estimate. After a couple of weeks your own logs replace it.</p>
         <label>Weekly session target<input class="inp" id="p-wt" type="number" value="${p.weeklyTarget ?? 4}"></label>
         <label>Units<select class="inp" id="p-u"><option value="kg" ${U.kg ? "selected" : ""}>Kilograms</option><option value="lb" ${!U.kg ? "selected" : ""}>Pounds</option></select></label>
+        <label class="check-line"><input type="checkbox" id="p-nutri-vit" ${p.nutritionVitality !== false ? "checked" : ""}> Include nutrition in ${term("attr-VIT", "Vitality")}</label>
+        <p class="muted small grid-note" id="p-nutri-vit-note">When this is on, the food you log counts toward Vitality — but only the days you actually logged; a blank day is left out, never counted as zero. Untick to keep nutrition off your stats. The setting is dated, so it changes your Vitality from today on and leaves past months as they were already measured.</p>
       </div>
       <button class="btn primary" id="p-save">Save profile</button>`;
     host.append(c);
@@ -2088,6 +2092,10 @@
       // valid value and falls through to the observed/training/fallback precedence.
       const act = g("#p-act");
       p.activityLevel = (typeof Macros !== "undefined" && Macros.activityLevelFor(act)) ? act : null;
+      // Decision #3's opt-out: nutrition counts toward Vitality unless this is
+      // unticked. Stored on the profile so it is a dated fact (see TRACKED), and
+      // set BEFORE recordProfileLog so the snapshot captures it.
+      p.nutritionVitality = !!$("#p-nutri-vit").checked;
       p.weeklyTarget = parseInt(g("#p-wt"), 10) || 4;
       p.units = g("#p-u");
       // Snapshot the dated profile fields (height/age/sex/goals/weekly target)

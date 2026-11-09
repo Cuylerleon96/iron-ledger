@@ -577,6 +577,12 @@ console.log("=== glossary: every term the UI shows has ONE entry, and every entr
     "per-100-g", "portion", "amdr", "rda", "essential-fat", "deficit-surplus", "usda", "controller",
   ];
   eq("every displayed nutrition term has an entry", REQUIRED_NUTRITION.filter((id) => !G.has(id)), []);
+  /* Every NEW nutrition badge carries a glossary entry of its own, so a badge the
+     user can see is never left unexplained. The badge names live in engine.js
+     (the ACHIEVEMENTS list), which is part of the ui corpus, so each entry's own
+     heading is a term the UI really displays. */
+  const REQUIRED_BADGES = ["firstlog", "logcover4", "logcover12", "foodvariety"];
+  eq("every new nutrition badge has a glossary entry", REQUIRED_BADGES.filter((id) => !G.has(id)), []);
   /* ...and the jargon the tab itself puts on screen is TAPPABLE there (not only
      reachable from the Profile list): nutrition.js links its own words through
      tlink(), app.js links the food-logging abbreviations through term(). */

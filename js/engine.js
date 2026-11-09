@@ -1017,6 +1017,84 @@ const Engine = (() => {
      profile moves. */
   const belowEssentialBF = (pct, sex) => num(pct) > 0 && num(pct) < ESSENTIAL_BF[sex === "M" ? "M" : "F"];
 
+  /* ---------- nutrition logging (shared by Vitality, the badges and XP) ----------
+     Distinct CALENDAR DAYS that carry at least one food entry — never entry
+     counts and never an amount. A day with nothing logged simply does not appear,
+     so it can never be scored as a zero-calorie day. Food logging is a sensitive
+     domain here (the app's standing rule): nothing below reads a calorie total,
+     so nothing below can reward eating less. */
+  const NUTRI_COVER_DAYS = 5;               // days/week that count as "logged that week"
+  const NUTRI_VIT = { MIN_DAYS: 5, WINDOW: 28, REF_G_PER_KG: 1.6, W: 0.3 };
+
+  const intakeDaySet = (state) => {
+    const s = new Set();
+    for (const e of (state && state.intakelog) || []) if (e && e.date) s.add(String(e.date));
+    return s;
+  };
+  const intakeDays = (state) => intakeDaySet(state).size;
+
+  /* Monday-start weeks in which food was logged on at least `need` distinct days.
+     ONE payment of coverage per week whatever those days hold in ENTRIES — fifty
+     entries in a day is still one day — and it counts DAYS, not amounts, so it
+     cannot be farmed by volume and cannot reward eating less. */
+  function intakeCoverWeeks(state, need) {
+    const byWeek = {};
+    for (const d of intakeDaySet(state)) { const k = weekKeyOf(d); byWeek[k] = (byWeek[k] || 0) + 1; }
+    return Object.values(byWeek).filter((n) => n >= need).length;
+  }
+
+  /* Distinct foods logged, by name (case-insensitive). Repeating one food adds
+     nothing, so variety cannot be farmed by volume either. */
+  function intakeFoods(state) {
+    const s = new Set();
+    for (const e of (state && state.intakelog) || []) {
+      if (!e) continue;
+      const n = e.name != null ? String(e.name).trim().toLowerCase()
+        : (e.src != null ? String(e.src) : "");
+      if (n) s.add(n);
+    }
+    return s.size;
+  }
+
+  /* ---------- the nutrition component of Vitality ----------
+     Decision #3: nutrition feeds Vitality ONLY while it is actually being used,
+     and the Profile checkbox lets the user keep it OFF their stats (default ON).
+     Two rules make it safe:
+       - MISSING DATA IS NEVER A ZERO. Only days that carry a protein figure are
+         averaged; an unlogged day, or a day whose foods carry no protein value,
+         is left out entirely rather than counted as a bad day.
+       - IT CANNOT REWARD EATING LESS. The only thing measured is whether the
+         logged day reached a protein reference — capped, so eating more buys
+         nothing — and no calorie total is read at all.
+     Returns null (no part added, Vitality unchanged) when the user has opted out,
+     when the log is too thin to count as "in use", or when there is no bodyweight
+     to size the reference. */
+  function nutritionVitality(state, asOfDate) {
+    if (!state || (state.profile && state.profile.nutritionVitality === false)) return null;
+    const bw = bodyweight(state, asOfDate);
+    if (!(bw > 0)) return null;
+    const refG = NUTRI_VIT.REF_G_PER_KG * bw;
+    /* Local-noon day indices on BOTH sides. Date.now()/DAY is a UTC day index and
+       rolls a day ahead of local time every evening (19:00 EST), which silently
+       dropped the oldest day of the window; anchoring on the LOCAL date string
+       keeps the window and the entries on the same (local) calendar. */
+    const endDay = Math.floor(Date.parse((asOfDate || dstr(Date.now())) + "T12:00:00") / DAY);
+    const startDay = endDay - (NUTRI_VIT.WINDOW - 1);
+    const perDay = {};
+    for (const e of state.intakelog || []) {
+      if (!e || !e.date) continue;
+      const idx = Math.floor(Date.parse(String(e.date) + "T12:00:00") / DAY);
+      if (!isFinite(idx) || idx < startDay || idx > endDay) continue;
+      const p = e.macros && e.macros.protein;
+      if (p == null || !isFinite(Number(p))) continue;    // absent protein: excluded, not zero
+      perDay[e.date] = (perDay[e.date] || 0) + Number(p);
+    }
+    const vals = Object.values(perDay);
+    if (vals.length < NUTRI_VIT.MIN_DAYS) return null;    // too thin to be "in use"
+    const v = clamp(vals.reduce((a, p) => a + clamp((p / refG) * 100), 0) / vals.length);
+    return { w: NUTRI_VIT.W, v, days: vals.length, refG };
+  }
+
   function vitalityScore(state, asOfDate) {
     // asOfDate re-evaluates an earlier month using the measurements that existed
     // THEN. Without it a history point would silently borrow today's bodyweight.
@@ -1068,6 +1146,11 @@ const Engine = (() => {
       const v = bmi < 18.5 ? clamp(100 - (18.5 - bmi) * 12) : bmi > 25 ? clamp(100 - (bmi - 25) * 7) : 100;
       parts.push({ w: 0.2, v }); used.push("BMI");
     }
+    /* Nutrition joins the blend ONLY while it is being logged and not opted out
+       (decision #3). Its own measure excludes unlogged days, so a missing day is
+       never a zero here — see nutritionVitality(). */
+    const nutri = nutritionVitality(state, asOfDate);
+    if (nutri) { parts.push({ w: nutri.w, v: nutri.v }); used.push("nutrition log"); }
     // No measurements means no score, exactly like the other five attributes.
     // Returning a middle value here implied "Decent" body composition on a fresh
     // install, which is a number the user never gave us.
@@ -1828,6 +1911,9 @@ const Engine = (() => {
     CONSISTENCY_MAX: 1.25, // ...and then some
     OVER_MRV: 0.5,         // a session wholly past a group's MRV earns about half
     CAP: 2.0,              // the composed multiplier cannot exceed this
+    INTAKE_WEEK: 15,       // food logged on 5+ days in a week: paid ONCE per week,
+                           // never per entry — see intakeXp(). Small next to a PR
+                           // (100), so it cannot out-earn improvement.
   };
 
   /* Monday-start week key for a date. Pure in the date itself, so XP does not
@@ -1846,6 +1932,13 @@ const Engine = (() => {
     for (const w of state.workouts || []) { const k = weekKeyOf(w.date); byWeek[k] = (byWeek[k] || 0) + 1; }
     return Object.values(byWeek).filter((n) => n >= target).length;
   }
+
+  /* Food logging XP: ONE payment for a week logged on 5+ distinct days, NEVER per
+     entry. Fifty entries in a single day is still one day, so the term cannot be
+     farmed by volume; and it counts DAYS, never amounts, so it can never reward
+     eating less or a low-calorie day. Calendar-bounded: at most one payment per
+     week that exists. */
+  function intakeXp(state) { return intakeCoverWeeks(state, NUTRI_COVER_DAYS) * XP.INTAKE_WEEK; }
 
   /* PRs per calendar date — the same one achievement per exercise per session
      prCount reports, built once so xp() stays linear. */
@@ -1945,6 +2038,7 @@ const Engine = (() => {
        consecutive-day one, so it stays. Both terms only ever grow as data is
        added, so a level can still never go down. */
     total += weeksAtTarget(state) * 15 + streaks(state).bestWeeks * 50;
+    total += intakeXp(state);          // food-logging coverage, one payment per week
     total += (state.bodylog || []).length * 10;
     return total;
   }
@@ -2051,6 +2145,15 @@ const Engine = (() => {
        exact pattern the deload guidance warns against. Same condition, honest
        name. */
     { id: "nightowl",  name: "Weekend Warrior",  desc: "Train on a weekend",                tier: "minor", test: (c) => c.weekend },
+    /* ---------- nutrition logging: HEALTHY BEHAVIOURS only ----------
+       Every one of these reads a COUNT of days or foods, never an amount, so none
+       can be earned by eating less and none can be farmed by logging more entries
+       (fifty entries in a day is still one day; a repeated food is still one food).
+       A missed day is simply absent — it is information, not a failure. */
+    { id: "firstlog",    name: "First Entry",  desc: "Log your first food",                    tier: "minor", test: (c) => c.intakeDays >= 1 },
+    { id: "logcover4",   name: "Well Tracked", desc: "Log food on 5+ days in each of 4 weeks",  tier: "minor", test: (c) => c.intakeCoverWeeks >= 4 },
+    { id: "logcover12",  name: "In the Habit", desc: "Log food on 5+ days a week for 12 weeks", tier: "major", test: (c) => c.intakeCoverWeeks >= 12 },
+    { id: "foodvariety", name: "Varied Plate", desc: "Log 20 different foods",                 tier: "minor", test: (c) => c.intakeFoods >= 20 },
   ];
 
   /* Effort-weighted sets in one session: the same stimulus-equivalent unit the
@@ -2141,6 +2244,12 @@ const Engine = (() => {
       balanced: trainedG.length >= 5 && trainedG.every((g) => mg[g].score >= 60),
       groupsWeek: trainedG.length, weighins: (state.bodylog || []).length,
       weeksAtTarget: weeksAtTarget(state),
+      /* Nutrition logging: distinct DAYS, weeks covered (5+ logged days) and
+         distinct foods. Counts, never amounts — so no badge below can fire on a
+         low-calorie day or reward eating less. */
+      intakeDays: intakeDays(state),
+      intakeCoverWeeks: intakeCoverWeeks(state, NUTRI_COVER_DAYS),
+      intakeFoods: intakeFoods(state),
       measures: (state.bodylog || []).filter((b) => MEASURES.some((m) => num(b[m.key]) > 0)).length,
       deloads: deloadWeeks(state),
       bigSession: bigSession(state, ws),
@@ -2221,6 +2330,7 @@ const Engine = (() => {
     exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, profileAsOf, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
+    intakeDays, intakeCoverWeeks, intakeFoods, intakeXp, nutritionVitality, NUTRI_VIT, NUTRI_COVER_DAYS,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,

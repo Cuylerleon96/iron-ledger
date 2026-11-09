@@ -338,9 +338,33 @@ const Glossary = (() => {
     },
     {
       id: "attr-VIT", term: "Vitality", aliases: ["Vitality", "VIT", "body comp"],
-      plain: "Your body composition, read from the weigh-ins and body-fat check-ins you log — how you are trending toward the goals you set.",
-      real: "A weighted blend of weight trend (or weight vs goal), body-fat trend (or body fat vs goal, or the healthy band with no goal), and BMI. No measurements means no score; a BMI-only score is capped.",
-      source: "BMI is the standard weight-for-height index (WHO); the weighting of the blend and the cap are this app's own. The body-fat inputs are estimates — see the 'Body fat %' entry.",
+      plain: "Your body composition, read from the weigh-ins and body-fat check-ins you log — how you are trending toward the goals you set. If you log food, that counts too, unless you turn it off in Profile.",
+      real: "A weighted blend of weight trend (or weight vs goal), body-fat trend (or body fat vs goal, or the healthy band with no goal), and BMI. When food is being logged, a nutrition part joins the blend: only the days that carry a protein figure are averaged, so an unlogged day is left out rather than scored as a zero, and it can be switched off in Profile. No measurements means no score; a BMI-only score is capped.",
+      source: "BMI is the standard weight-for-height index (WHO); the weighting of the blend and the cap are this app's own. The nutrition part's protein reference (1.6 g/kg/day) sits inside the ISSN 2017 range for healthy adults (1.4-2.0 g/kg/day, PMID 28642676) — the exact point is this app's own arrangement, not a published threshold. The body-fat inputs are estimates — see the 'Body fat %' entry.",
+    },
+    {
+      id: "firstlog", term: "First Entry", aliases: ["First Entry"],
+      plain: "You logged your first food. That is the whole thing — the first step is the one that starts the habit, so it is worth a nod.",
+      real: "Awarded the first time a day carries at least one logged food. It reads only whether a day has an entry, never what or how much, so it cannot be earned by eating less and logging many items in one day is still one day.",
+      source: "This app's own first-time rule (a logged day exists). No external definition.",
+    },
+    {
+      id: "logcover4", term: "Well Tracked", aliases: ["Well Tracked"],
+      plain: "You logged food on five or more days in each of four separate weeks. Keeping a record is the habit that makes the rest of the nutrition tab work.",
+      real: "Counted per Monday-start week: a week counts when at least five DISTINCT days in it carry a logged food. Fifty entries in one day is still one day, and the weeks do not have to be consecutive — a missed day is information, not a failure. It reads days, never amounts, so a low-calorie day earns nothing extra and eating less cannot trigger it.",
+      source: "This app's own logging-coverage measure (5+ logged days per week). No external definition.",
+    },
+    {
+      id: "logcover12", term: "In the Habit", aliases: ["In the Habit"],
+      plain: "Twelve weeks of logging food on five or more days a week — the point where food tracking is simply part of your routine.",
+      real: "The same 5+ distinct-logged-days-per-week coverage as Well Tracked, counted across twelve separate weeks (consecutive or not). It counts DAYS and never amounts, so it cannot be farmed by adding entries and cannot be earned by eating less.",
+      source: "This app's own logging-coverage measure (5+ logged days per week). No external definition.",
+    },
+    {
+      id: "foodvariety", term: "Varied Plate", aliases: ["Varied Plate"],
+      plain: "Twenty different foods logged. Variety across what you eat is a gentle nudge, not a rule — a wider range of foods tends to cover more of what your body needs.",
+      real: "Distinct foods counted by name, case-insensitive. Logging the same food many times counts once, so it cannot be farmed by volume; and it never reads portion size or calories, so it cannot be earned by eating less.",
+      source: "This app's own variety count (distinct food names logged). No external definition.",
     },
   ];
 

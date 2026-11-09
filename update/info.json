@@ -1,11 +1,11 @@
 {
-  "versionCode": 71,
-  "versionName": "1.0.70",
+  "versionCode": 72,
+  "versionName": "1.0.71",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d0897074e44f7153d7e3351c448004fa00e553b52e5e71b1f8738993765d3d1c",
-  "sizeBytes": 3878416,
+  "sha256": "29167202fe6079d0d1f72a366f37f2a47d6a33608bd521214726afd755f16922",
+  "sizeBytes": 3882294,
   "published": "2026-11-08",
   "notes": [
-    "With sex not set, the body-fat safety checks now use the higher, protective values and the screen says which value was used."
+    "Food logging now counts toward Vitality, with a Profile switch to keep it off your stats - plus four nutrition badges that reward steady logging, never eating less."
   ]
 }

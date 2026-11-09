@@ -1611,5 +1611,114 @@ console.log("\n=== 39. the per-exercise effort weight is a maths constant, not a
   eq("migrate strips weight but keeps the sibling mode", JSON.stringify(mig.overrides.c), JSON.stringify({ mode: "reps" }));
 }
 
+console.log("\n=== 46. nutrition gamification + the Vitality opt-out (decision #3) ===");
+{
+  const e = env();
+  const acc = (id, st) => e.E.achievements(st).find((a) => a.id === id);
+  const A = e.E.ACHIEVEMENTS;
+  // A logged food. `protein` may be omitted to model a day whose foods carry NO
+  // protein figure at all (an ABSENT value, never a 0).
+  const ie = (date, name, protein) => {
+    const macros = { kcal: 400, fat: 10, carb: 40 };
+    if (protein != null) macros.protein = protein;
+    return { id: "i" + date + name, date, name, grams: 100, macros };
+  };
+  const mon = () => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; };
+  const dstr = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const inWeek = (i) => { const x = mon(); x.setDate(x.getDate() + i); return dstr(x); };
+  const dayPlus = (d, n) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + n); return dstr(x); };
+
+  // ---- (a) each new badge fires on the healthy behaviour it names ----
+  const oneDay = base({ intakelog: [ie(iso(1), "Oats", 40)] });
+  truthy("First Entry fires on a first logged day", acc("firstlog", oneDay).met);
+  eq("...and does NOT fire with nothing logged", acc("firstlog", base({})).met, false);
+
+  // N Monday-start weeks, each with 5 distinct logged days (any amount).
+  const coverWeeks = (n) => { const es = []; for (let i = 0; i < n; i++) { const m = dayPlus("2026-01-05", i * 7); for (let k = 0; k < 5; k++) es.push(ie(dayPlus(m, k), "Oats", 40)); } return base({ intakelog: es }); };
+  eq("four covered weeks is what Well Tracked counts", e.E.achievementContext(coverWeeks(4)).intakeCoverWeeks, 4);
+  truthy("Well Tracked fires at 4 covered weeks", acc("logcover4", coverWeeks(4)).met);
+  eq("...and does not at 3", acc("logcover4", coverWeeks(3)).met, false);
+  truthy("In the Habit (major) fires at 12 covered weeks", acc("logcover12", coverWeeks(12)).met);
+  eq("...and does not at 11", acc("logcover12", coverWeeks(11)).met, false);
+  truthy("In the Habit is a major badge (it earns the badge-get moment)", acc("logcover12", coverWeeks(12)).tier === "major");
+
+  // 20 DIFFERENT foods (one entry each) — a repeated food must not count twice.
+  const manyFoods = (n, repeat) => { const es = []; for (let i = 0; i < n; i++) es.push(ie(iso(1), "Food " + i, 10)); if (repeat) for (let i = 0; i < 5; i++) es.push(ie(iso(2), "Food 0", 10)); return base({ intakelog: es }); };
+  eq("20 distinct foods counts 20", e.E.achievementContext(manyFoods(20)).intakeFoods, 20);
+  truthy("Varied Plate fires at 20 distinct foods", acc("foodvariety", manyFoods(20)).met);
+  eq("...and does not at 19", acc("foodvariety", manyFoods(19)).met, false);
+  eq("repeating ONE food does not add variety", e.E.achievementContext(manyFoods(20, true)).intakeFoods, 20);
+
+  // ---- (b) HARD EXCLUSIONS: nothing here can be earned by eating less ----
+  const FORBIDDEN = /calorie|kcal|cheat|undereat|starv|fasted|skip(ped)? meal|guilt|shame|punish|injur|illness|\bsick\b|pain|burn|\bno days off\b|torch/i;
+  eq("no badge name or blurb shames food, calories, rest, burning or pain",
+     A.filter((a) => FORBIDDEN.test(a.name + " " + a.desc)).map((a) => a.id), []);
+
+  // a LONE low-calorie day (one tiny entry) unlocks no coverage/variety badge...
+  const tinyDay = base({ intakelog: [ie(iso(1), "Lettuce", 1)] });
+  eq("a single low-calorie day unlocks no coverage or variety badge",
+     ["logcover4", "logcover12", "foodvariety"].filter((id) => acc(id, tinyDay).met), []);
+  eq("...and earns no food XP", e.E.intakeXp(tinyDay), 0);
+  // ...and a week of low-calorie days is worth EXACTLY what a week of big days is:
+  // the badge and the XP count DAYS, never amounts, so a low-calorie week is not
+  // celebrated, and eating less buys nothing.
+  const lowWeek = base({ intakelog: [0, 1, 2, 3, 4].map((k) => ({ id: "lo" + k, date: inWeek(k), name: "Lettuce", grams: 5, macros: { kcal: 8, protein: 0.5 } })) });
+  const bigWeek = base({ intakelog: [0, 1, 2, 3, 4].map((k) => ({ id: "hi" + k, date: inWeek(k), name: "Steak", grams: 500, macros: { kcal: 1400, protein: 120 } })) });
+  eq("a low-calorie week and a big week cover the same number of weeks",
+     e.E.achievementContext(lowWeek).intakeCoverWeeks, e.E.achievementContext(bigWeek).intakeCoverWeeks);
+  eq("...and earn the same food XP (amounts are never read)", e.E.intakeXp(lowWeek), e.E.intakeXp(bigWeek));
+  // a "burned calories" figure (logged cardio) with NO food earns nothing
+  const burnt = base({ intakelog: [], workouts: [wk(iso(1), [{ d: 12000, t: 3600 }], 1307, "Running", "distance_time")] });
+  eq("logged cardio (calories 'burned') earns no food XP", e.E.intakeXp(burnt), 0);
+  eq("...and unlocks no nutrition badge",
+     A.filter((a) => /^(firstlog|logcover4|logcover12|foodvariety)$/.test(a.id) && a.test(e.E.achievementContext(burnt))).map((a) => a.id), []);
+
+  // ---- (c) XP is not farmable by volume ----
+  // A workout is carried so xp() is a real number here (xp() reads streaks()
+  // .bestWeeks, which is undefined on a zero-workout state — a pre-existing quirk,
+  // untouched by this batch).
+  const W = wk(iso(30), [{ w: 100, r: 8 }]);
+  const farm = base({ workouts: [W], intakelog: Array.from({ length: 50 }, (_, i) => ie(iso(1), "Food " + i, 5)) });
+  const week = base({ workouts: [W], intakelog: [0, 1, 2, 3, 4].map((k) => ie(inWeek(k), "Oats", 40)) });
+  const dXp = (st) => e.E.xp(st) - e.E.xp(base({ workouts: [W] }));
+  eq("50 entries in ONE day is one day: no food XP at all", e.E.intakeXp(farm), 0);
+  eq("five logged days in one week pay exactly once", e.E.intakeXp(week), e.E.XP.INTAKE_WEEK);
+  truthy("50 entries in a day does NOT out-earn a week of coverage",
+     e.E.intakeXp(farm) < e.E.intakeXp(week));
+  eq("the single XP counter agrees: the farmed day adds nothing", dXp(farm), 0);
+  eq("...and the covered week adds exactly one payment", dXp(week), e.E.XP.INTAKE_WEEK);
+  truthy("the logging term stays small next to improvement (a PR)",
+     e.E.XP.INTAKE_WEEK < e.E.XP.PR / 5);
+
+  // ---- (d) the Vitality opt-out (decision #3) ----
+  const blog = [{ date: iso(40), weightKg: 84, bodyFatPct: 20 }, { date: iso(2), weightKg: 80, bodyFatPct: 15 }];
+  const ifood = [1, 2, 3, 4, 5].map((i) => ie(iso(i), "Chicken breast", 130));
+  const vit = (over) => e.E.attributes(base(over), 28).VIT;
+  const on = vit({ bodylog: blog, intakelog: ifood });
+  const offState = { profile: { ...base().profile, nutritionVitality: false }, bodylog: blog, intakelog: ifood };
+  const off = vit(offState);
+  const none = vit({ bodylog: blog, intakelog: [] });
+  truthy("with nutrition in use, the Vitality basis names it", /nutrition log/.test(on.detail.basis));
+  eq("the opt-out removes the nutrition part from the basis", /nutrition log/.test(off.detail.basis), false);
+  eq("the opt-out removes nutrition from Vitality (== no intake at all)", off.score, none.score);
+  truthy("with nutrition in use the score differs from the opted-out score", on.score !== off.score);
+  eq("the engine exposes the opt-out directly (null nutrition part)",
+     e.E.nutritionVitality(offState, null), null);
+  // NOT "actually being used" yet -> no nutrition part, whatever the toggle
+  eq("a thin log (< 5 logged days) does not count as 'in use'",
+     e.E.nutritionVitality(base({ intakelog: ifood.slice(0, 4) }), null), null);
+
+  // ---- (e) missing days must NOT read as zero ----
+  const spread = [1, 6, 12, 20, 27].map((i) => ie(iso(i), "Chicken breast", 130)); // same 5 days, gaps between
+  const plusBlank = ifood.concat([ie(iso(9), "Water", null)]);                    // a 6th logged day with NO protein
+  const nv = (st) => e.E.nutritionVitality(st, null);
+  eq("gaps between logged days do not lower the score (a missing day is not a zero)",
+     nv(base({ intakelog: spread })).v, nv(base({ intakelog: ifood })).v);
+  eq("a logged day carrying no protein value is excluded, not counted as zero",
+     nv(base({ intakelog: plusBlank })).v, nv(base({ intakelog: ifood })).v);
+  truthy("reaching the reference reads 100 (and cannot exceed it)",
+     nv(base({ intakelog: ifood })).v <= 100 && nv(base({ intakelog: ifood })).v >= 99);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
