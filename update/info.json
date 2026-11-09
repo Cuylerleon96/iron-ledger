@@ -1,11 +1,11 @@
 {
-  "versionCode": 63,
-  "versionName": "1.0.62",
+  "versionCode": 64,
+  "versionName": "1.0.63",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "c4857e922da1a6e1147c58ebd942a75281bd9ab48a175bb9269db37b0dc7f0e2",
-  "sizeBytes": 3863671,
+  "sha256": "f45c85fc737855b0a88f6e7b80bf7f51c06321cac62bddb8a5af49578623b13c",
+  "sizeBytes": 3863683,
   "published": "2026-11-08",
   "notes": [
-    "The per-exercise effort weight is worked out in the maths now, not set by hand: the exercise screen is only for learning the movement."
+    "Food names now use their modern global names (daikon, wood ear, Asian)."
   ]
 }
