@@ -1,12 +1,11 @@
 {
-  "versionCode": 87,
-  "versionName": "1.2.9",
+  "versionCode": 88,
+  "versionName": "1.2.10",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "395108da4986bc74af2dee375a88306c4fc3bead23694813b0d099df08b981a3",
-  "sizeBytes": 3908736,
+  "sha256": "61d76079857998537e983440d2657a575b3a8285ff5ebf9dc9936775d55e14ff",
+  "sizeBytes": 3909747,
   "published": "2026-11-09",
   "notes": [
-    "Session XP now scales with the work you actually log - no cap on how many exercises or sets a real session has.",
-    "Timed sets now have a hold timer: tap Start when the hold begins and tap again to stop - the seconds you held are written straight into the set."
+    "XP now only ever goes up - extra sets, exercises and sessions add to your total, and going past a muscle group's weekly volume is worth less per set instead of taking XP away."
   ]
 }

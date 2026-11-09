@@ -1971,7 +1971,8 @@ const Engine = (() => {
     IMPROVEMENT: 1.25,     // a session containing a PR
     CONSISTENCY_MIN: 1.10, // the week's sessions met the weekly target
     CONSISTENCY_MAX: 1.25, // ...and then some
-    OVER_MRV: 0.5,         // a session wholly past a group's MRV earns about half
+    SET: 2,                // full XP for a valid set inside its group's weekly MRV
+    OVER_MRV: 0.5,         // ...and this fraction of it once the group is past MRV
     CAP: 2.0,              // the composed multiplier cannot exceed this
     INTAKE_WEEK: 15,       // food logged on 5+ days in a week: paid ONCE per week,
                            // never per entry — see intakeXp(). Small next to a PR
@@ -1991,8 +1992,10 @@ const Engine = (() => {
        The anti-farm guard is NOT a row count. It is (a) the VALIDITY filter —
        an entry is only counted at all once it carries at least one real set
        (see validSet/entryStats), so a row with no real reps/time/load earns
-       nothing; and (b) the VOLUME factor — work past a muscle group's MRV is
-       halved by XP.OVER_MRV, so overreaching volume is priced, not rewarded. */
+       nothing; and (b) the VOLUME TAPER — a set past its own group's weekly MRV
+       pays XP.OVER_MRV of the full per-set rate (see sessionSetTaper). It prices
+       overreaching volume PER SET and never taxes the whole session, because a
+       whole-session multiplier let ADDING work LOWER a session's XP. */
     /* --- effort XP: a HARD set pays extra, and that extra is CAPPED. ---
        A drop or failure set is harder than a straight one, so — alongside the
        muscle-group effort path — it earns a little extra XP for the extra
@@ -2060,54 +2063,94 @@ const Engine = (() => {
     return m;
   }
 
-  /* Share-weighted sets per muscle group for one Monday-start week, in the SAME
+  /* Share-weighted sets per muscle group for one Monday-start week — the SAME
      units muscleGroups compares to the MEV/MAV/MRV landmarks: the primary group
-     takes full credit, secondary groups half. No second definition of volume. */
-  function weekGroupSets(state, weekKey) {
-    const m = {};
+     takes full credit, secondary groups half. No second definition of volume.
+     ALSO returns, per session, the group volume already logged EARLIER in that
+     week (in the order the app appends workouts): the position a set is priced
+     from. Pricing a set by volume-before-it is what makes the taper MONOTONIC —
+     adding a set or a session only ever APPENDS, so it can never move a set that
+     is already logged. */
+  function weekVolume(state, weekKey) {
+    const sets = {};
+    const before = new Map();
     for (const w of state.workouts || []) {
       if (weekKeyOf(w.date) !== weekKey) continue;
+      const snap = {};
+      for (const g of GROUP_ORDER) snap[g] = sets[g] || 0;
+      before.set(w, snap);
       for (const en of w.entries || []) {
         const st = entryStats(en);
         if (!st.sets) continue;
         entryGroups(state, en).forEach((g, i) => {
           if (!GROUP_ORDER.includes(g)) return;
-          m[g] = (m[g] || 0) + st.sets * (i === 0 ? 1 : 0.5);
+          sets[g] = (sets[g] || 0) + st.sets * (i === 0 ? 1 : 0.5);
         });
       }
     }
-    return m;
+    return { sets, before };
   }
 
-  /* How much of a session sits past each trained group's own MRV, and how much
-     it contributes in total (same share-weighted units). A session entirely past
-     MRV reads over === total. */
-  function overMrvSplit(state, w, weekSets) {
+  /* How a session's sets are priced. A set is judged by its PRIMARY group's own
+     weekly position: the first LANDMARKS[g].mrv share-weighted sets of the week
+     pay the FULL per-set rate, later ones pay XP.OVER_MRV of it. It counts SETS
+     — the unit the per-set term pays — so it does not depend on how the same
+     work is split across entries. A set whose groups are all outside
+     GROUP_ORDER (nothing to compare against) pays the full rate. */
+  function sessionSetTaper(state, w, wv) {
+    const start = (wv && wv.before.get(w)) || {};
+    const cum = {};
+    for (const g of GROUP_ORDER) cum[g] = start[g] || 0;
     let over = 0, total = 0;
     for (const en of w.entries || []) {
       const st = entryStats(en);
       if (!st.sets) continue;
-      entryGroups(state, en).forEach((g, i) => {
-        if (!GROUP_ORDER.includes(g)) return;
-        const mine = st.sets * (i === 0 ? 1 : 0.5);
-        total += mine;
-        const beyond = Math.max(0, (weekSets[g] || 0) - LANDMARKS[g].mrv);
-        over += Math.min(mine, beyond);
-      });
+      const gs = entryGroups(state, en).filter((g) => GROUP_ORDER.includes(g));
+      const mode = en.mode || "weight_reps";
+      const bw = isBodyweight(en.name);
+      for (const s of en.sets || []) {
+        if (!validSet(s, mode, bw)) continue;
+        total++;
+        const primary = gs[0];
+        if (primary && cum[primary] >= LANDMARKS[primary].mrv) over++;
+        /* advance every group this set trains, so the NEXT set's position is the
+           same share-weighted volume muscleGroups measures it against */
+        for (let i = 0; i < gs.length; i++) cum[gs[i]] += i === 0 ? 1 : 0.5;
+      }
     }
     return { over, total };
   }
 
-  /* The compose step, alone, so "the multiplier is capped" is provable directly. */
-  const composeMult = (improvement, consistency, volume) =>
-    Math.min(XP.CAP, improvement * consistency * volume);
+  /* Does this session train any group whose WHOLE week is past that group's MRV?
+     The Big Session badge uses this to refuse a session sitting inside an
+     overreaching week. It is deliberately the WEEK's total, not the session's own
+     position: pricing (sessionSetTaper) is position-based so it stays monotonic,
+     but the badge asks about the week the session lives in. */
+  function weekOverMrv(state, w, wv) {
+    const sets = (wv && wv.sets) || {};
+    for (const en of w.entries || []) {
+      if (!entryStats(en).sets) continue;
+      for (const g of entryGroups(state, en)) {
+        if (!GROUP_ORDER.includes(g)) continue;
+        if ((sets[g] || 0) > LANDMARKS[g].mrv) return true;
+      }
+    }
+    return false;
+  }
+
+  /* The compose step, alone, so "the multiplier is capped" is provable directly.
+     Volume is NOT a term here any more: it is priced PER SET inside the base (see
+     sessionSetTaper), because a whole-session multiplier let adding work LOWER a
+     session's XP. */
+  const composeMult = (improvement, consistency) =>
+    Math.min(XP.CAP, improvement * consistency);
 
   /* One session's earned XP and the named factors that produced it. */
   function sessionXp(state, w, opts) {
     const prs = (opts && opts.prs) || prsByDate(state);
     const wks = (opts && opts.weekSets) || {};
     const wk = weekKeyOf(w.date);
-    const weekSets = wks[wk] || (wks[wk] = weekGroupSets(state, wk));
+    const wv = wks[wk] || (wks[wk] = weekVolume(state, wk));
 
     let tonnage = 0, sets = 0, countedEntries = 0;
     for (const en of w.entries || []) {
@@ -2145,11 +2188,26 @@ const Engine = (() => {
        has. A genuinely big session must pay what it earned — the old
        XP.ENTRY_CAP silently stopped paying past 8 entries. The anti-farm guard
        is not a row count: an entry with no valid set is not counted at all (the
-       validity filter), and volume past a group's MRV is priced by the volume
-       factor below. */
-    const base = XP.SESSION + Math.round(tonnage / 1000) + sets * 2
+       validity filter), and volume past a group's MRV is priced per set by the
+       volume taper below. */
+    const setXpFull = sets * XP.SET;
+    const base = XP.SESSION + Math.round(tonnage / 1000) + setXpFull
                + countedEntries * 5 + nPr * XP.PR
                + effortXp;
+
+    /* The VOLUME TAPER, applied PER SET (sessionSetTaper). Every valid set pays
+       XP.SET inside its group's own weekly MRV; past it, XP.SET * XP.OVER_MRV.
+       This is the WHOLE volume path — there is deliberately NO whole-session
+       volume multiplier any more, because scaling the base by a factor over the
+       week's split let ADDING work LOWER a session. A fixed per-set price can
+       only add: each set is priced once, so an appended set contributes its own
+       price and never reprices what is already logged. `base` keeps the full
+       per-set term so the taper shows up as an explicit, non-negative reduction
+       (overCut) rather than hiding in a multiplier. */
+    const taper = sessionSetTaper(state, w, wv);
+    const overCut = taper.over * XP.SET * (1 - XP.OVER_MRV);
+    const volume = taper.total > 0
+      ? (taper.total - taper.over * (1 - XP.OVER_MRV)) / taper.total : 1;
 
     const improvement = nPr > 0 ? XP.IMPROVEMENT : 1;
     const target = num(state.profile.weeklyTarget) || 4;
@@ -2158,15 +2216,13 @@ const Engine = (() => {
     const consistency = ratio >= 1
       ? Math.min(XP.CONSISTENCY_MAX, XP.CONSISTENCY_MIN + (ratio - 1) * 0.15)
       : 1;
-    const split = overMrvSplit(state, w, weekSets);
-    const volume = split.total > 0
-      ? Math.max(XP.OVER_MRV, 1 - (1 - XP.OVER_MRV) * (split.over / split.total)) : 1;
 
-    const raw = composeMult(improvement, consistency, volume);
+    const raw = composeMult(improvement, consistency);
     const r3 = (v) => Math.round(v * 1000) / 1000;
     return {
-      xp: Math.round(base * raw), base, mult: r3(raw), capped: improvement * consistency * volume > XP.CAP,
-      prs: nPr, overMrv: split.over > 0,
+      xp: Math.round((base - overCut) * raw), base, mult: r3(raw),
+      capped: improvement * consistency > XP.CAP,
+      prs: nPr, overMrv: taper.over > 0, overSets: taper.over, overCut,
       /* The effort part of the base, and how many hard sets actually paid for it
          (capped). The UI reads these to show the extra explicitly. */
       effortXp, hardSets: hardPaid,
@@ -2343,8 +2399,8 @@ const Engine = (() => {
       }
       if (groups.size < BIG_SESSION_GROUPS) continue;
       const wk = weekKeyOf(w.date);
-      const weekSets = weekCache[wk] || (weekCache[wk] = weekGroupSets(state, wk));
-      if (overMrvSplit(state, w, weekSets).over > 0) continue;
+      const wv = weekCache[wk] || (weekCache[wk] = weekVolume(state, wk));
+      if (weekOverMrv(state, w, wv)) continue;
       best = eff;
     }
     return Math.round(best * 10) / 10;

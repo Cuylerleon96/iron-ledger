@@ -1191,15 +1191,15 @@
     const box = el("div", { class: "xp-break" });
     box.innerHTML =
       `<h3>+${fmt(sx.xp)} XP <span class="muted">(${esc(xpMultText(sx.mult))})</span></h3>
-       <p class="muted small">${esc(w.date)} — base XP for the work logged, then one ${term("xp-multiplier", "XP multiplier")} on top.</p>
+       <p class="muted small">${esc(w.date)} — base XP for the work logged (sets past a muscle group's weekly max pay less), then one ${term("xp-multiplier", "XP multiplier")} on top.</p>
        <div class="xp-rows">
          ${row("Base XP (tonnage, sets, exercises, PRs)", fmt(sx.base - sx.effortXp))}
          ${sx.hardSets ? row(`${term("hard-sets", "Hard sets")} — extra effort for ${sx.hardSets} set${sx.hardSets === 1 ? "" : "s"}`, "+" + fmt(sx.effortXp) + " XP") : ""}
+         ${row("Volume — sets past the weekly max pay less", xpMultText(f.volume) + (sx.overSets ? ` (-${fmt(sx.overCut)} XP)` : ""))}
          ${row("Improvement — a PR this session", xpMultText(f.improvement))}
          ${row("Consistency — weekly target met", xpMultText(f.consistency))}
-         ${row("Volume — over-MRV reduction", xpMultText(f.volume))}
        </div>
-       <p class="muted small">${esc(xpMultText(f.improvement))} × ${esc(xpMultText(f.consistency))} × ${esc(xpMultText(f.volume))} = ${esc(xpMultText(sx.mult))}${sx.capped ? " (capped)" : ""} · capped at ×${Engine.XP.CAP}</p>
+       <p class="muted small">${esc(xpMultText(f.improvement))} × ${esc(xpMultText(f.consistency))} = ${esc(xpMultText(sx.mult))}${sx.capped ? " (capped)" : ""} · capped at ×${Engine.XP.CAP}</p>
        <div class="row end"><button class="btn ghost" id="xb-ok">Got it</button></div>`;
     openModal(box, "narrow");
     $("#xb-ok", box).addEventListener("click", closeModal);

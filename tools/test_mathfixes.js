@@ -1027,12 +1027,21 @@ console.log("\n=== 34. XP rebalance: improvement leads, junk volume pays less, O
   console.log(`     chest, same 5-set session: week ${5} sets -> ${su.xp} XP (vol ${su.factors.volume}, MRV ${e.E.LANDMARKS.Chest.mrv}) | week ${weekSets} sets -> ${so.xp} XP (vol ${so.factors.volume})`);
   truthy("the session's week is past the group's own MRV", weekSets > e.E.LANDMARKS.Chest.mrv);
   eq("the session below MRV pays full rate", su.factors.volume, 1);
-  eq("a session wholly past MRV earns about half (the negative side of the scaler)", so.factors.volume, 0.5);
+  /* RE-EXPRESSED for the per-set volume taper: overreaching used to halve the
+     WHOLE session through the multiplier (so ADDING work could lower XP); it is
+     now a fixed per-set price, so a session wholly past MRV still pays half rate
+     on every set, but the cut is an explicit, non-negative reduction. */
+  eq("a session wholly past MRV pays HALF RATE on every set (the volume taper)", so.factors.volume, 0.5);
   truthy("the same session earns less once it is past MRV", so.xp < su.xp);
-  eq("...and its base is unchanged (only the scaler moved)", so.base, su.base);
+  eq("...every one of its sets is past the group's MRV", so.overSets, 5);
+  eq("...the cut is exactly the half-rate on those sets, never a whole-session tax", so.overCut, 5);
+  eq("...so the XP is the within-MRV session minus the cut", so.xp, su.xp - so.overCut);
+  eq("...and its base (the FULL-rate work) is unchanged — the taper is a cut, not a base change", so.base, su.base);
+  eq("...a session inside MRV is never cut at all", su.overSets, 0);
+  eq("...and carries no volume term in its multiplier", so.mult, 1);
 
   // ---- The composed multiplier is capped.
-  eq("the composed multiplier is capped", e.E.composeMult(3, 3, 3), e.E.XP.CAP);
+  eq("the composed multiplier is capped", e.E.composeMult(3, 3), e.E.XP.CAP);
   eq("...at x2.0", e.E.XP.CAP, 2);
   truthy("no real session can exceed the cap",
     [prDay, over].every((st) => st.workouts.every((w) => e.E.sessionXp(st, w).mult <= e.E.XP.CAP)));
@@ -1832,7 +1841,7 @@ console.log("\n=== 47. the per-session XP entry term is LINEAR: what you log is 
      genuinely big session must pay what it earned, so N counted entries pay 5N,
      LINEAR and uncapped. The anti-farm guard is NOT a row count — it is (a) the
      validity filter (an entry counts only once it carries a real set) and (b) the
-     volume factor (work past a muscle group's MRV is halved). Isolate the entry
+     volume taper (a set past its group's weekly MRV pays half the per-set rate). Isolate the entry
      term by logging entries that carry NO sets: they contribute nothing to tonnage
      or the per-set term, so the ONLY thing that can move `base` is the entry count
      — and with the cap gone a session of empty rows earns NOTHING. */
@@ -1869,8 +1878,9 @@ console.log("\n=== 47. the per-session XP entry term is LINEAR: what you log is 
 
   /* A WEEK of sensible sessions must BEAT a farmer who stuffs one session with 40
      one-set entries. Nothing is turned down any more; the anti-farm guard that
-     still bites is the VOLUME factor (40 one-set rows on one group is far past its
-     MRV, so the whole session is halved), never a row count. */
+     still bites is the VOLUME TAPER (40 one-set rows on one group is far past its
+     MRV, so every set beyond the group's MRV pays half rate — a per-set price,
+     never a whole-session tax or a row count). */
   const days = ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"];   // Mon-Thu, one week
   const week = base({ workouts: days.map((d, i) => ({ id: "k" + i, date: d, note: "",
     entries: [1,2,3,4,5].map(entry4) })) });
@@ -1880,9 +1890,12 @@ console.log("\n=== 47. the per-session XP entry term is LINEAR: what you log is 
   const farmSx = e.E.sessionXp(farm, farm.workouts[0]);
   console.log(`     consistent week (4 sessions, 80 sets) ${wkXp} XP vs 40-set farmer (one session) ${fXp} XP`);
   truthy("a consistent week OUT-EARNS the 40-set farmer", wkXp > fXp);
-  truthy("the farmer's VOLUME is priced, not his row count", farmSx.mult < 1 && farmSx.xp < farmSx.base);
-  eq("the farmer is discounted by the over-MRV volume factor, not by a cap",
-    farmSx.factors.volume, 0.75);
+  /* RE-EXPRESSED for the per-set taper: the over-MRV price is no longer a
+     whole-session multiplier (farmSx.mult stays 1), it is paid per set. */
+  truthy("the farmer's VOLUME is priced, not his row count", farmSx.factors.volume < 1 && farmSx.xp < farmSx.base);
+  eq("the farmer's over-MRV sets pay the half rate, never a cap",
+    farmSx.factors.volume, 0.775);
+  eq("...and exactly the sets past Chest's MRV pay it", farmSx.overSets, 40 - e.E.LANDMARKS.Chest.mrv);
 }
 
 console.log("\n=== 48. the Save button's CLICK path really saves (the event-argument shadow) ===");
@@ -2470,5 +2483,94 @@ console.log("\n=== 53. XP scales with the work logged — and only ever GROWS as
   truthy("...and the total only ever climbs across a week", prevTotal > e.E.xp(oneDay));
 }
 
+console.log("\n=== 54. PROPERTY: NOTHING ever reduces XP — a set, an entry or a session can only ADD ===");
+{
+  /* the owner's standing rule (v1.2.10): "Nothing should ever reduce xp."
+     The old defect: `overMrvSplit` summed min(mine, beyond) PER ENTRY and the
+     volume factor multiplied the WHOLE session, so (a) splitting the same weekly
+     volume across more entries raised the penalty (measured 22 one-set entries ->
+     226 XP, 23 -> 176) and (b) any over-MRV work taxed everything. This drives
+     the app's three append axes ONE STEP AT A TIME across a matrix of realistic
+     sessions that cross every group's MRV, and asserts XP is non-decreasing at
+     EVERY step — for the session being grown AND for the grand total. */
+  const e = env();
+  const PROF = { name: "C", sex: "M", heightCm: 178, weightKg: 80, bodyFatPct: 15, weeklyTarget: 5, units: "kg" };
+  /* `g` is stamped on each entry, so attribution is deterministic and does not
+     depend on the library's own group list. */
+  const LIFTS = [
+    { id: 73, name: "Bench Press", g: ["Chest"], mode: "weight_reps", set: { w: 100, r: 8 } },
+    { id: 22, name: "Barbell Row", g: ["Back"], mode: "weight_reps", set: { w: 80, r: 10 } },
+    { id: 11, name: "Squat", g: ["Legs"], mode: "weight_reps", set: { w: 120, r: 6 } },
+    { id: 31, name: "Plank", g: ["Core"], mode: "time", set: { t: 60 } },
+  ];
+  const lift = (i, n) => ({ id: LIFTS[i].id, name: LIFTS[i].name, mode: LIFTS[i].mode, g: LIFTS[i].g,
+    sets: Array.from({ length: n }, () => ({ ...LIFTS[i].set })) });
+  const DAY = (i) => { const d = new Date(2026, 5, 1 + i); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const sess = (id, dayI, entries) => ({ id, date: DAY(dayI), note: "", entries });
+  /* Four realistic PRIOR-week volumes, from empty to past two groups' MRV. */
+  const PRIORS = [
+    { name: "empty week", sets: [] },
+    { name: "20 chest sets (inside MRV 22)", sets: [[0, 20]] },
+    { name: "30 chest sets (past MRV 22)", sets: [[0, 30]] },
+    { name: "chest 30 + back 26 (both past MRV)", sets: [[0, 30], [1, 26]] },
+  ];
+  let steps = 0, fails = 0;
+  const nonDec = (label, a, b) => { steps++; if (!(b >= a)) { fails++; console.log(`  FAIL ${label}: ${a} -> ${b}`); } };
+  const xpOf = (st, w) => e.E.sessionXp(st, w).xp;
+
+  let best = { within: null, split1: null, split2: null, over: null, week: null };
+  for (const prior of PRIORS) {
+    const priorW = prior.sets.map(([li, n], k) => sess("p" + k, k, [lift(li, n)]));
+
+    // AXIS 1 — grow ONE entry one SET at a time
+    let ps = null, pt = null;
+    for (let n = 1; n <= 30; n++) {
+      const w = sess("t", 5, [lift(0, n)]);
+      const st = base({ profile: PROF, workouts: [...priorW, w] });
+      const s = xpOf(st, w), t = e.E.xp(st);
+      if (ps !== null) { nonDec(`${prior.name} / +1 set (n=${n}) session`, ps, s); nonDec(`${prior.name} / +1 set (n=${n}) total`, pt, t); }
+      ps = s; pt = t;
+      if (prior.name === "empty week" && n === 20) best.within = s;   // 20 chest sets, inside MRV
+      if (prior.name === "30 chest sets (past MRV 22)" && n === 5) best.over = { xp: s, over: e.E.sessionXp(st, w).overSets };
+    }
+
+    // AXIS 2 — grow ONE session one ENTRY at a time (the SPLIT axis that broke)
+    ps = pt = null;
+    for (let n = 1; n <= 12; n++) {
+      const w = sess("t", 5, Array.from({ length: n }, () => lift(0, 1)));
+      const st = base({ profile: PROF, workouts: [...priorW, w] });
+      const s = xpOf(st, w), t = e.E.xp(st);
+      if (ps !== null) { nonDec(`${prior.name} / +1 entry (n=${n}) session`, ps, s); nonDec(`${prior.name} / +1 entry (n=${n}) total`, pt, t); }
+      ps = s; pt = t;
+      if (prior.name === "empty week" && n === 1) best.split1 = s;
+      if (prior.name === "empty week" && n === 4) best.split2 = s;
+    }
+
+    // AXIS 3 — append whole SESSIONS; the total AND every existing session's XP grow
+    pt = null;
+    const acc = [...priorW];
+    let lastXs = acc.map((x) => xpOf(base({ profile: PROF, workouts: acc }), x));
+    for (let i = 0; i < 7; i++) {
+      acc.push(sess("s" + i, 2 + i, [lift(0, 6), lift(1, 6), lift(2, 6)]));
+      const st = base({ profile: PROF, workouts: acc });
+      const t = e.E.xp(st);
+      if (pt !== null) nonDec(`${prior.name} / +1 session (i=${i}) total`, pt, t);
+      for (let j = 0; j < acc.length - 1; j++) nonDec(`${prior.name} / +1 session (i=${i}) session#${j}`, lastXs[j], xpOf(st, acc[j]));
+      lastXs = acc.map((x) => xpOf(st, x));
+      pt = t;
+    }
+
+    // a NORMAL WEEK benchmark (4 sessions x 3 entries x 6 sets, within MRV)
+    const normalWeek = base({ profile: PROF, workouts: [0, 1, 3, 4].map((d, k) =>
+      sess("n" + k, d, [lift(0, 6), lift(1, 6), lift(2, 6)])) });
+    if (prior.name === "empty week") best.week = e.E.xp(normalWeek);
+  }
+
+  console.log(`     matrix: ${PRIORS.length} prior-week volumes x {30 sets, 12 entries, 7 sessions} = ${steps} non-decreasing steps checked`);
+  console.log(`     within-MRV 20-set session ${best.within} XP · same work as 1 entry ${best.split1} XP -> 4 entries ${best.split2} XP`);
+  console.log(`     a 5-set session in an over-MRV week: ${best.over.xp} XP with ${best.over.over} of its 5 sets tapered · a normal week ${best.week} XP`);
+  eq("XP is NON-DECREASING at every step — a set, an entry or a session can only ADD", fails, 0);
+  truthy("the property test really exercised the matrix", steps > 400);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
