@@ -1186,8 +1186,11 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
     /scaleX\(-1\)/.test(hero));
   truthy("transient rows chain on animationend (never interrupt a cycle)",
     /addEventListener\("animationend"/.test(hero));
-  truthy("a translateX transition is derived from the walk cycle (no skate)",
-    /STRIDE_CSS/.test(hero) && /WALK_CYCLE_MS/.test(hero) && /transform " \+ dur \+ "ms linear/.test(hero));
+  /* RE-EXPRESSED (walk motion moved from `transform` to the individual `translate`
+     property so the mirror can never be interpolated: see js/hero.js). Intent
+     unchanged: the walk's own transition duration is derived from the cycle. */
+  truthy("a `translate` transition is derived from the walk cycle (no skate)",
+    /STRIDE_CSS/.test(hero) && /WALK_CYCLE_MS/.test(hero) && /translate " \+ dur \+ "ms linear/.test(hero));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

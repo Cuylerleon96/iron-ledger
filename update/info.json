@@ -1,11 +1,11 @@
 {
-  "versionCode": 93,
-  "versionName": "1.2.15",
+  "versionCode": 94,
+  "versionName": "1.2.16",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "77f7c517e8d28c82a3ee66f6c0e8653c7bcd8f9c3a0b84f7e6c4ce042e15fc9c",
-  "sizeBytes": 3924183,
+  "sha256": "af87e0ab0cbe4d6b945b894fef93615affca4a704f92e08951a1f971d4107909",
+  "sizeBytes": 3925907,
   "published": "2026-11-09",
   "notes": [
-    "The little creature in the header now walks about and works out."
+    "The creature in the header no longer flips about or jumps around while it walks."
   ]
 }

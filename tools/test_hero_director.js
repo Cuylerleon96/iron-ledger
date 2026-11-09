@@ -179,5 +179,61 @@ truthy("that one flip lives inside startWalk (a walk only begins off a neutral f
 truthy("only startWalk assigns the direction; resetTransform only clears it to neutral",
   src.split("facing =").length - 1 === 3);
 
+/* (6) CONTINUITY — the mirror can never be interpolated and the walk can never
+   teleport. Two regression tests, one per defect:
+     (a) NO TRANSITIONED PROPERTY can carry the facing flip: the only property the
+         director ever transitions is `translate`; the flip rides `transform`,
+         which never appears in a transition, so it can only SNAP (and the flip is
+         applied at a walk's start, before the transition is armed);
+     (b) a PURE predicate over a sampled trace: every consecutive x change is
+         bounded by the walk's own speed — so a recorded teleport FAILS it. */
+console.log("=== (6) motion separated from the mirror; no position discontinuity ===");
+H._reset();
+H._exec({ a: "walkTo", side: -1 });                       // arm a walk (left)
+const trAfterWalk = hero.style.transition || "";
+truthy("a walk transitions `translate` only (never `transform`/`scale`)",
+  /^translate \d+ms linear$/.test(trAfterWalk));
+truthy("the walk's transitioned property does NOT contain the flip", !/scale|transform/.test(trAfterWalk));
+eq("the mirror is applied via the NON-transitioned `transform` property", hero.style.transform, "scaleX(-1)");
+eq("the motion is applied via the `translate` property", hero.style.translate, `${minX}px`);
+H._exec({ a: "walkTo", side: 1 });                        // walk right -> mirror cleared
+truthy("walking right snaps the mirror off in `transform` (not via a transition)", hero.style.transform === "");
+truthy("its transition is still `translate` only", /^translate \d+ms linear$/.test(hero.style.transition || ""));
+/* every transition literal the source ever writes must be "" or "none" or a
+   `translate …ms linear` — a flip can therefore never be interpolated. */
+const trLits = (src.match(/style\.transition\s*=\s*"([^"]*)"/g) || [])
+  .map((m) => m.replace(/.*=\s*"/, "").replace(/"$/, ""));
+truthy("the source writes at least one transition literal", trLits.length > 0);
+truthy("NO transition literal ever names `transform` or `scale` (only `translate`)",
+  trLits.every((t) => !/transform|scale/.test(t)) && trLits.some((t) => /^translate/.test(t)));
+const seatIdx = src.indexOf('h.style.transition = "none"');
+truthy("the start pose is seated with the transition OFF, then COMMITTED (a reflow) before the pump",
+  seatIdx !== -1 && /h\.style\.transition = "none";[\s\S]*?setMotion\(from\);[\s\S]*?void h\.offsetWidth;[\s\S]*?h\.style\.transition = "translate/.test(src));
+truthy("the transition is armed only AFTER the start pose is committed",
+  src.indexOf('h.style.transition = "none"') < src.indexOf('"translate " + dur + "ms linear"'));
+/* (b) the pure continuity predicate */
+eq("walkSpeedCss is the stride over one cycle", H.walkSpeedCss(), H.SEEDS.STRIDE_CSS / H.SEEDS.WALK_CYCLE_MS);
+const BOUND50 = H.maxStepFor(50);
+console.log(`      walk speed = ${(H.walkSpeedCss() * 1000).toFixed(3)} px/s ; bound over 50 ms = ${BOUND50.toFixed(3)} px`);
+truthy("the 50 ms step bound is a small fraction of the run (a bound-to-bound jump cannot pass)",
+  BOUND50 > 2 && BOUND50 < (maxX - minX) / 4);
+const smooth = [];                                        // a synthetic smooth walk across the run
+for (let i = 0; i <= 40; i++) smooth.push({ t: i * 50, x: 0 - H.walkSpeedCss() * i * 50 });
+eq("a smooth walk trace is CONTINUOUS", H.traceIsContinuous(smooth).ok, true);
+const jitter = smooth.map((s, i) => ({ t: s.t, x: s.x + (i % 2 ? 0.4 : -0.4) }));
+eq("a smooth walk with sub-pixel sampling jitter is still CONTINUOUS", H.traceIsContinuous(jitter).ok, true);
+/* the RECORDED BEFORE defect: the real 20 Hz samples across the teleport
+   (walk left to x≈-59.6, then a jump straight to the middle at 0) */
+const recordedTeleport = [
+  { t: 2750, x: -55.46 }, { t: 2800, x: -57.54 }, { t: 2850, x: -59.61 },
+  { t: 2900, x: 0 }, { t: 2950, x: 0 },
+];
+const verdict = H.traceIsContinuous(recordedTeleport);
+eq("the RECORDED teleport (bound -> middle) FAILS the continuity predicate", verdict.ok, false);
+truthy("and it fails at the jump, naming the offending step", verdict.i === 3 && verdict.dx > 50);
+/* the recorded BEFORE flip: the scale interpolating through zero mid-walk would,
+   under the old scheme, also show as a mid-walk sign change — the separation plus
+   the non-transitioned flip is what removes it (pinned structurally above). */
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

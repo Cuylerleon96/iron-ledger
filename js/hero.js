@@ -18,11 +18,17 @@
                   * a downside/transient row is never interrupted — it chains on
                     `animationend` and lands back on neutral;
                   * the walk is a LOOPING cycle that the director STOPS on a cycle
-                    boundary (a neutral frame), so direction only ever flips on a
-                    neutral boundary (`scaleX(-1)`);
+                    boundary (a neutral frame), so direction only ever flips at a
+                    walk's start/end — and the flip lives in `transform: scaleX(-1)`,
+                    a property the walk NEVER transitions (the horizontal motion
+                    rides `translate`, the only transitioned property), so the
+                    mirror SNAPS and is never interpolated through zero;
+                  * every position change is a WALK: the start pose is committed
+                    with the transition off, so a walk can never animate 0 -> 0 and
+                    teleport to the middle;
                   * small SETTLE BEATS (the static neutral `stand`) sit between
                     behaviours so nothing cuts mid-cycle;
-                  * the translateX duration is DERIVED from the walk cycle
+                  * the translate duration is DERIVED from the walk cycle
                     (distance / stride-per-cycle * cycle length), so the body does
                     not skate against the bob.
      PAUSE    — document.visibilitychange pauses (class `.paused` + timers cleared);
@@ -156,6 +162,7 @@
   let qi = 0;
   let pos = 0;                           // current translateX (CSS px)
   let facing = false;                    // scaleX(-1) mirror state (facing left)
+  let walking = false;                   // a walk transition is in flight
   let timers = [];
 
   function later(fn, ms) { const id = setTimeout(fn, ms); timers.push(id); return id; }
@@ -167,31 +174,52 @@
     if (name) h.classList.add(name);
   }
 
-  function setTransform(tx, flip) {
+  /* MOTION and MIRROR live in SEPARATE CSS properties on purpose, so the walk can
+     transition one of them alone:
+       * `translate`  — the horizontal position; the ONLY property ever transitioned;
+       * `transform`  — the facing flip (`scaleX(-1)`); NEVER transitioned.
+     The old code put BOTH in one `transform` with `transition: transform`, so the
+     browser interpolated scaleX from +1 to -1 THROUGH ZERO across the whole walk
+     (the sprite mirrored mid-step), and a `measureRun` reflow that left the
+     identity committed as the transition's start style made a walk back to centre
+     animate 0 -> 0 — the teleport to the middle. Separate properties make the
+     mirror un-interpolatable by construction, and the walk's start pose is
+     committed (see startWalk) so it always animates from its real `from`. */
+  function setMotion(tx) {
     if (!h) return;
-    h.style.transform = "translateX(" + tx + "px)" + (flip ? " scaleX(-1)" : "");
+    h.style.translate = tx + "px";
   }
 
+  function setFacing(flip) {
+    if (!h) return;
+    h.style.transform = flip ? "scaleX(-1)" : "";
+  }
+
+  /* Both at once — used by the clamp/reset paths, which never run mid-walk. */
+  function setTransform(tx, flip) { setMotion(tx); setFacing(flip); }
+
   /* The MEASURED run: the horizontal gap between .brand's right edge and .hud's
-     left edge, in the slot's own (untransformed) frame. Never hard-coded.
-     TRANSITION-SAFE: a running `transform` transition (translateX + the scaleX
-     flip interpolates THROUGH zero width) would hand back a garbage AABB, so the
-     transform AND its transition are suspended, the layout is flushed, measured,
-     and then restored. */
+     left edge, in the slot's OWN (untransformed) frame. Never hard-coded.
+     NON-DESTRUCTIVE: a transform does not affect LAYOUT, so the slot's neutral
+     left edge is simply its rect minus the current `translate` — no property is
+     ever suspended or restored. (The old suspend/restore left the identity as the
+     committed style, which made a walk's transition animate 0 -> 0 — the teleport
+     — and re-snapped the sprite to its target whenever it ran mid-walk, e.g. from
+     document.fonts.ready.) */
   function measureRun() {
     if (!h) return { minX: 0, maxX: 0 };
-    const prevT = h.style.transition, prevX = h.style.transform;
-    h.style.transition = "none";
-    h.style.transform = "none";
-    void h.offsetWidth;                               // flush layout at transform:none
     const e = h.getBoundingClientRect();
+    let tx = 0;                                           // in a real browser the rect already
+    if (typeof getComputedStyle === "function") {         // carries the transform, so subtract the
+      try { tx = parseFloat(getComputedStyle(h).translate) || 0; } catch (err) { tx = 0; }
+    }                                                     // animated `translate` to get the neutral edge
+    const left = e.left - tx;                             // the slot's untransformed left edge
+    const right = e.right - tx;                           // ... and right edge
     const b = document.querySelector(".brand");
     const d = document.querySelector(".hud");
     const br = b ? b.getBoundingClientRect() : e;
     const dr = d ? d.getBoundingClientRect() : e;
-    h.style.transform = prevX;
-    h.style.transition = prevT;
-    return { minX: br.right - e.left, maxX: dr.left - e.right, w: e.width };
+    return { minX: br.right - left, maxX: dr.left - right, w: e.width };
   }
 
   /* Never let the slot sit outside the run: re-measure and pull `pos` back in.
@@ -203,7 +231,11 @@
     const B = measureRun();
     if (!(B.w >= 1)) return B;
     const p = clampPatrol(B.minX, B.maxX, pos);
-    if (p !== pos) { pos = p; setTransform(pos, facing); }
+    /* Never re-seat `pos` WHILE A WALK IS IN FLIGHT: writing `translate` then would
+       RETARGET the running transition (a re-measure that drifts by a float epsilon
+       — e.g. document.fonts.ready firing mid-walk — would churn it). The next op's
+       enforceBounds re-clamps on solid ground. */
+    if (p !== pos && !walking) { pos = p; setTransform(pos, facing); }
     return B;
   }
 
@@ -240,26 +272,56 @@
 
   /* Walk horizontally to one bound, aligned to a whole number of walk cycles so
      the stop lands on the neutral frame and the body never skates. A direction
-     flip happens ONLY here (at a cycle boundary), via scaleX(-1). */
+     flip happens ONLY here (at a walk's start), via the non-transitioned
+     `transform: scaleX(-1)` — so the mirror SNAPS and is never interpolated. */
   function startWalk(side, done) {
     const B = measureRun();
     const target = side === 1 ? B.maxX : (side === -1 ? B.minX : 0);
     const to = clampPatrol(B.minX, B.maxX, target);
     const from = pos;
     const dist = Math.abs(to - from);
-    if (dist < 0.5) { pos = to; setTransform(to, false); later(done, SETTLE_MS); return; }
+    if (dist < 0.5) { pos = to; setMotion(to); later(done, SETTLE_MS); return; }
     facing = to < from;                                       // moving left -> face left
     const cycles = Math.max(1, Math.round(dist / STRIDE_CSS));
     const dur = cycles * WALK_CYCLE_MS;
     setClass("walk");
-    setTransform(from, facing);                               // face the way we go
+    setFacing(facing);                                        // SNAP the mirror (transform is never transitioned)
+    walking = true;
     if (h) {
-      h.style.transition = "transform " + dur + "ms linear";  // speed derived from the cycle
-      void h.offsetWidth;                                     // commit start + transition
-      setTransform(to, facing);
+      /* SEAT the walk's START pose with NO transition and COMMIT it (a forced
+         reflow), so the run unambiguously animates from `from` -> `to` rather
+         than from whatever style happened to be committed last. */
+      h.style.transition = "none";
+      setMotion(from);
+      void h.offsetWidth;                                     // commit the start pose
+      h.style.transition = "translate " + dur + "ms linear";  // speed derived from the cycle
+      void h.offsetWidth;
+      setMotion(to);                                          // animate from -> to
     }
     pos = to;
-    later(() => { if (h) h.style.transition = ""; done(); }, dur);
+    /* End the walk on the transition's OWN end, not a bare timer: page-load jank
+       delayed the first transition's first frame, so a fixed setTimeout(dur) then
+       fired BEFORE the animation finished and `transition=""` snapped the sprite
+       straight to its target. Chaining on `transitionend` (the same idiom the
+       transient rows use with `animationend`) keeps the walk synchronised with the
+       real motion; a safety timeout covers a missed event (a backgrounded tab). */
+    let ended = false;
+    const onEnd = (e) => {
+      if (e && e.propertyName && e.propertyName !== "translate") return;
+      finished();
+    };
+    function finished() {
+      if (ended) return;
+      ended = true;
+      walking = false;
+      if (h) {
+        h.removeEventListener("transitionend", onEnd);
+        h.style.transition = "";
+      }
+      done();
+    }
+    if (h) h.addEventListener("transitionend", onEnd);
+    later(finished, dur + 1500);
   }
 
   function nextEntryRuntime() {
@@ -285,14 +347,16 @@
 
   function stop() {
     running = false;
+    walking = false;
     clearTimers();
   }
 
   function resetTransform() {
     if (!h) return;
     h.style.transition = "";
+    h.style.translate = "none";
     h.style.transform = "none";
-    pos = 0; facing = false;
+    pos = 0; facing = false; walking = false;
   }
 
   function applyProfile() {
@@ -367,16 +431,37 @@
     } catch (e) { /* no Image in this environment — the slot stays hidden */ }
   }
 
+  /* --- continuity predicate (pure) ------------------------------------------- */
+  /* The stride speed the walk can never exceed, in CSS px per ms. A sampler that
+     sees a bigger x change over a gap than this (times a tolerance that covers
+     paint-frame cadence, where a late frame can make one step ~2-3x the nominal
+     rate) has caught a TELEPORT — the exact defect this guards against. */
+  function walkSpeedCss() { return STRIDE_CSS / WALK_CYCLE_MS; }
+  function maxStepFor(dtMs, tol) { return walkSpeedCss() * Math.abs(dtMs) * (tol || 3) + 0.5; }
+  /* PURE: true iff every consecutive x change in a sampled trace [{t,x}] is
+     bounded by the walk's own speed. A teleport fails it. */
+  function traceIsContinuous(samples, tol) {
+    for (let i = 1; i < samples.length; i++) {
+      const dt = Math.abs(samples[i].t - samples[i - 1].t) || 1;
+      const dx = Math.abs(samples[i].x - samples[i - 1].x);
+      const bound = maxStepFor(dt, tol);
+      if (dx > bound) return { ok: false, i: i, dt: dt, dx: dx, bound: bound };
+    }
+    return { ok: true, i: -1, dt: 0, dx: 0, bound: 0 };
+  }
+
   /* Exposed surface — runtime + the pinnable pieces tests use. */
   window.Hero = {
     play, setTab, ROWS, PROFILE,
     plan, expand, clampPatrol, mulberry32,
+    walkSpeedCss, maxStepFor, traceIsContinuous,
     SEEDS: { STRIDE_CSS, CELL_CSS, WALK_CYCLE_MS, SETTLE_MS, DPR },
     /* live state, for the browser test + debugging */
     state: () => ({
       live, running, hidden, reduced, tab: curTab, profile: profile.kind,
       seed, pos, facing, cls: h ? (h.className || "") : "",
       transform: h ? h.style.transform : "",
+      motion: h ? h.style.translate : "",
       bounds: (function () { try { return measureRun(); } catch (e) { return null; } })(),
     }),
     /* test seams */
