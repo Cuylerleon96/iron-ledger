@@ -293,9 +293,11 @@ ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.te
 
 /* ---------- (i) DUPLICATE COLLAPSE: one row per food, nothing made unreachable ----
    The bundle carries FNDDS AND SR Legacy, which overlap. Food.dedupe collapses the
-   RESULT LIST only (never the dataset). RULE: equal normalised name (case,
-   punctuation and simple plurals folded) AND per-100 g energy within 5 kcal or
-   15%, keeping the row with more usable portioning measures. See js/food.js. */
+   RESULT LIST only (never the dataset). RULE: equal MATCH key — normalised name
+   with English plurals folded (radishes -> radish) and ONE optional trailing "raw"
+   dropped (FNDDS omits the stated raw state) — AND per-100 g energy within 5 kcal
+   or 15%, keeping the row with more usable portioning measures (or the row the
+   query names). See js/food.js. */
 console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
 {
   /* the normaliser folds exactly the plural that separates the real pair */
@@ -303,6 +305,10 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
     Food.nameKey('Bananas, raw'), Food.nameKey('Banana, raw'));
   eq('...and "Candies, hard" onto "Candy, hard"',
     Food.nameKey('Candies, hard'), Food.nameKey('Candy, hard'));
+  eq('...and "RADISHES" onto "RADISH" (the -es plural)',
+    Food.nameKey('RADISHES, raw'), Food.nameKey('RADISH, raw'));
+  eq('...and "tomatoes" onto "tomato" (the -oes plural)',
+    Food.nameKey('Tomatoes'), Food.nameKey('Tomato'));
   ok('...but keeps "Banana, baked" distinct',
     Food.nameKey('Banana, baked') !== Food.nameKey('Banana, raw'), Food.nameKey('Banana, baked'));
 
@@ -337,10 +343,10 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
 
   /* dataset-wide: exactly the real duplicate rows collapse, and nothing else */
   const dedup = Food.dedupe(DB.foods);
-  eq('the rule merges exactly the 132 real duplicate rows', dedup.removed, 132);
+  eq('the rule merges exactly the 137 real duplicate rows', dedup.removed, 137);
   eq('...keeping every other row', dedup.list.length, DB.foods.length - dedup.removed);
   const groups = new Map();
-  DB.foods.forEach((f) => { const k = Food.nameKey(f.name); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); });
+  DB.foods.forEach((f) => { const k = Food.twinKey(f.name); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); });
   let twinPairs = 0, groupsConsidered = 0, groupsHeldApart = 0;
   groups.forEach((v) => {
     if (v.length < 2) return;
@@ -349,8 +355,8 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
     for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++) if (Food.isTwin(v[i], v[j])) { twinPairs++; any = true; }
     if (!any) groupsHeldApart++;
   });
-  eq('exactly the 132 twin pairs are collapsible', twinPairs, 132);
-  eq('same-name groups with NO energy agreement are held apart (deliberately not merged)', groupsHeldApart, 12);
+  eq('exactly the 137 twin pairs are collapsible', twinPairs, 137);
+  eq('same-KEY groups with NO energy agreement are held apart (deliberately not merged)', groupsHeldApart, 20);
   eq('the collapsed + kept rows account for every food', dedup.list.length + dedup.removed, DB.foods.length);
 
   /* the DATASET is never modified — a returned row is a copy, the record is not */
@@ -431,6 +437,128 @@ console.log('\n--- (j) name curation (legacy terms) ---');
     ok('false positive still ships unchanged: ' + nm.slice(0, 26) + '…',
       DB.foods.some((f) => f.name === nm));
   });
+}
+
+/* ---------- (k) PLURAL TWINS: the -es plural and the ONE implied "raw" tail -----
+   The original rule matched an EXACT normalised name, so it caught "Banana, raw"
+   vs "Bananas, raw" but NOT the FNDDS/SR pair "Radish" vs "Radishes, raw" (the
+   -es plural folds wrongly, and FNDDS omits the raw state the SR name states).
+   These assertions pin the tightened rule AND its boundary: it traps the real
+   duplicate, it refuses a plural twin whose VALUES disagree, it leaves a
+   genuinely different food alone, it keeps a merged twin reachable by its exact
+   name, and it never touches logged history. */
+console.log('\n--- (k) plural twins (the -es plural + the implied raw state) ---');
+{
+  const radishF = DB.foods.find((f) => f.code === 2709803);   // FNDDS "Radish", 16 kcal/100 g
+  const radishS = DB.foods.find((f) => f.code === 169276);    // SR "Radishes, raw", 16 kcal/100 g
+  const seed = DB.foods.find((f) => f.name === 'Radish seeds, sprouted, raw');
+  const pickled = DB.foods.find((f) => f.name === 'Radishes, pickled');
+  const rhubarbF = DB.foods.find((f) => f.code === 2709268);  // FNDDS "Rhubarb", 73 kcal
+  const rhubarbS = DB.foods.find((f) => f.code === 167758);   // SR "Rhubarb, raw", 21 kcal
+
+  /* (1) the key itself: plural folded, ONE optional tail dropped, closed list */
+  eq('twinKey folds the -es plural ("RADISHES, raw" -> "radish")', Food.twinKey('RADISHES, raw'), 'radish');
+  eq('...and folds "tomatoes" onto "tomato"', Food.twinKey('Tomatoes, red, ripe, raw'), Food.twinKey('Tomato, red, ripe, raw'));
+  eq('...and drops the implied raw state ("Radishes, raw" == "Radish")', Food.twinKey('Radishes, raw'), Food.twinKey('Radish'));
+  eq('...but NOT any other qualifier ("Radish, cooked" keeps its word)', Food.twinKey('Radish, cooked'), 'radish cooked');
+  eq('the optional-tail list is deliberately closed at one word', JSON.stringify(Food.OPTIONAL_TAIL), '["raw"]');
+
+  /* (2) the real pair collapses to ONE search row — and it is the row the query names */
+  ok('the real FNDDS/SR radish pair (16 / 16 kcal) is a twin set', Food.isTwin(radishF, radishS),
+    [radishF.per100.kcal, radishS.per100.kcal]);
+  const radRows = Food.search(DB, 'radish', 50).filter((f) => Food.twinKey(f.name) === 'radish');
+  eq('searching "radish" shows the pair as ONE row', radRows.length, 1);
+  eq('...and the row kept is the one the query names', radRows[0] && radRows[0].code, 2709803);
+  ok('...with the collapsed twin attached as .alternates',
+    !!radRows[0] && (radRows[0].alternates || []).some((a) => a.code === 169276),
+    radRows[0] && (radRows[0].alternates || []).map((a) => a.code));
+  ok('the other radish foods keep their OWN rows (not swept up)',
+    Food.search(DB, 'radish', 50).filter((f) => /radish/i.test(f.name)).length >= 8,
+    Food.search(DB, 'radish', 50).filter((f) => /radish/i.test(f.name)).map((f) => f.code));
+
+  /* (3) the ORIGINAL exact-name pair still collapses (nothing loosened) */
+  eq('the original "Banana, raw" / "Bananas, raw" pair still collapses to one row',
+    Food.search(DB, 'banana', 50).filter((f) => Food.nameKey(f.name) === 'banana raw').length, 1);
+
+  /* (4) a NAME-only twin is NOT a twin: the energy gate is mandatory */
+  const fx = { foods: [
+    { code: 90001, name: 'Carrot', per100: { kcal: 41 }, measures: [] },
+    { code: 90002, name: 'Carrots', per100: { kcal: 90 }, measures: [] },        // plural only, values far apart
+    { code: 90003, name: 'Carrot, raw', per100: { kcal: 41 }, measures: [] },    // raw tail only, values agree
+    { code: 90004, name: 'Carrot, pickled', per100: { kcal: 41 }, measures: [] },// non-optional qualifier
+  ] };
+  const c = fx.foods;
+  ok('a pair that differs ONLY by a plural but with DIFFERENT values does NOT merge',
+    !Food.isTwin(c[0], c[1]), Food.twinKey(c[1].name) + ' vs kcal ' + c.map((x) => x.per100.kcal).join('/'));
+  ok('...though their keys do agree (so the values are what stopped it)',
+    Food.twinKey(c[0].name) === Food.twinKey(c[1].name));
+  ok('a pair that differs only by the optional "raw" but with different values does NOT merge',
+    !Food.isTwin(rhubarbF, rhubarbS), [rhubarbF.per100.kcal, rhubarbS.per100.kcal]);
+  ok('the same pair WITH agreeing values DOES merge', Food.isTwin(c[0], c[2]));
+  ok('a genuinely different food sharing the stem is untouched (radish seeds)',
+    !Food.isTwin(radishF, seed), seed && seed.per100.kcal);
+  ok('a non-optional trailing qualifier is untouched ("Radishes, pickled")',
+    !Food.isTwin(radishF, pickled), pickled && pickled.per100.kcal);
+  const bw = DB.foods.find((f) => f.name === 'Bread, white');
+  const bww = DB.foods.find((f) => f.name === 'Bread, white wheat');
+  ok('"Bread, white" is NOT "Bread, white wheat" (the tail is not optional)',
+    !Food.isTwin(bw, bww), [bw.per100.kcal, bww.per100.kcal]);
+
+  /* (5) HARD CONSTRAINT: the dropped twin is still findable by its EXACT name */
+  const byExact = Food.search(DB, radishS.name, 50);
+  ok('the collapsed twin is still found by its exact name',
+    byExact.some((f) => f.code === radishS.code), byExact.map((f) => f.code));
+  eq('...and that exact-name search shows the pair as one row too',
+    byExact.filter((f) => Food.twinKey(f.name) === 'radish').length, 1);
+  eq('...keeping the row the query named', byExact.filter((f) => Food.twinKey(f.name) === 'radish')[0].code, 169276);
+  ok('...and the dataset record itself is untouched',
+    DB.foods.some((f) => f.code === radishS.code) && DB.foods.some((f) => f.code === radishF.code));
+
+  /* (6) the extension's blast radius on the real dataset: exactly 5 more pairs */
+  const countPairs = (keyFn, viaKey) => {
+    const g = new Map();
+    DB.foods.forEach((f) => { const k = keyFn(f.name); if (!g.has(k)) g.set(k, []); g.get(k).push(f); });
+    let n = 0;
+    g.forEach((v) => {
+      if (v.length < 2) return;
+      for (let a = 0; a < v.length; a++) for (let b = a + 1; b < v.length; b++) {
+        const A = v[a], B = v[b];
+        const ka = A.per100 && A.per100.kcal, kb = B.per100 && B.per100.kcal;
+        if (ka == null || kb == null) continue;
+        const agree = Math.abs(ka - kb) <= Math.max(Food.KCAL_TOL_ABS, Food.KCAL_TOL_REL * Math.min(ka, kb));
+        if (agree && (viaKey ? Food.isTwin(A, B) : true)) n++;
+      }
+    });
+    return n;
+  };
+  eq('the plural + optional-raw key merges exactly 5 pairs more than the bare key',
+    countPairs(Food.twinKey, true) - countPairs(Food.nameKey, false), 5);
+  eq('...so the dataset-wide collapse is 137 rows, not 132', Food.dedupe(DB.foods).removed, 137);
+
+  /* (7) LOGGED HISTORY IS UNTOUCHED — the log snapshots its own macros */
+  const ls = {};
+  const c4 = { console, module: { exports: {} }, JSON, Math, Object, Array, Number, String,
+    Boolean, RegExp, Error, Promise, isFinite, parseFloat, parseInt, Map, Set, setTimeout, clearTimeout, Date,
+    localStorage: { getItem: (k) => (k in ls ? ls[k] : null), setItem: (k, v) => { ls[k] = String(v); }, removeItem: (k) => { delete ls[k]; } } };
+  c4.globalThis = c4; vm.createContext(c4);
+  vm.runInContext(['js/food.js', 'js/nutrition.js', 'js/store.js']
+    .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n;\n')
+    + '\n;globalThis.__J={Nutrition,Store};', c4, { filename: 'plural-intake-bundle.js' });
+  const JN = c4.__J.Nutrition, JS = c4.__J.Store;
+  const cloneJ = (o) => JSON.parse(JSON.stringify(o));
+  const d0 = new Date();
+  const today = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
+  JS.importJSON(JSON.stringify({ version: 1, createdAt: '2026-01-01T00:00:00.000Z',
+    profile: {}, workouts: [], bodylog: [], custom: [], achievements: {}, overrides: {}, targets: {}, settings: {} }), 'replace');
+  const logRow = Food.search(DB, 'radish', 50).filter((f) => Food.twinKey(f.name) === 'radish')[0];
+  JS.logIntake(JN.intakeEntry(cloneJ(logRow), 100));
+  JS.logIntake(JN.intakeEntry(cloneJ(logRow.alternates[0]), 100));
+  const logBefore = JSON.stringify(JS.intakesOn(today));
+  Food.dedupe(DB.foods);
+  Food.search(DB, 'radish', 50);
+  eq('the log is byte-identical after a re-dedupe + search', JSON.stringify(JS.intakesOn(today)), logBefore);
+  eq('both twins keep their OWN snapshotted kcal (16 each)', JS.intakesOn(today).map((e) => e.macros.kcal).join(','), '16,16');
+  eq('the day total is the sum of the snapshots (a collapsed row is not lost)', JS.dayTotals(today).kcal, 32);
 }
 
 console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');

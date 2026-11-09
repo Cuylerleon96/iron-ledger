@@ -28,37 +28,73 @@ const Food = (() => {
 
      RULE (stated here and tested in tools/test_food.js):
        two foods are TWINS when
-         (1) their NORMALISED NAMES are equal — lower-cased, punctuation dropped
-             and simple English plurals folded, so "Bananas, raw" and "Banana,
-             raw" share the key "banana raw"; AND
+         (1) their NORMALISED MATCH KEYS are equal — lower-cased, punctuation
+             dropped and English plurals folded word by word (bananas -> banana,
+             candies -> candy, RADISHES -> radish, tomatoes -> tomato), so
+             "Radishes, raw" and "Radish" share the stem "radish"; AND
          (2) their per-100 g ENERGY agrees within tolerance: <= 5 kcal, or <= 15%
              of the smaller value. The two databases are sampled and analysed
              separately, so the SAME food lands a few percent apart (banana: 97
              vs 89 kcal = 8% — merged); a genuinely different food does not sit
              that close ("Kale, raw" 35 vs 43 kcal = 23% — deliberately NOT
              merged). Without (2) a pure name collision could hide a real food.
-       Of a twin set we KEEP the entry with the more useful portioning measures
-       (how many measures carry a real gram weight), then the one stating more
-       nutrients, then the lower code — fully deterministic, so the same search
-       always keeps the same row.
+
+     THE PLURAL CASE, and the one qualifier that comes with it. The trailing
+     plural is normalised word by word (-s, -ies, -es after ch/sh/ss/x/z, -oes);
+     that alone merges nothing new, because the real FNDDS/SR duplicate also
+     differs by a word: the FNDDS survey description OMITS the implied state that
+     SR Legacy spells out last ("Radish" vs "Radishes, raw"; "Veal, ground" vs
+     "Veal, ground, raw"; "Tamarind" vs "Tamarinds, raw"). The key therefore also
+     drops ONE trailing "raw" token, and that list is deliberately CLOSED at that
+     single token. Any OTHER trailing qualifier is a different food and keeps its
+     own row: "Radishes, pickled" is not "Radish" (34 vs 16 kcal), "Bread, white"
+     is not "Bread, white wheat" (238 vs 267), "Waffle, plain" is not "Waffle,
+     plain, frozen" (373 vs 309), "Bread, rye" is not "Bread, rye, toasted"
+     (259 vs 284). A name that differs by more than a plural (or by that implied
+     raw state) is NEVER merged on the name alone — and inside a matching key the
+     energy gate (2) still decides: 20 same-key pairs are held apart by it (e.g.
+     "Rhubarb, raw" 21 vs "Rhubarb" 73, "Kale, raw" 35 vs 43, "Millet, raw" 378
+     vs "Millet" 118). The gate, not the name, is what keeps those apart.
+
+     Of a twin set we KEEP the entry with the more useful portioning measures
+     (how many measures carry a real gram weight), then the one stating more
+     nutrients, then the lower code — fully deterministic, so the same search
+     always keeps the same row. ONE exception, there to keep a full-name search
+     honest: when the query IS the exact normalised name of one of the collapsed
+     rows (the query "radish" names the row "Radish"), THAT row is the one kept
+     and shown — still one row, and it is the row the user actually named.
 
      HARD CONSTRAINTS, both enforced and asserted:
-       - NO FOOD BECOMES UNREACHABLE. The dropped twin is still returned when the
-         query IS its full normalised name, and it is attached to the kept row as
+       - NO FOOD BECOMES UNREACHABLE. A full-name query keeps the row it names
+         (above), and every dropped twin is attached to the kept row as
          `.alternates` so the UI can offer it.
        - LOGGED HISTORY IS UNTOUCHED. This shapes a returned LIST only: nothing
          already logged is read, rewritten or recomputed, and an intake entry
          snapshots its own name and macros at log time (see js/store.js). */
   const KCAL_TOL_REL = 0.15, KCAL_TOL_ABS = 5;
 
-  /* lower-case + strip punctuation + fold simple plurals. "Bananas, raw" and
-     "Banana, raw" collapse to one key; "Banana, baked" does not. */
+  /* lower-case + strip punctuation + fold English plurals word by word.
+     "Bananas, raw" and "Banana, raw" collapse to one key; "Radishes, raw" and
+     "Radish" fold to "radish"/"radish raw"; "Banana, baked" stays apart. */
   const singular = (w) =>
     (w.length > 3 && /ies$/.test(w)) ? w.slice(0, -3) + "y"
-      : (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0, -1)
-        : w;
+      : (w.length > 4 && /(?:ch|sh|ss|x|z)es$/.test(w)) ? w.slice(0, -2)   // radishes -> radish
+        : (w.length > 3 && /oes$/.test(w)) ? w.slice(0, -2)                // tomatoes -> tomato
+          : (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0, -1)
+            : w;
   const nameKey = (s) =>
     norm(s).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).map(singular).join(" ");
+
+  /* the MATCH key: nameKey with ONE optional trailing state word removed. The
+     list is closed at "raw" on purpose (see the rule above): FNDDS omits the
+     implied raw state that SR Legacy states, and nothing else may be dropped. */
+  const OPTIONAL_TAIL = ["raw"];
+  const twinKey = (s) => {
+    const w = nameKey(s).split(" ").filter(Boolean);
+    while (w.length > 1 && OPTIONAL_TAIL.indexOf(w[w.length - 1]) >= 0) w.pop();
+    return w.join(" ");
+  };
+
 
   const kcalPer100 = (f) =>
     (f && f.per100 && typeof f.per100.kcal === "number" && isFinite(f.per100.kcal)) ? f.per100.kcal : null;
@@ -67,11 +103,11 @@ const Food = (() => {
       .filter((m) => m && m.label && isFinite(m.grams) && m.grams > 0).length;
   const nutrientCount = (f) => (f && f.per100) ? Object.keys(f.per100).length : 0;
 
-  /* the twin test: name identity AND an agreeing energy figure. Two rows with no
-     usable energy are NEVER merged (nothing is guessed). */
+  /* the twin test: MATCH-KEY identity AND an agreeing energy figure. Two rows
+     with no usable energy are NEVER merged (nothing is guessed). */
   const isTwin = (a, b) => {
     if (!a || !b || a === b) return false;
-    if (nameKey(a.name) !== nameKey(b.name)) return false;
+    if (twinKey(a.name) !== twinKey(b.name)) return false;
     const ka = kcalPer100(a), kb = kcalPer100(b);
     if (ka == null || kb == null) return false;
     return Math.abs(ka - kb) <= Math.max(KCAL_TOL_ABS, KCAL_TOL_REL * Math.min(ka, kb));
@@ -90,14 +126,15 @@ const Food = (() => {
   /* Collapse twins in a ranked LIST -> { list, removed }.
      `list` keeps the surviving rows in their original rank order, and every kept
      row that absorbed a twin carries `.alternates` (those rows). `removed` is the
-     number of rows dropped. `exactKey`, when supplied, is the normalised name of
-     the QUERY: a food whose own normalised name equals it is NEVER hidden, so a
-     full-name search still finds the row the list would otherwise collapse. */
+     number of rows dropped. `exactKey`, when supplied, is the normalised FULL name
+     of the QUERY (nameKey, not twinKey): the row whose own name equals it is the
+     one KEPT — so a full-name search shows the row it named instead of hiding the
+     twin, and it is never dropped. */
   const dedupe = (list, exactKey) => {
     const rows = Array.isArray(list) ? list : [];
     const groups = new Map();
     for (let i = 0; i < rows.length; i++) {
-      const k = nameKey(rows[i] && rows[i].name);
+      const k = twinKey(rows[i] && rows[i].name);
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(i);
     }
@@ -105,7 +142,7 @@ const Food = (() => {
     const alts = new Map();          // kept index -> absorbed rows
     groups.forEach((idxs) => {
       if (idxs.length < 2) return;
-      /* cluster inside the name group: only energy-agreeing rows are twins. */
+      /* cluster inside the key group: only energy-agreeing rows are twins. */
       const clusters = [];
       idxs.forEach((i) => {
         let found = null;
@@ -116,9 +153,18 @@ const Food = (() => {
       });
       clusters.forEach((c) => {
         if (c.members.length < 2) return;
-        let rep = c.members[0];
-        for (let j = 1; j < c.members.length; j++) {
-          if (keepBetter(rows[rep], rows[c.members[j]]) === rows[c.members[j]]) rep = c.members[j];
+        /* the named row wins the row; otherwise the most useful one does. */
+        let rep = null;
+        if (exactKey != null) {
+          for (let j = 0; j < c.members.length; j++) {
+            if (nameKey(rows[c.members[j]].name) === exactKey) { rep = c.members[j]; break; }
+          }
+        }
+        if (rep == null) {
+          rep = c.members[0];
+          for (let j = 1; j < c.members.length; j++) {
+            if (keepBetter(rows[rep], rows[c.members[j]]) === rows[c.members[j]]) rep = c.members[j];
+          }
         }
         const absorbed = [];
         c.members.forEach((i) => {
@@ -311,7 +357,7 @@ const Food = (() => {
     /* internals exposed for callers/tests */
     foodsOf, norm, round2,
     /* duplicate collapse (FNDDS vs SR Legacy) */
-    dedupe, nameKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS,
+    dedupe, nameKey, twinKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS, OPTIONAL_TAIL,
   };
 })();
 if (typeof module !== "undefined") module.exports = Food;

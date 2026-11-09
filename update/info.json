@@ -1,11 +1,11 @@
 {
-  "versionCode": 64,
-  "versionName": "1.0.63",
+  "versionCode": 65,
+  "versionName": "1.0.64",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "f45c85fc737855b0a88f6e7b80bf7f51c06321cac62bddb8a5af49578623b13c",
-  "sizeBytes": 3863683,
+  "sha256": "19d3a4b53bbeaff6214289d760f5057af88356081ab4b53415508daf7cd05567",
+  "sizeBytes": 3864700,
   "published": "2026-11-08",
   "notes": [
-    "Food names now use their modern global names (daikon, wood ear, Asian)."
+    "Searching a food no longer shows the singular and the plural of the same food as two rows."
   ]
 }
