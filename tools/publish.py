@@ -8,9 +8,19 @@ api.github.com (its route to them is blackholed), only the release CDN.
                              --notes "Log defaults to today's date" \
                              [--bump patch|minor|major] [--dry-run]
 
-Order matters: the release + APK asset are created BEFORE the feed is committed.
-The app reads the feed from the main branch, so committing a feed that points at
-a release which does not exist yet would offer an update that cannot download.
+Order matters, and the tag's provenance depends on it. The source commit is
+committed AND pushed FIRST; the git tag and the GitHub release are created AFTER,
+pinned to that exact commit — so the tag identifies the commit that ships the
+version. (Creating the release first, as this tool used to, made GitHub tag the
+PREVIOUS release's commit, so `git checkout vN` yielded the wrong source.) The APK
+and info.json assets are then uploaded to the release.
+
+Consequence of the new order: the repo copy of the feed (raw main) now goes live a
+few seconds before the release asset exists. That is safe — the APK url points at
+`releases/latest`, whose version/sha the feed must match, so a feed that runs ahead
+of the release can only make an update temporarily UNAVAILABLE (the download is
+refused on a mismatch), never install the wrong binary. The app's authoritative
+channel is the release-asset feed, which is uploaded in the same publish call.
 """
 import argparse
 import hashlib
@@ -295,6 +305,55 @@ def main():
                  f"Bump the version (android/version.properties) or pass "
                  f"--replace-release to re-cut this tag deliberately.")
 
+    # ------------------------------------------------------------------
+    # ORDER: commit + push the SOURCE, THEN point the tag at it, THEN create the
+    # release. The tag must identify the commit that SHIPS this version, so the
+    # source has to be on the remote before the tag exists. This tool used to
+    # create the release (and therefore the tag) first and only commit afterwards,
+    # so every tag pointed at the PREVIOUS release's commit and `git checkout vN`
+    # gave the wrong source. A failure here now aborts BEFORE any release exists,
+    # which is a cleaner state than a live release whose source was never pushed.
+    #
+    # Stage the SOURCE that produced this APK, not just the feed and the version.
+    # It used to stage only info.json + version.properties, so a real code change
+    # would be compiled into a release, published, and left uncommitted — the
+    # shipped binary and the repo disagreeing silently.
+    #
+    # Plain `git add -A`. .gitignore already covers every build output (www/,
+    # node_modules/, android/.gradle/, android/app/src/main/assets/public/), so
+    # nothing regenerated can be committed. An earlier attempt to ALSO exclude
+    # them with :! pathspecs made git try to add the ignored paths anyway and
+    # exit 1 — killing the commit, on a release that was already live.
+    FEED_FILE.parent.mkdir(parents=True, exist_ok=True)
+    FEED_FILE.write_text(json.dumps(feed, indent=2) + "\n")
+    print("committing source + feed…")
+    run(["git", "add", "-A"])
+    run(["git", "-c", "user.email=hermes@local", "-c", "user.name=Hermes",
+         "commit", "-m", f"Release {tag}: {'; '.join(feed['notes'])}"])
+    run(["git", "push", "origin", f"HEAD:{BRANCH}"])
+    shipping = run(["git", "rev-parse", "HEAD"]).strip()
+    print(f"  shipping commit {shipping[:12]}")
+    left = run(["git", "status", "--porcelain"])
+    if left.strip():
+        print("  WARNING: source still uncommitted after this release:")
+        for line in left.strip().splitlines()[:10]:
+            print("    " + line)
+
+    # Point the tag at the shipping commit BEFORE the release references it, so
+    # the tag and the release can only ever describe that commit. Force-moves an
+    # existing tag (the --replace-release path), otherwise creates it.
+    try:
+        api("GET", f"/repos/{OWNER}/{REPO}/git/ref/tags/{tag}")
+        api("PATCH", f"/repos/{OWNER}/{REPO}/git/refs/tags/{tag}",
+            {"sha": shipping, "force": True})
+        print(f"  moved tag {tag} -> {shipping[:12]}")
+    except RuntimeError as e:
+        if "-> 404" not in str(e):
+            raise
+        api("POST", f"/repos/{OWNER}/{REPO}/git/refs",
+            {"ref": f"refs/tags/{tag}", "sha": shipping})
+        print(f"  created tag {tag} -> {shipping[:12]}")
+
     if existing:
         print(f"re-cutting release {tag} (notes and asset replaced)…")
         rel = api("PATCH", f"/repos/{OWNER}/{REPO}/releases/{existing['id']}",
@@ -304,6 +363,7 @@ def main():
         print(f"creating release {tag}…")
         rel = api("POST", f"/repos/{OWNER}/{REPO}/releases", {
             "tag_name": tag,
+            "target_commitish": shipping,   # the tag already exists at this commit
             "name": rel_name,
             "body": body,
             "draft": False,
@@ -334,44 +394,8 @@ def main():
     api("POST", upload + f"?name={FEED_ASSET_NAME}",
         raw=(json.dumps(feed, indent=2) + "\n").encode(), content_type="application/json")
 
-    # the feed goes live only once the asset it points at really exists
-    FEED_FILE.parent.mkdir(parents=True, exist_ok=True)
-    FEED_FILE.write_text(json.dumps(feed, indent=2) + "\n")
-    print("committing feed…")
-    # Stage the SOURCE that produced this APK, not just the feed and the version.
-    # It used to stage only info.json + version.properties, so a real code change
-    # would be compiled into a release, published, and left uncommitted — the
-    # shipped binary and the repo disagreeing silently.
-    #
-    # Plain `git add -A`. .gitignore already covers every build output (www/,
-    # node_modules/, android/.gradle/, android/app/src/main/assets/public/), so
-    # nothing regenerated can be committed. An earlier attempt to ALSO exclude
-    # them with :! pathspecs made git try to add the ignored paths anyway and
-    # exit 1 — killing the commit, on a release that was already live.
-    #
-    # This runs after the release is published, so a failure here must never look
-    # like a failed release: warn loudly and carry on.
-    try:
-        run(["git", "add", "-A"])
-        run(["git", "-c", "user.email=hermes@local", "-c", "user.name=Hermes",
-             "commit", "-m", f"Release {tag}: {'; '.join(feed['notes'])}"])
-        run(["git", "push", "origin", f"HEAD:{BRANCH}"])
-        left = run(["git", "status", "--porcelain"])
-        if left.strip():
-            print("  WARNING: source still uncommitted after this release:")
-            for line in left.strip().splitlines()[:10]:
-                print("    " + line)
-    except SystemExit as e:
-        print("\n  !!  The release IS published, but its source was NOT committed.")
-        print(f"  !!  {e}")
-        print("  !!  Fix by hand:  git add -A && git commit && git push origin HEAD:%s" % BRANCH)
-        try:
-            for line in run(["git", "status", "--porcelain"]).strip().splitlines()[:10]:
-                print("    " + line)
-        except SystemExit:
-            pass
-
     print(f"\npublished {tag}")
+    print(f"  tag  : {tag} -> {shipping[:12]}")
     print(f"  feed : https://raw.githubusercontent.com/{OWNER}/{REPO}/{BRANCH}/update/info.json")
     print(f"  apk  : {apk_url}")
 
