@@ -1711,9 +1711,20 @@
      when a real comparison produced that verdict — an unreachable feed or an
      unreadable installed version reads as "couldn't check", because a silent
      false "up to date" is how a user gets stranded on an old build. */
+  const hhmm = (ms) => {
+    const d = ms ? new Date(ms) : new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  };
+
   function updateStatusText(r) {
     if (r.state === "available") return "v" + (r.versionName || r.latest) + " available";
-    if (r.state === "current") return "up to date" + (r.latest != null ? " (newest build " + r.latest + ")" : "");
+    if (r.state === "current") {
+      const newest = r.latest != null ? " (newest build " + r.latest + ")" : "";
+      // Without the non-CDN release list answering, a cached feed may be lagging,
+      // so do not swear the app is newest — state when it was actually checked.
+      if (r.authoritative === false) return "up to date as of " + hhmm(r.checkedAt) + newest + " (release feed only)";
+      return "up to date" + newest + " · checked " + hhmm(r.checkedAt);
+    }
     if (r.state === "unsupported") return "browser build";
     return "couldn't check — " + (r.reason || "unknown error");
   }
@@ -1737,7 +1748,7 @@
     if (status) status.textContent = "checking…";
     lastCheckAt = Date.now();
     let r;
-    try { r = await Updater.check(); }
+    try { r = await Updater.check({ manual: !!manual }); }
     catch (e) { r = { state: "unknown", reason: String((e && e.message) || e) }; }
     lastUpdateResult = r;
 
@@ -1749,7 +1760,13 @@
       Updater.markOffered(r.latest);
       showUpdatePrompt(r);
     } else if (manual && r.state === "current") {
-      toast(`Up to date — installed build ${instCode(r)}, newest build ${r.latest}`, "good");
+      if (r.authoritative === false) {
+        // The release list did not answer, so this verdict may come from a cached
+        // feed. Never present that as a confident "up to date".
+        toast(`Checked ${hhmm(r.checkedAt)} — the release list is unreachable, so this may be a cached copy (build ${instCode(r)})`, "warn", 6000);
+      } else {
+        toast(`Up to date — installed build ${instCode(r)}, newest build ${r.latest} · checked ${hhmm(r.checkedAt)}`, "good");
+      }
     } else if (manual && r.state === "unknown") {
       // never a silent "up to date": say what went wrong
       toast("Couldn't check — " + (r.reason || "unknown reason"), "warn", 6000);

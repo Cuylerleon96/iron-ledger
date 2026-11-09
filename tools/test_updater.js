@@ -30,6 +30,10 @@ function makeFetch(routes) {
             if (opts && opts.signal) opts.signal.addEventListener("abort", () => { const e = new Error("aborted"); e.name = "AbortError"; rej(e); });
           });
         }
+        if (r && typeof r === "object" && r.__status) {
+          const code = r.__status;
+          return { ok: false, status: code, json: async () => { throw new Error("HTTP " + code); }, text: async () => "" };
+        }
         const text = typeof r === "string" ? r : JSON.stringify(r);
         return { ok: true, status: 200, json: async () => (typeof r === "string" ? JSON.parse(r) : r), text: async () => text };
       }
@@ -38,8 +42,9 @@ function makeFetch(routes) {
   };
 }
 
-function run({ installed, routes }) {
+function run({ installed, routes, onInstall }) {
   const store = new Map();
+  const dl = async (a) => (onInstall ? onInstall(a) : { ok: true, args: a });
   const sandbox = {
     console, Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat,
     setTimeout, clearTimeout,
@@ -48,12 +53,12 @@ function run({ installed, routes }) {
     Capacitor: { isNativePlatform: () => true, Plugins: { AppUpdater: {
       getAppInfo: async () => installed,
       addListener: async () => ({ remove: async () => {} }),
-      downloadAndInstall: async (a) => ({ ok: true, args: a }),
+      downloadAndInstall: dl,
     } } },
     window: { Capacitor: { isNativePlatform: () => true, Plugins: { AppUpdater: {
       getAppInfo: async () => installed,
       addListener: async () => ({ remove: async () => {} }),
-      downloadAndInstall: async (a) => ({ ok: true, args: a }),
+      downloadAndInstall: dl,
     } } } },
     fetch: makeFetch(routes),
     module: { exports: {} },
@@ -67,6 +72,21 @@ function run({ installed, routes }) {
 const FRESH = FEED_JSON(9, "1.0.8");
 const STALE = FEED_JSON(7, "1.0.6");
 const INST_106 = { versionCode: 7, versionName: "1.0.6", canInstall: true };
+
+/* The GitHub REST API release object, shaped as api.github.com returns it: the
+   true tag, the release NAME carrying "(build N)", and per-asset sha256 digests. */
+const hex = (c) => c.repeat(64);
+const PINNED = (name) => "https://github.com/Cuylerleon96/iron-ledger/releases/download/v" + name + "/iron-ledger.apk";
+const API_REL = (name, code, apkSha, apkUrl) => ({
+  tag_name: "v" + name,
+  name: "Iron Ledger v" + name + " (build " + code + ")",
+  assets: [
+    { name: "info.json", size: 406, digest: "sha256:" + hex("0"),
+      browser_download_url: "https://github.com/Cuylerleon96/iron-ledger/releases/download/v" + name + "/info.json" },
+    { name: "iron-ledger.apk", size: 3903849, digest: "sha256:" + apkSha,
+      browser_download_url: apkUrl || PINNED(name) },
+  ],
+});
 
 (async () => {
   console.log("--- the reported bug: a stale cached feed must not read as 'up to date' ---");
@@ -180,6 +200,156 @@ const INST_106 = { versionCode: 7, versionName: "1.0.6", canInstall: true };
     })();
     await U2.check();
     eq("all requests carry a cache-buster", seen.length > 0 && seen.every((u) => u.includes("t=")), true);
+  }
+
+  console.log("--- the non-CDN API source is decisive when every CDN feed is stale ---");
+  {
+    const S = hex("a");
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.6")],
+      ["releases/latest/download/info.json", STALE],
+      ["raw.githubusercontent.com", STALE],
+      ["api.github.com", API_REL("1.0.8", 9, S)],
+    ] });
+    const r = await U.check();
+    console.log(`        all three feeds stale at 1.0.6; API says 1.0.8 (build 9) -> ${r.state}`);
+    eq("state is available", r.state, "available");
+    eq("the name channel caught it", r.byName, true);
+    eq("the build channel caught it too (API build 9)", r.byCode, true);
+    eq("the API is flagged authoritative", r.authoritative, true);
+    eq("offers the API's version name", r.versionName, "1.0.8");
+    eq("download names the exact tag, not the mutable 'latest' pointer",
+       /releases\/download\/v1\.0\.8\/iron-ledger\.apk$/.test(r.apkUrl), true);
+    eq("checksum is the API's non-CDN digest", r.sha256, S);
+    eq("the payload is marked version-pinned", r.pinned, true);
+  }
+
+  console.log("--- a name-only API answer still overrides stale feeds ---");
+  {
+    const S = hex("b");
+    const api = API_REL("1.0.8", 9, S);
+    delete api.name;                                    // an older release: no build marker
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.6")],
+      ["releases/latest/download/info.json", STALE],
+      ["raw.githubusercontent.com", STALE],
+      ["api.github.com", api],
+    ] });
+    const r = await U.check();
+    eq("still offered via the name channel", r.state, "available");
+    eq("name channel decided", r.byName, true);
+    eq("the stale build number cannot outvote the name channel", r.byCode, false);
+  }
+
+  console.log("--- without the API, a lagging 'current' is not claimed confidently ---");
+  {
+    const U = run({ installed: { versionCode: 9, versionName: "1.0.8", canInstall: true }, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", FRESH],
+      ["raw.githubusercontent.com", FRESH],
+    ] });                                              // api.github.com unmatched -> 404
+    const r = await U.check();
+    eq("state is still current", r.state, "current");
+    eq("but marked NOT authoritative", r.authoritative, false);
+    eq("a freshness timestamp is carried", typeof r.checkedAt === "number" && r.checkedAt > 0, true);
+  }
+
+  console.log("--- the API failing (rate limit / offline) never breaks the check ---");
+  {
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", FRESH],
+      ["raw.githubusercontent.com", FRESH],
+      ["api.github.com", { __status: 403 }],            // e.g. rate limited
+    ] });
+    const r = await U.check();
+    eq("the feeds still decide", r.state, "available");
+    eq("and it is not marked authoritative", r.authoritative, false);
+    eq("the API failure is recorded", r.results.some((x) => !x.ok && /api\.github\.com/.test(x.url) && /403/.test(x.error)), true);
+  }
+
+  console.log("--- a manual check re-reads a lagging cache and finds the new release ---");
+  {
+    let apiCalls = 0;
+    const S = hex("c");
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.6")],
+      ["releases/latest/download/info.json", STALE],
+      ["raw.githubusercontent.com", STALE],
+      ["api.github.com", () => { apiCalls++; return apiCalls === 1 ? { __status: 404 } : API_REL("1.0.8", 9, S); }],
+    ] });
+    const auto = await U.check();
+    eq("the automatic check sees only the stale cache -> current", auto.state, "current");
+    eq("the automatic check only asked the API once", apiCalls, 1);
+    const r = await U.check({ manual: true });
+    eq("the manual re-read finds the new release", r.state, "available");
+    eq("via the API's name", r.versionName, "1.0.8");
+    eq("the API was queried a second time", apiCalls, 2);
+  }
+
+  console.log("--- install downloads from the pinned URL and the API checksum ---");
+  {
+    const S = hex("1");
+    let got = null;
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", STALE],
+      ["raw.githubusercontent.com", STALE],
+      ["api.github.com", API_REL("1.0.8", 9, S)],
+    ], onInstall: async (a) => { got = a; return { ok: true, sha256: S, bytes: 3903849 }; } });
+    const r = await U.check();
+    const res = await U.install(r, null);
+    eq("install succeeded", !!(res && res.ok), true);
+    eq("downloaded the version-pinned URL (a stale 'latest' 302 cannot redirect it)",
+       got.url, PINNED("1.0.8"));
+    eq("verified against the API digest, not the stale feed's sha", got.sha256, S);
+  }
+
+  console.log("--- install aborts loudly on a mismatched sha ---");
+  {
+    const S = hex("d"), BAD = hex("e");
+    let got = null;
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", { versionCode: 9, versionName: "1.0.8", sha256: S, sizeBytes: 3903849, apkUrl: PINNED("1.0.8") }],
+      ["raw.githubusercontent.com", { versionCode: 9, versionName: "1.0.8", sha256: S, sizeBytes: 3903849, apkUrl: PINNED("1.0.8") }],
+      ["api.github.com", API_REL("1.0.8", 9, S)],
+    ], onInstall: async (a) => { got = a; return { ok: true, sha256: BAD, bytes: 1 }; } });
+    const r = await U.check();
+    let err = null;
+    try { await U.install(r, null); } catch (e) { err = e; }
+    eq("the mismatch aborts loudly", !!(err && /checksum/i.test(err.message)), true);
+    eq("it did download from the pinned URL", got && /releases\/download\/v1\.0\.8\/iron-ledger\.apk$/.test(got.url), true);
+    eq("it asked for the expected checksum", got && got.sha256, S);
+  }
+
+  console.log("--- install refuses when no checksum is available to verify against ---");
+  {
+    const noSha = { versionCode: 9, versionName: "1.0.8", apkUrl: PINNED("1.0.8") };
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", noSha],
+      ["raw.githubusercontent.com", noSha],
+    ], onInstall: async (a) => ({ ok: true, args: a }) });
+    const r = await U.check();
+    let err = null;
+    try { await U.install(r, null); } catch (e) { err = e; }
+    eq("refuses to install unverified", !!(err && /checksum/i.test(err.message)), true);
+  }
+
+  console.log("--- install aborts when two sources disagree on the checksum for one version ---");
+  {
+    const S = hex("2"), OTHER = hex("3");
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", { versionCode: 9, versionName: "1.0.8", sha256: OTHER, apkUrl: PINNED("1.0.8") }],
+      ["raw.githubusercontent.com", FRESH],
+      ["api.github.com", API_REL("1.0.8", 9, S)],
+    ], onInstall: async () => { throw new Error("should not have downloaded"); } });
+    const r = await U.check();
+    let err = null;
+    try { await U.install(r, null); } catch (e) { err = e; }
+    eq("a same-version checksum disagreement aborts", !!(err && /disagree/i.test(err.message)), true);
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

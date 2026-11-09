@@ -165,6 +165,44 @@ def ensure_repo():
     })
 
 
+def read_live_version():
+    """The live version as (versionCode, versionName), preferring the non-CDN API.
+
+    The CDN feeds (release-asset info.json, raw copy) lag by minutes, so reading
+    one to decide whether a publish advances the version can compare against a
+    stale number and let a non-advancing publish through. api.github.com is NOT
+    behind that cache. It exposes no versionCode field, so the build number is
+    read from the release NAME, which this tool writes as
+    "Iron Ledger v1.2.4 (build 82)". Falls back to the asset feed, then the repo
+    copy, only if the API is unreachable. Returns (None, None) when there is no
+    release yet or nothing can be read.
+    """
+    try:
+        rel = api("GET", f"/repos/{OWNER}/{REPO}/releases/latest")
+        name = str(rel.get("tag_name") or "").lstrip("vV")
+        m = re.search(r"\(build\s+(\d+)\)", rel.get("name") or "")
+        if m:
+            return int(m.group(1)), name
+        # API reachable but the release name carries no build marker (an older
+        # release): fall through to a feed for the numeric code.
+    except RuntimeError as e:
+        if "-> 404" in str(e):
+            return None, None                                   # no release yet
+    for _src in (
+        f"https://github.com/{OWNER}/{REPO}/releases/latest/download/info.json",
+        f"https://raw.githubusercontent.com/{OWNER}/{REPO}/{BRANCH}"
+        f"/update/info.json?t={int(time.time())}",
+    ):
+        try:
+            with urllib.request.urlopen(_src, timeout=30) as r:
+                live = json.load(r)
+            if live:
+                return int(live.get("versionCode", 0)), live.get("versionName")
+        except Exception:                                       # noqa: BLE001
+            continue
+    return None, None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--notes", action="append", default=[], help="release note line (repeatable)")
@@ -192,40 +230,21 @@ def main():
     # fail loudly here instead of publishing something nobody can install.
     if not args.dry_run and not (args.replace_release or args.no_bump):
         try:
-            # Read the RELEASE-ASSET feed first: the raw.githubusercontent copy lags
-            # by up to 5 minutes, and a stale reading weakens this guard (it would
-            # compare against an older versionCode and let a non-advancing publish
-            # through). Fall back to the repo copy only if the asset is unreachable.
-            live = None
-            for _src in (
-                f"https://github.com/{OWNER}/{REPO}/releases/latest/download/info.json",
-                f"https://raw.githubusercontent.com/{OWNER}/{REPO}/{BRANCH}"
-                f"/update/info.json?t={int(time.time())}",
-            ):
-                try:
-                    with urllib.request.urlopen(_src, timeout=30) as r:
-                        live = json.load(r)
-                    if live:
-                        break
-                except Exception:                               # noqa: BLE001
-                    continue
-            if live is None:
-                raise RuntimeError("no feed reachable")
-            live_code = int(live.get("versionCode", 0))
-            if live_code >= code:
-                sys.exit(f"refusing to publish: the live feed is already at "
-                         f"versionCode {live_code} (v{live.get('versionName')}) and this build is "
+            live_code, live_name = read_live_version()
+            if live_code is None:
+                print("  live version could not be read (no release yet, or no "
+                      "source reachable) — skipping the version-advance guard")
+            elif live_code >= code:
+                sys.exit(f"refusing to publish: the live release is already at "
+                         f"versionCode {live_code} (v{live_name}) and this build is "
                          f"{code} (v{name}). versionCode MUST increase or no app will update.\n"
                          f"Check android/version.properties was not overwritten by a stale copy.")
-            print(f"  live feed is at versionCode {live_code} — ok to publish {code}")
-        except urllib.error.HTTPError as e:
-            if e.code != 404:
-                raise
-            print("  no live feed yet — first release")
+            else:
+                print(f"  live release is at versionCode {live_code} (v{live_name}) — ok to publish {code}")
         except SystemExit:
             raise
         except Exception as e:                                  # noqa: BLE001
-            print(f"  (could not read the live feed to compare versions: {e})")
+            print(f"  (could not read the live version to compare: {e})")
 
     print("building web bundle…")
     run(["python3", "tools/build_www.py"])
@@ -258,6 +277,10 @@ def main():
     ensure_repo()
 
     tag = f"v{name}"
+    # The build number rides in the release NAME. api.github.com exposes no
+    # versionCode field, so this is what lets the app learn the true latest BUILD
+    # from the single non-CDN API call instead of only the version name.
+    rel_name = f"Iron Ledger {tag} (build {code})"
     body = "\n".join("- " + n for n in feed["notes"])
 
     # Never silently reuse a tag: replacing an asset under an existing tag leaves
@@ -275,13 +298,13 @@ def main():
     if existing:
         print(f"re-cutting release {tag} (notes and asset replaced)…")
         rel = api("PATCH", f"/repos/{OWNER}/{REPO}/releases/{existing['id']}",
-                  {"name": f"Iron Ledger {tag}", "body": body,
+                  {"name": rel_name, "body": body,
                    "draft": False, "prerelease": False})
     else:
         print(f"creating release {tag}…")
         rel = api("POST", f"/repos/{OWNER}/{REPO}/releases", {
             "tag_name": tag,
-            "name": f"Iron Ledger {tag}",
+            "name": rel_name,
             "body": body,
             "draft": False,
             "prerelease": False,
