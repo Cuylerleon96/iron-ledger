@@ -492,22 +492,7 @@ const Nutrition = (() => {
       hasTargets: !!(targets && targets.length),
       rows,
       headline: intakeHeadline(rows, opts.count || 0, goal),
-      vitality: vitalityPart(opts.vitality, opts.vitalityOptOut),
     };
-  }
-
-  /* The day's Vitality contribution, stated honestly in three states, and NEVER
-     a number when there is none (opted out, or too few logged days). It never
-     reads as a judgement — a blank day is simply not counted. */
-  function vitalityPart(vit, optedOut) {
-    if (optedOut) return { state: "off", value: null, weight: null, days: null,
-      text: "Nutrition is kept off your Vitality stats — that's your setting in Profile." };
-    if (!vit || typeof vit.v !== "number") return { state: "not-yet", value: null, weight: null, days: null,
-      text: "Nutrition joins Vitality once a few days are logged — a blank day is never counted as a zero." };
-    return { state: "on", value: vit.v, weight: vit.w, days: vit.days,
-      text: "Nutrition is part of Vitality: " + vit.days + " " + (vit.days === 1 ? "logged day" : "logged days") +
-        " in this window, contributing " + Math.round(vit.v) + "/100 toward its " +
-        Math.round(vit.w * 100) + "% share." };
   }
 
   /* ---------- the weekly adherence bar (Change A) ----------
@@ -588,7 +573,7 @@ const Nutrition = (() => {
 
   return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE,
     NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline, historyHeadline,
-    macroCard, vitalityPart, adherence, sumMacros, loggedDays, nutritionHistory,
+    macroCard, adherence, sumMacros, loggedDays, nutritionHistory,
     MACRO_ROUNDING_NOTE, roundingNoteFor, alternateNote, FOOD_LABEL };
 })();
 if (typeof module !== "undefined") module.exports = Nutrition;

@@ -1,8 +1,8 @@
 /* Nutrition UI view-model suite — the Change A/B pure logic added to
-   js/nutrition.js: the day's no-bar macro card, the day's Vitality line, the
-   weekly adherence measure, and the History tab's Nutrition view
-   (loggedDays / nutritionHistory). Runs the REAL module in a vm sandbox — these
-   paths need no Macros, Food or Store, so the module is loaded alone.
+   js/nutrition.js: the day's no-bar macro card, the weekly adherence measure,
+   and the History tab's Nutrition view (loggedDays / nutritionHistory). Runs the
+   REAL module in a vm sandbox — these paths need no Macros, Food or Store, so the
+   module is loaded alone.
    Run: node tools/test_nutritionui.js */
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const root = path.resolve(__dirname, "..");
@@ -72,32 +72,26 @@ const TOTALS = { kcal: 1560, protein: 96, fat: 52, carb: 180 };
     none.headline, N.intakeHeadline([], 0, "maintain"));
 }
 
-/* ---------- the day's Vitality line ---------- */
+/* ---------- nutrition no longer feeds Vitality: the strip is gone ---------- */
 {
-  const off = N.vitalityPart({ w: 0.3, v: 90, days: 9 }, true);
-  eq("vitalityPart: opted out -> state off", off.state, "off");
-  eq("vitalityPart: opted out -> no value", off.value, null);
-  ok("vitalityPart: opted-out text prints no number", !/\d/.test(off.text), off.text);
-
-  const thin = N.vitalityPart(null, false);
-  eq("vitalityPart: too thin -> state not-yet", thin.state, "not-yet");
-  eq("vitalityPart: too thin -> no value", thin.value, null);
-
-  const on = N.vitalityPart({ w: 0.3, v: 80, days: 9 }, false);
-  eq("vitalityPart: live -> state on", on.state, "on");
-  eq("vitalityPart: live -> carries the value", on.value, 80);
-  ok("vitalityPart: live text names the days and the share",
-    /9 logged days/.test(on.text) && /80\/100/.test(on.text) && /30% share/.test(on.text), on.text);
-  ok("vitalityPart: singular day is worded as one day",
-    /1 logged day\b/.test(N.vitalityPart({ w: 0.3, v: 50, days: 1 }, false).text));
-
-  /* the card wires the vitality state through */
-  eq("macroCard: vitality rides along (on)",
-    N.macroCard(TOTALS, TARGETS, { vitality: { w: 0.3, v: 77, days: 8 } }).vitality.state, "on");
-  eq("macroCard: vitality rides along (off when opted out)",
-    N.macroCard(TOTALS, TARGETS, { vitalityOptOut: true }).vitality.state, "off");
-  eq("macroCard: vitality still reported when there are no targets",
-    N.macroCard({}, null, {}).vitality.state, "not-yet");
+  eq("Nutrition no longer exposes a vitalityPart helper", typeof N.vitalityPart, "undefined");
+  ok("the exported surface carries no vitality-named member",
+    !/vitality/i.test(Object.keys(N).join(",")));
+  const mc = N.macroCard(TOTALS, TARGETS, { goal: "gain", count: 3 });
+  eq("macroCard carries NO vitality field", mc.vitality, undefined);
+  ok("macroCard has no 'vitality' key at all", !Object.prototype.hasOwnProperty.call(mc, "vitality"));
+  ok("the macroCard view-model never names Vitality", !/vitality/i.test(JSON.stringify(mc)));
+  eq("macroCard still carries its goal (unchanged)", mc.goal, "gain");
+  eq("macroCard still carries one row per target (unchanged)", mc.rows.length, 4);
+  ok("macroCard still carries the day's headline (unchanged)",
+    typeof mc.headline === "string" && mc.headline.length > 0);
+  const none = N.macroCard({}, null, {});
+  eq("no-targets macroCard carries NO vitality field either", none.vitality, undefined);
+  ok("no-targets macroCard still has its headline (unchanged)",
+    typeof none.headline === "string" && none.headline.length > 0);
+  const legacy = N.macroCard(TOTALS, TARGETS, { vitality: { w: 0.3, v: 77, days: 8 }, vitalityOptOut: true });
+  eq("a legacy {vitality} opt is ignored, not surfaced", legacy.vitality, undefined);
+  ok("...and adds no Vitality text anywhere in the model", !/vitality/i.test(JSON.stringify(legacy)));
 }
 
 /* ---------- the weekly adherence measure (Change A) ---------- */

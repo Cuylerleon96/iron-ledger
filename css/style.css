@@ -854,12 +854,6 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .ntrack-row .bar-fill { background: linear-gradient(180deg, var(--teal-4), var(--teal-2) 65%, var(--teal-1)); }
 .ntrack-cap { margin: .1rem 0 .45rem; line-height: 1.45; }
 .ntrack-hint { line-height: 1.45; }
-.ntrack-vit {
-  display: flex; align-items: baseline; gap: .35rem; flex-wrap: wrap;
-  margin-top: .5rem; border-top: 2px dotted rgba(255, 255, 255, .14); padding-top: .4rem;
-}
-.ntrack-vit-lab { font-family: var(--pxd); font-size: .58rem; color: var(--purple); text-shadow: var(--outline-sm); }
-.ntrack-vit-val { font-family: var(--pxd); font-size: .8rem; color: var(--cream); text-shadow: var(--outline-sm); }
 
 /* ---- Barcode scanner (modal surface) ----
    The camera preview is the one thing that must be visible; everything else is

@@ -2038,28 +2038,21 @@
     return c;
   }
 
-  function vitalityStripHtml(v) {
-    return '<div class="ntrack-vit">' +
-      '<span class="ntrack-vit-lab">' + term("attr-VIT", "Vitality") + "</span>" +
-      (v.value == null ? "" : ' <span class="ntrack-vit-val">' + Math.round(v.value) + "</span>") +
-      ' <span class="muted small">' + esc(v.text) + "</span></div>";
-  }
-
   /* The no-bar macro card's body: label + right-aligned "logged / target unit",
-     the reason sub-line, the day's headline, then the Vitality line. No
-     bar-track / bar-fill is emitted — the whole point of the redesign. */
+     the reason sub-line, then the day's headline. No bar-track / bar-fill is
+     emitted — the whole point of the redesign. */
   function macroCardHtml(vm) {
     if (!vm.hasTargets) {
       return '<p class="muted small">Macro targets appear once your birth year is set in Profile — ' +
         "a target is a guide, never a grade.</p>" +
-        '<p class="muted small">' + esc(vm.headline) + "</p>" + vitalityStripHtml(vm.vitality);
+        '<p class="muted small">' + esc(vm.headline) + "</p>";
     }
     const rows = vm.rows.map((r) =>
       '<div class="n-target"><div class="n-t-head"><span class="n-t-label">' + esc(r.label) + "</span>" +
       '<span class="n-t-val">' + fmt(r.logged) + '<span class="n-t-unit"> / ' + r.target + " " + esc(r.unit) + "</span></span></div>" +
       '<p class="n-t-reason muted small">' + esc(r.text) + "</p></div>").join("");
     return '<div class="n-targets">' + rows + "</div>" +
-      '<p class="muted small">' + esc(vm.headline) + "</p>" + vitalityStripHtml(vm.vitality);
+      '<p class="muted small">' + esc(vm.headline) + "</p>";
   }
 
   function renderMacroCard() {
@@ -2070,9 +2063,7 @@
     const date = today();
     const totals = Store.dayTotals(date);
     const count = Store.intakesOn(date).length;
-    const vit = Engine.nutritionVitality(S, date);
-    const optedOut = !!(S.profile && S.profile.nutritionVitality === false);
-    host.innerHTML = macroCardHtml(Nutrition.macroCard(totals, targets, { goal, count, vitality: vit, vitalityOptOut: optedOut }));
+    host.innerHTML = macroCardHtml(Nutrition.macroCard(totals, targets, { goal, count }));
   }
 
   /* Change A — the weekly adherence bar at the foot of the tab. Uses the engine's
@@ -2420,8 +2411,6 @@
         <p class="muted small grid-note">A starting estimate. After a couple of weeks your own logs replace it.</p>
         <label>Weekly session target<input class="inp" id="p-wt" type="number" value="${p.weeklyTarget ?? 4}"></label>
         <label>Units<select class="inp" id="p-u"><option value="kg" ${U.kg ? "selected" : ""}>Kilograms</option><option value="lb" ${!U.kg ? "selected" : ""}>Pounds</option></select></label>
-        <label class="check-line"><input type="checkbox" id="p-nutri-vit" ${p.nutritionVitality !== false ? "checked" : ""}> Include nutrition in ${term("attr-VIT", "Vitality")}</label>
-        <p class="muted small grid-note" id="p-nutri-vit-note">When this is on, the food you log counts toward Vitality — but only the days you actually logged; a blank day is left out, never counted as zero. Untick to keep nutrition off your stats. The setting is dated, so it changes your Vitality from today on and leaves past months as they were already measured.</p>
       </div>
       <button class="btn primary" id="p-save">Save profile</button>`;
     host.append(c);
@@ -2556,10 +2545,6 @@
       // valid value and falls through to the observed/training/fallback precedence.
       const act = g("#p-act");
       p.activityLevel = (typeof Macros !== "undefined" && Macros.activityLevelFor(act)) ? act : null;
-      // Decision #3's opt-out: nutrition counts toward Vitality unless this is
-      // unticked. Stored on the profile so it is a dated fact (see TRACKED), and
-      // set BEFORE recordProfileLog so the snapshot captures it.
-      p.nutritionVitality = !!$("#p-nutri-vit").checked;
       p.weeklyTarget = parseInt(g("#p-wt"), 10) || 4;
       p.units = g("#p-u");
       // Snapshot the dated profile fields (height/age/sex/goals/weekly target)

@@ -19,12 +19,6 @@ const Store = (() => {
       // A starting estimate only — the Nutrition tab replaces it with an OBSERVED
       // factor once intake and weigh-ins exist. Unset (null) is allowed.
       activityLevel: null,
-      // Decision #3: nutrition feeds the Vitality attribute ONLY while it is
-      // actually being used, and the user can keep it OFF their stats. Default is
-      // ON (opt-in); the Profile checkbox is the visible opt-out. It is a TRACKED
-      // profile field (see TRACKED) so that toggling it cannot SILENTLY rewrite
-      // the Vitality figure a past month was already measured with.
-      nutritionVitality: true,
     },
     // The chosen training phase for the Nutrition tab. A user choice, not a
     // measurement, so it lives on the state — and it round-trips through export.
@@ -69,7 +63,7 @@ const Store = (() => {
 
   /* The profile fields captured in the dated profilelog — the ones with no dated
      home of their own. weightKg/bodyFatPct are NOT here: they belong to bodylog. */
-  const TRACKED = ["heightCm", "birthYear", "sex", "goalWeightKg", "goalBodyFatPct", "weeklyTarget", "activityLevel", "nutritionVitality"];
+  const TRACKED = ["heightCm", "birthYear", "sex", "goalWeightKg", "goalBodyFatPct", "weeklyTarget", "activityLevel"];
   const profileSnap = (p) => {
     const o = {};
     for (const k of TRACKED) o[k] = (p && p[k] != null) ? p[k] : null;

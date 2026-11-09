@@ -338,9 +338,9 @@ const Glossary = (() => {
     },
     {
       id: "attr-VIT", term: "Vitality", aliases: ["Vitality", "VIT", "body comp"],
-      plain: "Your body composition, read from the weigh-ins and body-fat check-ins you log — how you are trending toward the goals you set. If you log food, that counts too, unless you turn it off in Profile.",
-      real: "A weighted blend of weight trend (or weight vs goal), body-fat trend (or body fat vs goal, or the healthy band with no goal), and BMI. When food is being logged, a nutrition part joins the blend: only the days that carry a protein figure are averaged, so an unlogged day is left out rather than scored as a zero, and it can be switched off in Profile. No measurements means no score; a BMI-only score is capped.",
-      source: "BMI is the standard weight-for-height index (WHO); the weighting of the blend and the cap are this app's own. The nutrition part's protein reference (1.6 g/kg/day) sits inside the ISSN 2017 range for healthy adults (1.4-2.0 g/kg/day, PMID 28642676) — the exact point is this app's own arrangement, not a published threshold. The body-fat inputs are estimates — see the 'Body fat %' entry.",
+      plain: "Your body composition, read from the weigh-ins and body-fat check-ins you log — how you are trending toward the goals you set. Food logging never feeds it.",
+      real: "A weighted blend of weight trend (or weight vs goal), body-fat trend (or body fat vs goal, or the healthy band with no goal), and BMI. It reads only your body measurements — food logging is a separate thing and never feeds it. No measurements means no score; a BMI-only score is capped.",
+      source: "BMI is the standard weight-for-height index (WHO); the weighting of the blend and the cap are this app's own. The body-fat inputs are estimates — see the 'Body fat %' entry.",
     },
     {
       id: "firstlog", term: "First Entry", aliases: ["First Entry"],

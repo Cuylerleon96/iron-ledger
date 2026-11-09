@@ -1611,7 +1611,7 @@ console.log("\n=== 39. the per-exercise effort weight is a maths constant, not a
   eq("migrate strips weight but keeps the sibling mode", JSON.stringify(mig.overrides.c), JSON.stringify({ mode: "reps" }));
 }
 
-console.log("\n=== 46. nutrition gamification + the Vitality opt-out (decision #3) ===");
+console.log("\n=== 46. nutrition gamification + Vitality is body-only ===");
 {
   const e = env();
   const acc = (id, st) => e.E.achievements(st).find((a) => a.id === id);
@@ -1690,34 +1690,37 @@ console.log("\n=== 46. nutrition gamification + the Vitality opt-out (decision #
   truthy("the logging term stays small next to improvement (a PR)",
      e.E.XP.INTAKE_WEEK < e.E.XP.PR / 5);
 
-  // ---- (d) the Vitality opt-out (decision #3) ----
+  // ---- (d) VITALITY IS BODY-COMPOSITION ONLY ----
+  // Reverses decision #3: nutrition was 30% of Vitality (NUTRI_VIT.W = 0.3) and
+  // switched on after just 5 logged-protein days, so ONE logged low-protein day
+  // dragged the score down — a perverse incentive to log less. Food logging is
+  // now its own thing: it never feeds Vitality.
   const blog = [{ date: iso(40), weightKg: 84, bodyFatPct: 20 }, { date: iso(2), weightKg: 80, bodyFatPct: 15 }];
   const ifood = [1, 2, 3, 4, 5].map((i) => ie(iso(i), "Chicken breast", 130));
   const vit = (over) => e.E.attributes(base(over), 28).VIT;
-  const on = vit({ bodylog: blog, intakelog: ifood });
-  const offState = { profile: { ...base().profile, nutritionVitality: false }, bodylog: blog, intakelog: ifood };
-  const off = vit(offState);
-  const none = vit({ bodylog: blog, intakelog: [] });
-  truthy("with nutrition in use, the Vitality basis names it", /nutrition log/.test(on.detail.basis));
-  eq("the opt-out removes the nutrition part from the basis", /nutrition log/.test(off.detail.basis), false);
-  eq("the opt-out removes nutrition from Vitality (== no intake at all)", off.score, none.score);
-  truthy("with nutrition in use the score differs from the opted-out score", on.score !== off.score);
-  eq("the engine exposes the opt-out directly (null nutrition part)",
-     e.E.nutritionVitality(offState, null), null);
-  // NOT "actually being used" yet -> no nutrition part, whatever the toggle
-  eq("a thin log (< 5 logged days) does not count as 'in use'",
-     e.E.nutritionVitality(base({ intakelog: ifood.slice(0, 4) }), null), null);
+  const body = vit({ bodylog: blog });                              // body measurements alone
+  const withFood = vit({ bodylog: blog, intakelog: ifood });        // ...plus a thick food log
+  const oneBlank = vit({ bodylog: blog, intakelog: [ie(iso(2), "Water", null)] }); // a logged low-protein day
+  truthy("Vitality's basis names only the body parts, never nutrition",
+     /weight|body fat|BMI/.test(body.detail.basis) && !/nutrition/i.test(body.detail.basis));
+  eq("a thick food log does NOT change the Vitality score", withFood.detail.score, body.detail.score);
+  eq("a single logged low-protein day no longer drags Vitality down", oneBlank.detail.score, body.detail.score);
+  eq("the engine no longer exposes a nutrition part of Vitality",
+     typeof e.E.nutritionVitality, "undefined");
+  eq("...and the NUTRI_VIT weight table went with it", typeof e.E.NUTRI_VIT, "undefined");
 
-  // ---- (e) missing days must NOT read as zero ----
-  const spread = [1, 6, 12, 20, 27].map((i) => ie(iso(i), "Chicken breast", 130)); // same 5 days, gaps between
-  const plusBlank = ifood.concat([ie(iso(9), "Water", null)]);                    // a 6th logged day with NO protein
-  const nv = (st) => e.E.nutritionVitality(st, null);
-  eq("gaps between logged days do not lower the score (a missing day is not a zero)",
-     nv(base({ intakelog: spread })).v, nv(base({ intakelog: ifood })).v);
-  eq("a logged day carrying no protein value is excluded, not counted as zero",
-     nv(base({ intakelog: plusBlank })).v, nv(base({ intakelog: ifood })).v);
-  truthy("reaching the reference reads 100 (and cannot exceed it)",
-     nv(base({ intakelog: ifood })).v <= 100 && nv(base({ intakelog: ifood })).v >= 99);
+  // ---- (e) the body path itself is intact ----
+  const withGoal = (bl) => vit({ profile: Object.assign({}, base().profile, { goalWeightKg: 75 }), bodylog: bl });
+  truthy("with a weight goal, the weight-trend part still drives Vitality",
+     /weight trend/.test(withGoal(blog).detail.basis));
+  truthy("...and getting closer to the goal scores higher (the log is still read)",
+     withGoal([{ date: iso(40), weightKg: 84 }, { date: iso(2), weightKg: 76 }]).score >
+     withGoal([{ date: iso(40), weightKg: 84 }, { date: iso(2), weightKg: 84 }]).score);
+  const bare = vit({ profile: { name: "C", sex: "M", weightKg: 80, weeklyTarget: 3, units: "kg" },
+    bodylog: [], intakelog: ifood });
+  eq("no body measurements at all is still a zero score, not a nutrition number",
+     bare.detail.score, 0);
+  eq("...and its basis says 'no data'", bare.detail.basis, "no data");
 }
 
 console.log("\n=== 25. age-adjusted Strength (McCulloch coefficients) ===");
