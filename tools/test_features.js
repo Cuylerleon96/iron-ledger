@@ -305,6 +305,28 @@ console.log("=== the essential-fat floor ===");
   eq("12% for a woman is flagged", e.E.belowEssentialBF(12, "F"), true);
   eq("16% for a woman is not", e.E.belowEssentialBF(16, "F"), false);
   eq("no value is not flagged", e.E.belowEssentialBF(null, "M"), false);
+  // Sex unset -> the PROTECTIVE value (the women's 13%), exactly as the intake
+  // floor takes the higher (male) 1500 kcal. The permissive male 5% would leave
+  // the warning silent on a reading it should flag.
+  eq("with sex unset the floor is the protective 13% — 12% is flagged", e.E.belowEssentialBF(12, null), true);
+  eq("...4% is flagged too", e.E.belowEssentialBF(4, null), true);
+  eq("...but 14% is not", e.E.belowEssentialBF(14, null), false);
+  eq("unset reads the SAME floor as an explicit woman", e.E.belowEssentialBF(12, null), e.E.belowEssentialBF(12, "F"));
+  eq("...and NOT the permissive male 5%", e.E.belowEssentialBF(9, null), true);   // 9 < 13
+  eq("...where a man's 9% is fine", e.E.belowEssentialBF(9, "M"), false);        // 9 > 5
+}
+
+console.log("=== the healthy body-fat band when sex is unset ===");
+{
+  const vitAt = (sex) => { const e = env({});
+    e.S.state.profile.sex = sex; e.S.state.profile.bodyFatPct = 15;
+    return e.E.attributes(e.S.state, 28).VIT.score; };
+  const unset = vitAt(null), m = vitAt("M"), f = vitAt("F");
+  console.log(`        15% body fat -> unset VIT ${unset}, M ${m}, F ${f}`);
+  eq("unset uses the protective (women's) band, not the male one", unset, f);
+  eq("...so a lean 15% is scored, not waved through as the male 100", unset < 100, true);
+  eq("an explicit male still reads the male band (15% is inside 8-18)", m, 100);
+  eq("an explicit female reads the women's band (15% is below 18)", f, 82);
 }
 
 console.log("=== the body-fat goal survives an export ===");
@@ -985,6 +1007,18 @@ console.log("=== the Profile sex control offers a neutral 'Not set' choice ===")
   eq("a female profile selects Female", /<option value="F" selected>Female<\/option>/.test(female), true);
   // the save path stores the empty choice as null, never coercing it to "M"
   truthy("the save handler stores 'Not set' as null", /p\.sex = g\("#p-sex"\) \|\| null;/.test(fs.readFileSync(path.join(B, "js", "app.js"), "utf8")));
+
+  // A SAFETY threshold chosen for an unset sex must SAY which value was used.
+  const noteUnset = A.bfFloorNoteHTML({ sex: null });
+  console.log(`        note: ${noteUnset.replace(/<[^>]+>/g, "")}`);
+  truthy("the essential-fat note names the value used (13%)", /13%/.test(noteUnset));
+  truthy("...and says it is the women's figure", /figure for women/.test(noteUnset));
+  truthy("...and that setting the sex may change it", /may change this floor/.test(noteUnset));
+  eq("no note is shown for an explicit male", A.bfFloorNoteHTML({ sex: "M" }), "");
+  eq("no note is shown for an explicit female", A.bfFloorNoteHTML({ sex: "F" }), "");
+  eq("the floor for an unset sex is the protective 13%", A.bfFloorPct(null), 13);
+  eq("...the male figure for a man", A.bfFloorPct("M"), 5);
+  eq("...the female figure for a woman", A.bfFloorPct("F"), 13);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

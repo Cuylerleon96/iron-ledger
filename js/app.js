@@ -720,6 +720,8 @@
         + `. Continuity rewards turning up regularly, and one missed week costs only a few points.`;
       case "VIT": return (x.basis && x.basis !== "no data")
         ? `Scored from ${x.basis}${x.log ? ` · ${x.log} bodyweight check-in${x.log > 1 ? "s" : ""}` : ""}.`
+          + (sexUnset(S.profile) && (x.used || []).includes("body fat")
+             ? " Sex isn't set, so the healthy body-fat band used is the women's 18-28%; setting your sex in Profile may change it." : "")
         : "Add bodyweight, body-fat and height in Profile to score vitality.";
       default: return "";
     } })();
@@ -1921,6 +1923,17 @@
       "</select>";
   }
 
+  /* The essential-fat floor is a SAFETY threshold, so a profile with no sex gets
+     the PROTECTIVE figure — the female floor — exactly as the nutrition intake
+     floor takes the higher (male) 1500 kcal. An explicit "M" still reads the
+     male figure, so no male profile moves. */
+  const sexUnset = (p) => !(p && (p.sex === "M" || p.sex === "F"));
+  const bfFloorPct = (sex) => Engine.ESSENTIAL_BF[sex === "M" ? "M" : "F"];
+  function bfFloorNoteHTML(p) {
+    if (!sexUnset(p)) return "";
+    return `<p class="muted small n-bf-floor">Sex isn't set on your profile, so the essential-fat floor uses the higher value — ${bfFloorPct(p.sex)}%, the figure for women. Setting your sex in Profile may change this floor.</p>`;
+  }
+
   function renderProfile(host) {
     const p = S.profile;
     const c = el("section", { class: "card" });
@@ -1960,7 +1973,7 @@
     const bfp = Engine.bodyFatProgress(S);
     const bfReadings = (S.bodylog || []).filter((b) => Engine.num(b.bodyFatPct) > 0)
       .slice().sort((a, b) => a.date.localeCompare(b.date));
-    const floor = Engine.ESSENTIAL_BF[p.sex === "F" ? "F" : "M"];
+    const floor = bfFloorPct(p.sex);
     const bfBlock = (bfp || bfReadings.length >= 2) ? `
       ${bfp ? `<p class="target-line ${bfp.met ? "up" : ""}">Body-fat goal <b>${fmtW(bfp.goal)}%</b>${
         bfp.current != null
@@ -1969,6 +1982,7 @@
             (bfp.met ? " · met" : ` · ${fmtW(Math.abs(bfp.remaining))} pts to go`)
           : " · no body-fat check-in yet"}</p>
         ${bfp.belowEssential ? `<p class="muted small">Under about ${floor}% is below the essential-fat floor — not a level anyone holds.</p>` : ""}` : ""}
+      ${bfFloorNoteHTML(p)}
       ${bfReadings.length >= 2 ? `<p class="muted small chart-cap">Body fat % over time</p><div class="chart-host" id="bf-chart"></div>` : ""}` : "";
     /* Tape measurements: same log, same place to enter them, shown as a trend
        and as the latest figure. Each series is one measurement, in the user's
@@ -2084,7 +2098,8 @@
       // Factual, and only when it applies: a body-fat target under the essential
       // floor is not a target anyone can hold, so say so rather than accept it.
       if (Engine.belowEssentialBF(p.goalBodyFatPct, p.sex)) {
-        toast(`Goal saved — but under about ${Engine.ESSENTIAL_BF[p.sex === "F" ? "F" : "M"]}% is below the essential-fat floor and can't be held long.`, "warn", 9000);
+        toast(`Goal saved — but under about ${bfFloorPct(p.sex)}% is below the essential-fat floor and can't be held long.`
+          + (sexUnset(p) ? ` Sex isn't set, so we used the higher floor — ${bfFloorPct(p.sex)}%, the figure for women.` : ""), "warn", 9000);
       } else {
         toast(wKg ? "Saved — recorded a check-in for today" : "Profile saved", "good");
       }
@@ -2276,5 +2291,6 @@
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     targetLabelFor, exDetailHTML, TARGET_NOTE, sexFieldHTML,
+    sexUnset, bfFloorPct, bfFloorNoteHTML,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();

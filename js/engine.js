@@ -1010,7 +1010,12 @@ const Engine = (() => {
      lower bound is worth flagging rather than silently accepting, because the
      app would otherwise help someone aim somewhere they cannot stay. */
   const ESSENTIAL_BF = { M: 5, F: 13 };
-  const belowEssentialBF = (pct, sex) => num(pct) > 0 && num(pct) < ESSENTIAL_BF[sex === "F" ? "F" : "M"];
+  /* SAFETY threshold. With sex unset the app takes the PROTECTIVE value — the
+     female floor (13%) — exactly as the intake floor takes the higher (male)
+     1500 kcal. Reading the male 5% here would leave this warning silent on a
+     reading it should flag. An explicit "M" still reads M (5%), so no male
+     profile moves. */
+  const belowEssentialBF = (pct, sex) => num(pct) > 0 && num(pct) < ESSENTIAL_BF[sex === "M" ? "M" : "F"];
 
   function vitalityScore(state, asOfDate) {
     // asOfDate re-evaluates an earlier month using the measurements that existed
@@ -1047,7 +1052,12 @@ const Engine = (() => {
         parts.push({ w: 0.5, v: clamp(100 - Math.abs(bf - bfGoal) * 6) }); used.push("body fat vs goal");
       }
     } else if (bf > 0) {
-      const sex = state.profile.sex || "M";
+      /* The healthy body-fat band is sex-specific. With sex unset the app takes
+         the PROTECTIVE band — the female figures (18-28%), whose lower edge is
+         the higher, more cautious leanness boundary, matching the essential-fat
+         floor. An explicit "M" still reads the male 8-18% band, so no male
+         profile moves. */
+      const sex = state.profile.sex === "M" ? "M" : "F";
       const lo = sex === "F" ? 18 : 8, hi = sex === "F" ? 28 : 18;
       const v = bf < lo ? clamp(100 - (lo - bf) * 6) : bf > hi ? clamp(100 - (bf - hi) * 5) : 100;
       parts.push({ w: 0.3, v }); used.push("body fat");

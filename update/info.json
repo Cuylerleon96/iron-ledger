@@ -1,11 +1,11 @@
 {
-  "versionCode": 70,
-  "versionName": "1.0.69",
+  "versionCode": 71,
+  "versionName": "1.0.70",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "dfaad905d049848e42c5c6bbb7c7d53f22c5b6f03e470939b4361528fb117e62",
-  "sizeBytes": 3877749,
+  "sha256": "d0897074e44f7153d7e3351c448004fa00e553b52e5e71b1f8738993765d3d1c",
+  "sizeBytes": 3878416,
   "published": "2026-11-08",
   "notes": [
-    "Profile's sex field now offers a neutral 'Not set' choice \u2014 with a body-fat % your targets still work, using the lean-mass equation."
+    "With sex not set, the body-fat safety checks now use the higher, protective values and the screen says which value was used."
   ]
 }

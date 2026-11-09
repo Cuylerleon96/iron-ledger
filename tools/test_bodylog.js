@@ -52,7 +52,12 @@ P().bodyFatPct = 99;                       // deliberately poison the profile co
 const vit = Engine.attributes(Store.state, 28).VIT;
 console.log(`        VIT detail: ${JSON.stringify(vit.detail.used)} score=${vit.score}`);
 eq("body fat came from the log (22%), not the poisoned 99", vit.detail.used.includes("body fat"), true);
-eq("poisoned value did not drive the score", vit.score < 90, true);
+// The log's newest body fat is 30%. With no sex set the app now reads the
+// PROTECTIVE (women's 18-28%) band, so 30% scores 100 - (30-28)*5 = 90. Had the
+// poisoned 99% been used, the band would clamp to 0. The exact value proves the
+// LOG drove the score - the old "<90" bound encoded the male band for an unset
+// sex, which the protective default has now replaced.
+eq("the log value (30%) drove the score, not the poisoned 99", vit.score, 90);
 
 console.log("--- body measurements ride on the same check-in ---");
 // Tape measures are stored on the same bodylog entry (one entry per date, one
