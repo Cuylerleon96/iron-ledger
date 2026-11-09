@@ -450,6 +450,8 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .deload.ok   { color: #b8e0c0; }
 
 .target-line { font-size: .64rem; margin: .3rem 0 .15rem; line-height: 1.5; }
+/* the one-line scoring note, set right where the target is set */
+.target-note { margin: .05rem 0 .1rem; color: #9db8cc; }
 .chart-cap { margin: .5rem 0 .1rem; }
 .target-line.up { color: #a8e878; }
 

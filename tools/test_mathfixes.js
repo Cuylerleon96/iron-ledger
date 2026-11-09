@@ -830,7 +830,11 @@ console.log("\n=== 27. a short-id exercise's tracking-mode override survives ===
   const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
   eq("the length>2 gate is gone", /String\(en\.id\)\.length > 2/.test(src), false);
   truthy("the Log control routes through the shared helper", /setTrackMode\(en\.id, en\.mode\)/.test(src));
-  truthy("the detail-modal control routes through the same helper", /setTrackMode\(id, e\.target\.value\)/.test(src));
+  // The tracking-mode control moved OFF the exercise detail sheet and INTO the
+  // Log flow, so the sheet is no longer a call site for the helper. The Log
+  // entry's "Track as" select is now the only place a mode is chosen.
+  eq("the detail sheet no longer carries a tracking-mode control", /id="dt-mode"/.test(src), false);
+  truthy("the Log entry's 'Track as' select is the mode control", /track-as-lab">Track as</.test(src));
 }
 
 console.log("\n=== 28. the dead 'Hide from lists' control is gone ===");

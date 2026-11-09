@@ -1,11 +1,11 @@
 {
-  "versionCode": 67,
-  "versionName": "1.0.66",
+  "versionCode": 68,
+  "versionName": "1.0.67",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "a522ea8d745351ff4c27e9843353be235c2dfdb55b512506ee65386569284b7c",
-  "sizeBytes": 3868292,
+  "sha256": "72a405ba7be1f818a99410387fac9353e171cadd93b8ed23bca7d28de2c3ef5e",
+  "sizeBytes": 3868913,
   "published": "2026-11-08",
   "notes": [
-    "Food search shows the same food once: identical names merge into one row, and where two similar rows remain they now say how much protein each has, so you can tell them apart."
+    "The exercise page teaches and shows your target; Track as and Log this now now live in the Log flow."
   ]
 }

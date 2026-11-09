@@ -790,5 +790,89 @@ console.log("=== exercise form cue: full text, real steps, honest provenance ===
   truthy("the detail modal renders the cue through cueBlock", /\$\{cueBlock\(info\)\}/.test(app));
 }
 
+console.log("=== the exercise sheet teaches; the logging controls live in the Log flow ===");
+{
+  // Load the real app.js behind a stub DOM (as the cue section does) so the
+  // sheet's own markup builder can be called against a real state.
+  const mkNode = () => ({ innerHTML: "", className: "", dataset: {}, style: {}, children: [],
+    addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+    append() {}, prepend() {}, remove() {}, click() {}, focus() {}, contains: () => false,
+    querySelector: () => mkNode(), querySelectorAll: () => [],
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false } });
+  const uiStore = {};
+  const ui = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+    setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+    document: { addEventListener() {}, removeEventListener() {}, querySelector: () => mkNode(), querySelectorAll: () => [],
+      getElementById: () => mkNode(), createElement: () => mkNode(), createElementNS: () => mkNode(), body: mkNode(),
+      visibilityState: "visible", activeElement: null },
+    navigator: { clipboard: { writeText: async () => {} } },
+    localStorage: { getItem: (k) => (k in uiStore ? uiStore[k] : null), setItem: (k, v) => { uiStore[k] = String(v); }, removeItem: (k) => { delete uiStore[k]; } },
+    Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+  };
+  ui.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+  ui.window = ui; ui.globalThis = ui; vm.createContext(ui);
+  vm.runInContext('localStorage.setItem("fitness-app-v1", JSON.stringify({version:1,createdAt:"2026-01-01T00:00:00.000Z",profile:{name:"C",sex:"M",heightCm:180,weightKg:82,weeklyTarget:4,units:"kg"},workouts:[],bodylog:[],overrides:{},custom:[],achievements:{},settings:{seeded:true}}));', ui);
+  vm.runInContext(["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/chart.js", "js/app.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n") + "\n;globalThis.__X={App};", ui, { filename: "ui.js" });
+  const A = ui.__X.App;
+
+  const lc = { console: { log() {} }, Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, module: { exports: {} } };
+  lc.globalThis = lc; vm.createContext(lc);
+  vm.runInContext(fs.readFileSync(path.join(B, "js", "data.js"), "utf8") + "\n;globalThis.__L=EXERCISE_LIB;", lc, { filename: "data.js" });
+  const LIB = lc.__L;
+
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  // (a) the two logging controls are gone from the sheet
+  eq("the exercise sheet carries no 'Track as' control", /id="dt-mode"/.test(src), false);
+  eq("the exercise sheet carries no 'Log this now' button", /id="dt-log"/.test(src), false);
+  eq("no listener for either remains", /#dt-mode|#dt-log/.test(src), false);
+
+  // (b) the sheet still TEACHES and still shows the personal target
+  const withCue = LIB.find((e) => e.f === 1 && (e.d || "").trim());
+  const html = A.exDetailHTML(withCue.id);
+  truthy("the sheet keeps the 'How to do it' cue block", /How to do it/.test(html));
+  truthy("the sheet keeps the cue's source line", /free-exercise-db/.test(html));
+  truthy("the sheet keeps the settable target control", /id="dt-tgt"/.test(html) && /id="dt-tset"/.test(html));
+  truthy("the sheet still offers Close", /id="dt-x"/.test(html));
+  eq("no 'Track as' text anywhere in the rendered sheet", /Track as/.test(html), false);
+  eq("no 'Log this now' text anywhere in the rendered sheet", /Log this now/.test(html), false);
+
+  // (c) the target's mode-dependent label still resolves with NO mode control here
+  A.Store.setOverride(withCue.id, { mode: "reps" });
+  truthy("in reps mode the label reads 'Target (best)'", /Target \(best\)/.test(A.exDetailHTML(withCue.id)));
+  A.Store.setOverride(withCue.id, { mode: "weight_reps" });
+  truthy("in weight_reps mode it reads the e1RM label", /Target \(kg e1RM\)/.test(A.exDetailHTML(withCue.id)));
+  eq("every non-weight mode resolves to 'best'", ["reps", "time", "weight_time", "distance_time", "weight_distance"].map(A.targetLabelFor),
+     ["Target (best)", "Target (best)", "Target (best)", "Target (best)", "Target (best)"]);
+  eq("weight_reps is the only e1RM label", A.targetLabelFor("weight_reps"), "Target (kg e1RM)");
+
+  // (d) the one-line scoring note is present and promises only what is true
+  truthy("the sheet carries the one-line scoring note", /class="muted small target-note"/.test(html));
+  truthy("the note says the target drives the progress line", /drives the progress line/.test(A.TARGET_NOTE));
+  truthy("...and that it does not change the score or XP", /doesn't change your score or XP/.test(A.TARGET_NOTE));
+  const e2 = env({});
+  e2.S.upsertWorkout({ id: "w1", date: "2026-11-07", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] });
+  const xp0 = e2.E.sessionXp(e2.S.state, "w1");
+  const att0 = JSON.stringify(e2.E.attributes(e2.S.state, 28));
+  e2.S.setTarget(73, 200);
+  eq("a personal target does not change session XP", e2.E.sessionXp(e2.S.state, "w1"), xp0);
+  eq("a personal target does not change the attribute scores", JSON.stringify(e2.E.attributes(e2.S.state, 28)), att0);
+
+  // (e) the Log flow can pick an arbitrary exercise and set its mode
+  truthy("the Log flow offers a search picker", /function exercisePicker\(onPick\)/.test(src));
+  truthy("...over the whole library, not a recent/frequent subset", /Search \$\{EXERCISE_LIB\.length\} exercises/.test(src));
+  truthy("the Log entry carries the 'Track as' mode select", /track-as-lab">Track as</.test(src) && /class="mini mode-sel"/.test(src));
+  truthy("...wired through the shared setTrackMode helper", /setTrackMode\(en\.id, en\.mode\)/.test(src));
+  eq("the picker is reached from the Log tab's add button", /#btn-add"\)\.addEventListener\("click", \(\) => exercisePicker\(\(ex\) => addEntry\(ex\)\)\)/.test(src), true);
+  // The Library's recent-progress chip opened the sheet via el()'s attrs path,
+  // where setAttribute() stringified the arrow function into a dead inline
+  // handler. It is wired with addEventListener now, like the list rows.
+  truthy("the recent-progress chip is wired, not a dead onclick attribute",
+    !/onclick:/.test(src) && /chip\.addEventListener\("click", \(\) => exDetail\(id\)\)/.test(src));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

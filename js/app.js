@@ -856,7 +856,8 @@
           <div class="sub muted">${esc(info.c || "")}${(info.e || []).length ? " · " + esc(info.e.join(", ")) : ""} · <span class="mode-tag">${en.mode.replace("_", " × ")}</span></div>
         </div>
         <div class="row">
-          <select class="mini mode-sel">${["weight_reps", "reps", "time", "weight_time", "distance_time", "weight_distance"]
+          <span class="muted small track-as-lab">Track as</span>
+          <select class="mini mode-sel" aria-label="Track as — how these sets are entered" title="Track as — how these sets are entered">${["weight_reps", "reps", "time", "weight_time", "distance_time", "weight_distance"]
             .map((m) => `<option value="${m}" ${m === en.mode ? "selected" : ""}>${m.replace("_", " × ")}</option>`).join("")}</select>
           <button class="btn ghost tiny rm">✕</button>
         </div>
@@ -1376,7 +1377,13 @@
     Engine.trainedExerciseIds(S, 3650).slice(0, 40).forEach((id) => {
       const b = Engine.bestFor(S, id);
       if (!b.date) return;
-      prog.append(el("button", { class: "chip btnlike", onclick: () => exDetail(id) }, `${esc(Engine.exName(S, id))} · ${bestLabel({ best: b, mode: b.mode })}`));
+      const chip = el("button", { class: "chip btnlike" }, `${esc(Engine.exName(S, id))} · ${bestLabel({ best: b, mode: b.mode })}`);
+      // el()'s attrs path setAttribute()s every value, so an onclick passed there
+      // lands as the literal text "() => exDetail(id)" — a handler body that
+      // evaluates an arrow function and throws it away. The chip looked live and
+      // did nothing; wire it the same way the list rows are wired.
+      chip.addEventListener("click", () => exDetail(id));
+      prog.append(chip);
     });
 
     const list = el("div", { class: "lib-list" });
@@ -1429,13 +1436,31 @@
     return `<section class="cue-block"><h4 class="cue-head">How to do it</h4>${body}<p class="cue-src">${esc(src)}</p></section>`;
   }
 
-  function exDetail(id) {
+  /* The exercise sheet only TEACHES and shows the user's own target now. The
+     logging controls — "Track as" and "Log this now" — live in the Log flow:
+     choosing how an exercise is tracked is part of entering its sets, and
+     logging is an action that belongs where the sets are. The target's label
+     still depends on the tracking MODE, so it resolves from the engine's
+     effective mode (saved override, else the library default) rather than from
+     a control in this panel — the dependency holds with the control gone. */
+  function targetLabelFor(mode) {
+    return `Target (${mode === "weight_reps" ? U.label() + " e1RM" : "best"})`;
+  }
+
+  /* One line, and TRUE: a personal target feeds the progress line below (target,
+     current, % and an ETA) and nothing else. The engine reads state.targets in
+     exactly one place — targetProgress — so it never reaches scoring, session
+     XP, attributes or badges. Verified against the code, not asserted from
+     memory. */
+  const TARGET_NOTE = "Your target drives the progress line below — it doesn't change your score or XP.";
+
+  /* The sheet's markup as a pure string, so the split stays testable. */
+  function exDetailHTML(id) {
     const info = findEx(id) || { n: Engine.exName(S, id), c: "", e: [], p: [], s: [], m: "weight_reps", d: "" };
     const series = Engine.seriesFor(S, id);
     const best = Engine.bestFor(S, id);
     const cmp = Engine.compareLast(S, id);
-    const box = el("div", { class: "detail-modal" });
-    box.innerHTML = `
+    return `
       <h3>${esc(info.n)}</h3>
       <p class="muted small">${esc(info.c)}${(info.e || []).length ? " · " + esc(info.e.join(", ")) : " · bodyweight"}
         ${(info.p || []).length ? " · " + esc(info.p.join(", ")) : ""}</p>
@@ -1446,25 +1471,24 @@
         ${cmp ? `<span class="chip ${cmp.est1RM.pct > 0 ? "up" : cmp.est1RM.pct < 0 ? "down" : ""}">${cmp.est1RM.pct >= 0 ? "▲" : "▼"} ${cmp.est1RM.pct.toFixed(1)}% vs last</span>` : ""}
       </div>
       <div class="row">
-        <label class="mini-lab">Track as
-          <select class="mini" id="dt-mode">${["weight_reps", "reps", "time", "weight_time", "distance_time", "weight_distance"]
-            .map((m) => `<option value="${m}" ${m === Engine.exMode(S, id) ? "selected" : ""}>${m.replace("_", " × ")}</option>`).join("")}</select>
-        </label>
-      </div>
-      <div class="row">
-        <label class="mini-lab">Target (${Engine.exMode(S, id) === "weight_reps" ? U.label() + " e1RM" : "best"})
+        <label class="mini-lab">${targetLabelFor(Engine.exMode(S, id))}
           <input class="inp num" id="dt-tgt" type="number" step="any" placeholder="none"
                  value="${S.targets[id] ? fmtW(U.w(S.targets[id].value)) : ""}" style="width:96px"></label>
         <button class="btn ghost tiny" id="dt-tset">Set target</button>
         ${S.targets[id] ? `<button class="btn ghost tiny" id="dt-tclear">Clear</button>` : ""}
       </div>
+      <p class="muted small target-note">${esc(TARGET_NOTE)}</p>
       ${targetProgressLine(id)}
       ${customControlsHTML(id)}
       <div id="dt-chart" class="chart-host"></div>
-      <div class="row end"><button class="btn ghost" id="dt-x">Close</button><button class="btn primary" id="dt-log">Log this now</button></div>`;
+      <div class="row end"><button class="btn ghost" id="dt-x">Close</button></div>`;
+  }
+
+  function exDetail(id) {
+    const box = el("div", { class: "detail-modal" });
+    box.innerHTML = exDetailHTML(id);
     openModal(box, "wide");
     $("#dt-x").addEventListener("click", closeModal);
-    $("\#dt-mode").addEventListener("change", (e) => { setTrackMode(id, e.target.value); toast("Tracking mode updated"); render(); });
     const tset = $("#dt-tset", box);
     if (tset) tset.addEventListener("click", () => {
       const raw = $("#dt-tgt", box).value;
@@ -1489,9 +1513,8 @@
       if (!confirm(`Delete "${nm}"? Its logged sets stay in your history, but it will no longer appear in the exercise list or count toward your muscle-group analysis.`)) return;
       deleteCustomEx(id); toast("Deleted", "warn"); closeModal(); render();
     });
-    $("#dt-log").addEventListener("click", () => { closeModal(); draft = draft || newDraft(); addEntry({ id, n: info.n }); setView("log"); });
     const chartHost = $("#dt-chart", box);
-    const pts = series.filter((p) => (Engine.exMode(S, id) === "weight_reps" ? p.est1RM : p.top) > 0)
+    const pts = Engine.seriesFor(S, id).filter((p) => (Engine.exMode(S, id) === "weight_reps" ? p.est1RM : p.top) > 0)
       .map((p) => ({ x: p.date, y: Engine.exMode(S, id) === "weight_reps" ? U.w(p.est1RM) : p.top }));
     Chart.line(chartHost, { points: pts, color: "#58c8f8", unit: Engine.exMode(S, id) === "weight_reps" ? " " + U.label() + " e1RM" : "" });
   }
@@ -2229,5 +2252,6 @@
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
+    targetLabelFor, exDetailHTML, TARGET_NOTE,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();
