@@ -2276,6 +2276,216 @@ const Engine = (() => {
     return TITLES[i] + (lvl > 50 ? " ★" + (lvl - 50) : "");
   };
 
+  /* ---------- heroes & cosmetics: ONE UNLOCK TABLE ----------
+
+     Every hero and every cosmetic (a colourway, a gear overlay) is ONE row here,
+     and the row names the KEY that unlocks it plus a plain progress read. Keys are
+     THRESHOLDS on signals the app ALREADY tracks — never a new thing to collect:
+
+       weeks     weeksAtTarget(state)   — Monday-start weeks meeting the weekly
+                                          session target. CALENDAR-bounded; adding a
+                                          session can only ever add a week.
+       dis       Discipline (CON) score  — the 28-day attribute, 0-100.
+                                          PERFORMANCE-bound.
+       hardSets  a LIFETIME count of drop/failure sets actually logged (set.ty).
+                                          A count of hard WORK done, monotone: a
+                                          logged set is never un-logged, so it only
+                                          grows. (Deliberately NOT "a count of
+                                          typing": it counts a real training event,
+                                          and it is one of the signals the brief
+                                          names.)
+       level     levelInfo(xp()).level   — xp is monotone, so the level is too.
+       badges    how many achievements are unlocked — monotone.
+
+     RULES (the whole point of a single table):
+       * MONOTONE ONLY. A key can be CALENDAR-bounded or PERFORMANCE-bound, and it
+         must never be able to move BACKWARD. Nothing here counts consecutive days
+         and NOTHING here is a STREAK: a streak can be LOST, and a cosmetic that
+         can be taken away is shaming. The user only ever walks TOWARD a key.
+       * A locked row is ASPIRATIONAL, never punitive: a silhouette plus one plain
+         line stating the real remaining distance ("2 weeks at your target — 1 to
+         go"). No padlock, no countdown, no FOMO.
+       * An item may carry MORE THAN ONE key (an OR): the pebble golem opens on
+         either 2 weeks at target OR Discipline 60. Its progress pair and its locked
+         line report the key NEAREST completion, so the number shown is always true.
+
+     `heroItems(state)` returns, per row: { id, kind, name, unlocked, progress:
+     {have, need}, copy (the exact locked-line), and the art fields } for whichever
+     state is passed. One lookup, hero-agnostic: the director never branches on id. */
+
+  /* Lifetime hard sets: a drop or failure set the user actually logged. Counts
+     SETS, not sessions or entries, so it reads as "10 hard sets in the bank". */
+  function hardSetCount(state) {
+    let n = 0;
+    for (const w of (state && state.workouts) || []) for (const en of w.entries || []) {
+      for (const s of en.sets || []) if (s && (s.ty === "drop" || s.ty === "failure")) n++;
+    }
+    return n;
+  }
+  const badgeCount = (state) => Object.keys((state && state.achievements) || {}).length;
+
+  /* Every signal read ONCE, so the table cannot disagree with itself. */
+  function heroSignals(state) {
+    return {
+      weeks: weeksAtTarget(state),
+      dis: Math.round(attributes(state, 28).CON.score),   // CON is the "Discipline" attribute
+      hardSets: hardSetCount(state),
+      level: levelInfo(xp(state)).level,
+      badges: badgeCount(state),
+    };
+  }
+
+  /* The exact locked-line copy for one key, given how far along it is. Plain, and
+     only ever states distance — the numbers are real, so it can never promise a
+     progress the user has not got. */
+  const KEY_SAYS = {
+    start:    () => "Yours from the start.",
+    weeks:    (have, need) => `${need} ${need === 1 ? "week" : "weeks"} at your target — ${Math.max(0, need - have)} to go`,
+    dis:      (have, need) => `Discipline ${need} — ${Math.max(0, need - have)} to go`,
+    hardSets: (have, need) => `${need} hard sets — ${Math.max(0, need - have)} to go`,
+    level:    (have, need) => `Level ${need} — ${Math.max(0, need - have)} to go`,
+    badges:   (have, need) => `${need} ${need === 1 ? "badge" : "badges"} — ${Math.max(0, need - have)} to go`,
+  };
+
+  /* THE TABLE. Sheet/img paths are the director's ONE lookup (js/hero.js reads
+     `sheet`), so the app never hard-codes a hero anywhere. */
+  /* ANATOMY: where each hero's head/waist/shoulders are, in CELL UNITS (0..32,
+     origin top-left of the sprite cell — the SAME coordinate space the sheets
+     use).   MEASURED from the generated PNGs (solid silhouette, alpha >= 200; the
+   ember's alpha-70 glow halo is excluded), not guessed — see
+   tools/test_hero_gear.py, which re-measures the art and checks every gear
+   overlay lands on the band it names. The points are the LINE an item of that
+   kind pins to, and `w` is the MEASURED WIDTH of that band (the silhouette's
+   x-span at that row):
+       head       the brow line a headband sits on          (w = head width)
+       shoulders  the shoulder line a garment hangs from    (w = shoulder width)
+       waist      the waist line a belt sits on (null = the creature has none)
+   The WIDTHS are what makes a garment FIT: the golem's head is only 10 units
+   wide, so a fixed 14-unit headband overhung it by 2 a side and read as a bar.
+   Engine.gearBox sizes each item against the band it lands on (see the gear
+   row's `fit`), so ONE drawing still fits every hero. Every hero is a different
+   shape (the golem is squat, the slime is a low dome with no neck, the wisp is
+   a tapering flame), which is exactly why neither ONE drawing nor ONE size can
+   fit them all. */
+  const HERO_ANATOMY = {
+    //        brow            shoulders          waist          facing
+    // slime: the dome runs rows 16..31 with its EYES measured at rows 25..26, so
+    // `head` is the BROW row 18 (band 18..21 — on the forehead, clear of the eyes)
+    // and `waist` is row 28 (belt 28..31 — BELOW the face; row 26 used to clip the
+    // eyes' lower row). Widths are the silhouette's x-span at that row.
+    slime:  { head: { x: 16, y: 18, w: 12 }, shoulders: { x: 16, y: 22, w: 18 }, waist: { x: 16, y: 28, w: 24 }, facing: "right" },
+    pebble: { head: { x: 16, y: 13, w: 10 }, shoulders: { x: 16, y: 19, w: 16 }, waist: { x: 16, y: 24, w: 22 }, facing: "right" },
+    ember:  { head: { x: 16, y: 19, w: 10 }, shoulders: { x: 16, y: 22, w: 12 }, waist: null,                          facing: "right" },
+  };
+
+  const HERO_ITEMS = [
+    { id: "slime",  kind: "hero", name: "Slime",        sheet: "img/hero-sheet.png",
+      anatomy: HERO_ANATOMY.slime, keys: [{ sig: "start" }] },
+    { id: "pebble", kind: "hero", name: "Pebble golem", sheet: "img/hero-pebble.png",
+      anatomy: HERO_ANATOMY.pebble,
+      keys: [{ sig: "weeks", need: 2 }, { sig: "dis", need: 60 }] },
+    { id: "ember",  kind: "hero", name: "Ember wisp",   sheet: "img/hero-ember.png",
+      anatomy: HERO_ANATOMY.ember, keys: [{ sig: "hardSets", need: 10 }] },
+    /* --- COLOURWAYS: ZERO new art. Each is a CSS filter applied to the SAME sheet,
+       so a colourway costs nothing to draw and can never drift from the sprite. --- */
+    { id: "natural", kind: "colourway", name: "Natural", filter: "none",
+      keys: [{ sig: "start" }] },
+    { id: "blush",   kind: "colourway", name: "Blush",   filter: "hue-rotate(-38deg) saturate(1.25)",
+      keys: [{ sig: "weeks", need: 2 }] },
+    { id: "dusk",    kind: "colourway", name: "Dusk",    filter: "brightness(.78) saturate(.85) hue-rotate(192deg)",
+      keys: [{ sig: "weeks", need: 5 }] },
+    { id: "frost",   kind: "colourway", name: "Frost",   filter: "hue-rotate(150deg) brightness(1.12) saturate(.7)",
+      keys: [{ sig: "weeks", need: 10 }] },
+    /* --- GEAR OVERLAYS: a small static PNG pinned to a NAMED anchor on whatever
+       hero is worn. Geometry is in CELL UNITS (0..32) so it is exact at every
+       scale: the renderer computes left/top/width/height as cellSize · (v / 32)
+       (see the `.gear-overlay` rule in css/style.css). `anchor` names the anatomy
+       point the item pins to; `size` is the ART's own footprint in the 32-canvas
+       (tools/make_hero_gear.py draws it at native size in the canvas's top-left
+       box); `fit` says how the box is DERIVED from that hero's band WIDTH, so ONE
+       drawing fits every shape — `{ band: "head", k: 1 }` gives the headband the
+       head's own measured width (a 10-unit golem head gets a 10-unit band, never
+       the art's 14), and `{ band: "waist", k: .78 }` insets the belt to 78 % of
+       the waist. `offset` then nudges it (the horizontal centring is computed
+       from the fitted width, so it is never hard-coded); `z` is "front" of the
+       sprite. There is no CAPE: the bodies are wider than it, so it was 100 %
+       occluded on every hero (measured 0 visible pixels) — see the hero report. */
+    { id: "headband", kind: "gear", name: "Headband", img: "img/gear-headband.png",
+      anchor: "head", size: { w: 14, h: 4 }, fit: { band: "head", k: 1 }, offset: { x: 0, y: 0 }, z: "front",
+      keys: [{ sig: "level", need: 3 }] },
+    { id: "belt",     kind: "gear", name: "Belt",     img: "img/gear-belt.png",
+      anchor: "waist", size: { w: 14, h: 3 }, fit: { band: "waist", k: 0.78 }, offset: { x: 0, y: 0 }, z: "front",
+      keys: [{ sig: "badges", need: 3 }] },
+  ];
+
+  /* Where a gear item's overlay box sits on a given hero, in CELL UNITS.
+     PURE and single-sourced: the stage markup, the roster preview and the header
+     all call this, so they cannot disagree. `anchor` picks the hero's anatomy
+     point, the item's `fit` sizes the box against that band's MEASURED WIDTH (so
+     the garment fits THIS hero, not the art's native 14 units), the height then
+     follows the art's own aspect, and `offset` nudges it. A hero with NO such
+     point (the ember wisp has no waist) falls back to the nearest one it does
+     have, so an item is never silently dropped — the copy reports the wisp has
+     no waist, see the hero report. */
+  function gearBox(hero, gear) {
+    if (!hero || !gear || !gear.size) return null;
+    const a = hero.anatomy || {};
+    const key = a[gear.anchor] ? gear.anchor : (a.shoulders ? "shoulders" : "head");
+    const p = a[key] || { x: 16, y: 16, w: gear.size.w };
+    const art = gear.size;
+    const fit = gear.fit || {};
+    const bandW = num(p.w) || art.w;
+    let w = art.w;
+    if (fit.band) w = Math.max(4, Math.round(bandW * (num(fit.k) || 1)));
+    const h = Math.max(1, Math.round(art.h * w / art.w));       // the art's own aspect, kept
+    const off = gear.offset || { x: 0, y: 0 };
+    return {
+      x: p.x - Math.floor(w / 2) + (off.x || 0), y: p.y + (off.y || 0),
+      w: w, h: h,
+      artw: art.w, arth: art.h,
+      anchor: gear.anchor,
+      anchored: !!a[gear.anchor],
+      z: gear.z === "behind" ? "behind" : "front",
+    };
+  }
+
+  function heroItems(state, sigs) {
+    const sig = sigs || heroSignals(state);
+    /* The ever-unlocked FLOOR. Every signal here is either calendar-bounded
+       (weeks / coverage) or monotone (level, badges, lifetime hard sets), EXCEPT
+       Discipline, which is a rolling 28-day PERFORMANCE score and can fall. A
+       reward that can be taken back is shaming, so once an id has been unlocked it
+       is recorded in `state.hero.unlocked` and stays unlocked for good. The floor
+       only ever ADDS — it never fakes the live progress pair below, which always
+       reports the real signals. */
+    const ever = (state && state.hero && state.hero.unlocked) || [];
+    return HERO_ITEMS.map((it) => {
+      const keys = it.keys.map((k) => {
+        if (k.sig === "start") return { sig: "start", have: 1, need: 1, met: true, frac: 1 };
+        const need = num(k.need) || 1;
+        const have = num(sig[k.sig]) || 0;
+        return { sig: k.sig, have, need, met: have >= need, frac: Math.min(1, have / need) };
+      });
+      const unlocked = keys.some((x) => x.met) || ever.indexOf(it.id) !== -1;
+      /* The LEADING key: when a key is met, the met key with the shortest bar; when
+         locked (or unlocked only via the sticky FLOOR, with no key met right now),
+         the key nearest completion. Either way the progress pair and the locked
+         line describe the road the user is actually closest to walking. */
+      const met = keys.filter((x) => x.met).sort((a, b) => a.need - b.need);
+      const nearest = keys.slice().sort((a, b) => (b.frac - a.frac) || (a.need - b.need))[0];
+      const lead = met.length ? met[0] : nearest;
+      const copy = lead.sig === "start" ? KEY_SAYS.start()
+        : KEY_SAYS[lead.sig](lead.have, lead.need);
+      return {
+        id: it.id, kind: it.kind, name: it.name,
+        sheet: it.sheet || null, img: it.img || null, filter: it.filter || null,
+        anatomy: it.anatomy || null,
+        anchor: it.anchor || null, size: it.size || null, fit: it.fit || null, offset: it.offset || null, z: it.z || null,
+        keys, unlocked, progress: { have: lead.have, need: lead.need }, copy,
+      };
+    });
+  }
+
   /* ---------- achievements ----------
 
      The standing product rule: NO shaming at all — easy, helpful, encouraging
@@ -2600,6 +2810,7 @@ const Engine = (() => {
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     intakeDays, intakeCoverWeeks, intakeFoods, intakeXp, NUTRI_COVER_DAYS,
+    heroItems, heroSignals, HERO_ITEMS, HERO_ANATOMY, gearBox, hardSetCount, badgeCount,
     bodylogCoverWeeks, bodylogXp,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,

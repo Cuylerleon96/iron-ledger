@@ -22,20 +22,32 @@ const eq = (label, got, want) => {
 };
 const truthy = (label, got) => eq(label, !!got, true);
 
-/* a minimal element: classList + style + rect + listener registry */
-function el(rect) {
+/* a minimal DOM node: classList + style + attrs + children */
+function node() {
   const set = new Set();
-  return {
-    className: "", style: {},
+  const n = {
+    className: "", parentNode: null, _kids: [],
+    style: { setProperty(k, v) { this[k] = v; } },
+    _attrs: {},
+    setAttribute(k, v) { n._attrs[k] = v; },
+    appendChild(c) { c.parentNode = n; n._kids.push(c); return c; },
+    removeChild(c) { const i = n._kids.indexOf(c); if (i >= 0) n._kids.splice(i, 1); if (c.parentNode === n) c.parentNode = null; return c; },
     classList: {
       add: (...c) => c.forEach((x) => set.add(x)),
       remove: (...c) => c.forEach((x) => set.delete(x)),
       contains: (c) => set.has(c),
       _set: set,
     },
-    getBoundingClientRect: () => rect,
     addEventListener() {}, removeEventListener() {},
   };
+  return n;
+}
+
+/* a minimal element: the node above + a fixed rect */
+function el(rect) {
+  const n = node();
+  n.getBoundingClientRect = () => rect;
+  return n;
 }
 
 function load(rects) {
@@ -44,6 +56,7 @@ function load(rects) {
     readyState: "complete",
     getElementById: (id) => (id === "hero" ? hero : null),
     querySelector: (s) => (s === ".brand" ? brand : (s === ".hud" ? hud : null)),
+    createElement: () => node(),
     addEventListener() {}, removeEventListener() {},
     visibilityState: "visible",
   };
@@ -75,7 +88,7 @@ const { H, hero, brand, hud } = load(RECTS);
 
 /* (1) rows + profile lookup */
 eq("six row classes in sheet order", H.ROWS, ["idle", "walk", "pickup", "lift-a", "lift-b", "celebrate"]);
-const tabs = ["dash", "log", "history", "library", "nutrition", "profile"];
+const tabs = ["dash", "log", "nutrition", "hero", "history", "library", "profile"];
 truthy("the profile table covers all six tabs", tabs.every((t) => H.PROFILE[t]));
 eq("dash is the randomised profile", H.PROFILE.dash.kind, "random");
 tabs.filter((t) => t !== "dash").forEach((t) =>
@@ -147,30 +160,38 @@ truthy("the director measures the run at runtime (measureRun uses getBoundingCli
 
 /* (5) DIRECT FACING — walking LEFT mirrors (scaleX(-1)), walking RIGHT clears
    it, and the flip NEVER happens off a neutral frame boundary: no NON-walk op
-   ever touches the transform, and the direction flip lives in ONE place
-   (startWalk), which is only ever entered from a settled neutral pose. */
+   ever touches the mirror, and the direction flip lives in ONE place
+   (startWalk), which is only ever entered from a settled neutral pose.
+   RE-EXPRESSED (FIX A, the motion-compatibility regression): the mirror now
+   rides the INNER `.hero-body` element, NOT the slot — the slot's `transform`
+   carries the MOTION (`translateX`) instead, because the individual `translate`
+   CSS property needs Chrome 104+ and this app supports Android 5.1. Same intent,
+   split carriers: motion on the slot, mirror on the body. */
 const hasFlip = (t) => /scaleX\(-1\)/.test(t);
+const flipOf = () => H.state().flip;
+const motionOf = () => H.state().motion;
 H._reset();
 eq("reset -> neutral centre, unmirrored",
-  [H.state().facing, H.state().transform], [false, "none"]);
+  [H.state().facing, motionOf(), flipOf()], [false, "none", ""]);
 H._exec({ a: "walkTo", side: -1 });
 truthy("walking LEFT sets facing", H.state().facing);
-truthy("walking LEFT applies the MIRRORED transform scaleX(-1)", hasFlip(H.state().transform));
+truthy("walking LEFT applies the MIRRORED transform scaleX(-1) on the INNER body", hasFlip(flipOf()));
+truthy("...and NEVER on the slot (whose transform carries the motion)", !hasFlip(motionOf()));
 truthy("walking LEFT lands on the clamped left bound", Math.abs(H.state().pos - minX) < 1e-6);
 H._exec({ a: "walkTo", side: 1 });
 truthy("walking RIGHT clears the mirror (facing=false)", !H.state().facing);
-truthy("walking RIGHT applies NO scaleX(-1)", !hasFlip(H.state().transform));
+truthy("walking RIGHT applies NO scaleX(-1)", !hasFlip(flipOf()));
 truthy("walking RIGHT lands on the clamped right bound", Math.abs(H.state().pos - maxX) < 1e-6);
 H._reset();
 H._exec({ a: "walkTo", side: 1 });
-truthy("walk RIGHT from centre stays unmirrored", !H.state().facing && !hasFlip(H.state().transform));
-const before = H.state().transform;
+truthy("walk RIGHT from centre stays unmirrored", !H.state().facing && !hasFlip(flipOf()));
+const before = flipOf();
 H._exec({ a: "stand" });
-eq("a neutral stand beat does not touch the transform", H.state().transform, before);
+eq("a neutral stand beat does not touch the mirror", flipOf(), before);
 H._exec({ a: "once", row: "pickup" });
-eq("a transient row does not touch the transform", H.state().transform, before);
+eq("a transient row does not touch the mirror", flipOf(), before);
 H._exec({ a: "idle", dur: 1000 });
-eq("an idle beat does not touch the transform", H.state().transform, before);
+eq("an idle beat does not touch the mirror", flipOf(), before);
 const src = fs.readFileSync(path.join(B, "js", "hero.js"), "utf8");
 eq("the direction flip (`facing = to < from`) appears EXACTLY once in the source",
   src.split("facing = to < from").length - 1, 1);
@@ -181,36 +202,44 @@ truthy("only startWalk assigns the direction; resetTransform only clears it to n
 
 /* (6) CONTINUITY — the mirror can never be interpolated and the walk can never
    teleport. Two regression tests, one per defect:
-     (a) NO TRANSITIONED PROPERTY can carry the facing flip: the only property the
-         director ever transitions is `translate`; the flip rides `transform`,
-         which never appears in a transition, so it can only SNAP (and the flip is
-         applied at a walk's start, before the transition is armed);
+     (a) the MOTION rides the slot's `transform: translateX(…)` and is the ONLY
+         transitioned property; the MIRROR rides the INNER body's `transform`,
+         which carries NO transition at all (css pins `transition: none`), so it
+         can only SNAP — and it is applied at a walk's start, before the motion
+         transition is armed. The individual `translate`/`rotate`/`scale`
+         properties are banned outright (Chrome 104+; minSdkVersion 22);
      (b) a PURE predicate over a sampled trace: every consecutive x change is
          bounded by the walk's own speed — so a recorded teleport FAILS it. */
 console.log("=== (6) motion separated from the mirror; no position discontinuity ===");
 H._reset();
 H._exec({ a: "walkTo", side: -1 });                       // arm a walk (left)
 const trAfterWalk = hero.style.transition || "";
-truthy("a walk transitions `translate` only (never `transform`/`scale`)",
-  /^translate \d+ms linear$/.test(trAfterWalk));
-truthy("the walk's transitioned property does NOT contain the flip", !/scale|transform/.test(trAfterWalk));
-eq("the mirror is applied via the NON-transitioned `transform` property", hero.style.transform, "scaleX(-1)");
-eq("the motion is applied via the `translate` property", hero.style.translate, `${minX}px`);
+truthy("a walk transitions `transform` ONLY (the motion)", /^transform \d+ms linear$/.test(trAfterWalk));
+truthy("the mirror does NOT ride the slot's transform, so it cannot be interpolated", !hasFlip(motionOf()));
+eq("the mirror lives on the INNER body element", flipOf(), "scaleX(-1)");
+truthy("that body element carries NO transition (the mirror SNAPS)", !H._body().style.transition);
+eq("the motion is applied to the slot as transform: translateX(…)", motionOf(), `translateX(${minX}px)`);
 H._exec({ a: "walkTo", side: 1 });                        // walk right -> mirror cleared
-truthy("walking right snaps the mirror off in `transform` (not via a transition)", hero.style.transform === "");
-truthy("its transition is still `translate` only", /^translate \d+ms linear$/.test(hero.style.transition || ""));
+truthy("walking right snaps the mirror off on the body (not via a transition)", flipOf() === "");
+truthy("its transition is still `transform` only", /^transform \d+ms linear$/.test(hero.style.transition || ""));
 /* every transition literal the source ever writes must be "" or "none" or a
-   `translate …ms linear` — a flip can therefore never be interpolated. */
+   `transform …ms linear` — and NEVER a mirror, so a flip can never interpolate. */
 const trLits = (src.match(/style\.transition\s*=\s*"([^"]*)"/g) || [])
   .map((m) => m.replace(/.*=\s*"/, "").replace(/"$/, ""));
 truthy("the source writes at least one transition literal", trLits.length > 0);
-truthy("NO transition literal ever names `transform` or `scale` (only `translate`)",
-  trLits.every((t) => !/transform|scale/.test(t)) && trLits.some((t) => /^translate/.test(t)));
+truthy("NO transition literal names `scale`; the motion literal names `transform`",
+  trLits.every((t) => !/scale/.test(t)) && trLits.some((t) => /^transform/.test(t)));
+truthy("the source NEVER sets an individual `translate`/`rotate`/`scale` property",
+  !/\.style\.(translate|rotate|scale)\s*=/.test(src));
 const seatIdx = src.indexOf('h.style.transition = "none"');
 truthy("the start pose is seated with the transition OFF, then COMMITTED (a reflow) before the pump",
-  seatIdx !== -1 && /h\.style\.transition = "none";[\s\S]*?setMotion\(from\);[\s\S]*?void h\.offsetWidth;[\s\S]*?h\.style\.transition = "translate/.test(src));
+  seatIdx !== -1 && /h\.style\.transition = "none";[\s\S]*?setMotion\(from\);[\s\S]*?void h\.offsetWidth;[\s\S]*?h\.style\.transition = "transform/.test(src));
 truthy("the transition is armed only AFTER the start pose is committed",
-  src.indexOf('h.style.transition = "none"') < src.indexOf('"translate " + dur + "ms linear"'));
+  src.indexOf('h.style.transition = "none"') < src.indexOf('"transform " + dur + "ms linear"'));
+/* the CSS must pin the body to NO transition, or the snap could be lost */
+const cssSrc = fs.readFileSync(path.join(B, "css", "style.css"), "utf8");
+truthy("css/style.css pins .topbar .hero .hero-body to transition: none",
+  /\.topbar \.hero \.hero-body\s*\{[^}]*transition:\s*none/.test(cssSrc));
 /* (b) the pure continuity predicate */
 eq("walkSpeedCss is the stride over one cycle", H.walkSpeedCss(), H.SEEDS.STRIDE_CSS / H.SEEDS.WALK_CYCLE_MS);
 const BOUND50 = H.maxStepFor(50);
@@ -234,6 +263,32 @@ truthy("and it fails at the jump, naming the offending step", verdict.i === 3 &&
 /* the recorded BEFORE flip: the scale interpolating through zero mid-walk would,
    under the old scheme, also show as a mid-walk sign change — the separation plus
    the non-transitioned flip is what removes it (pinned structurally above). */
+
+console.log("\n=== hero director: the equipped hero + gear are hero-agnostic ===");
+{
+  /* setHero() takes ONE row from the engine's table — { sheet, filter } — and
+     never branches on a hero id. The colourway is a pure CSS filter on the SAME
+     sheet, applied to the SPRITE CHILD ONLY (so the gear is never tinted); the
+     overlay creation lives on the inner `.hero-body` (so a mirror flips the whole
+     creature with its kit). */
+  const spriteImg = () => ((H._sprite() && H._sprite().style.backgroundImage) || "");
+  truthy("the director exposes setHero and setGear", typeof H.setHero === "function" && typeof H.setGear === "function");
+  H.setHero({ sheet: "img/hero-pebble.png", filter: "hue-rotate(-38deg) saturate(1.25)" });
+  truthy("setHero points the SPRITE CHILD at the equipped hero's sheet", /hero-pebble\.png/.test(spriteImg()));
+  truthy("...and applies the colourway filter to the SPRITE ONLY (never the slot/gear)", H._sprite().style.filter === "hue-rotate(-38deg) saturate(1.25)");
+  H.setHero({ sheet: "img/hero-ember.png", filter: "none" });
+  truthy("a 'none' colourway clears the filter (Natural)", H._sprite().style.filter === "" || H._sprite().style.filter === "none");
+  truthy("...and switches the sheet to the ember wisp", /hero-ember\.png/.test(spriteImg()));
+  H.setHero(null);
+  truthy("setHero(null) is a no-op (never blanks the equipped hero)", /hero-ember\.png/.test(spriteImg()));
+  H.setGear([{ src: "img/gear-headband.png", box: { x: 11, y: 13, w: 10, h: 3, artw: 14, arth: 4, z: "front" } }]);
+  const gearKid = (H._body()._kids || []).filter((k) => /hero-gear/.test(k.className || ""))[0];
+  truthy("setGear creates the overlay INSIDE the inner body (so the mirror flips it with the creature)", !!gearKid);
+  truthy("...and the overlay carries the per-hero box + art size as CSS vars",
+    gearKid && gearKid.style["--gx"] === "11" && gearKid.style["--gw"] === "10" && gearKid.style["--artw"] === "14");
+  truthy("the director keeps the hero-agnostic surface (ROWS + setTab + setHero + setGear)",
+    H.ROWS.length === 6 && typeof H.setTab === "function" && typeof H.setHero === "function" && typeof H.setGear === "function");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

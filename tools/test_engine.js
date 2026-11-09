@@ -117,5 +117,115 @@ ok('no exported state getter returns a non-finite number on an empty state',
    nonFinite.length === 0);
 if (threw.length || nonFinite.length) console.log('        offenders: threw=[' + threw.join('; ') + '] nonFinite=[' + nonFinite.join(', ') + ']');
 
+/* ---- the HERO unlock table (Engine.heroItems) --------------------------------
+   ONE documented table maps every hero and every cosmetic to its key + a plain
+   progress read. These checks pin each key AT and JUST BELOW its threshold, the
+   exact locked-line copy, the sticky ever-unlocked floor, and the monotone rule
+   (no streak, no count of typing). ---- */
+console.log('\n-- hero unlock table --');
+const is = (label, got, want) => ok(label + (JSON.stringify(got) === JSON.stringify(want) ? '' : `  got=${JSON.stringify(got)} want=${JSON.stringify(want)}`),
+  JSON.stringify(got) === JSON.stringify(want));
+const H = Engine.HERO_ITEMS;
+const hItems = (sigs) => Engine.heroItems(EMPTY, sigs);
+/* the table: 3 heroes, 4 colourways, 3 gear — one of each kind */
+is('the table carries three heroes', H.filter(i => i.kind === 'hero').map(i => i.id), ['slime', 'pebble', 'ember']);
+is('the table carries four colourways', H.filter(i => i.kind === 'colourway').map(i => i.id), ['natural', 'blush', 'dusk', 'frost']);
+is('the table carries two gear overlays (no cape: the bodies occluded it)', H.filter(i => i.kind === 'gear').map(i => i.id), ['headband', 'belt']);
+/* every key is monotone by SIGNAL: calendar/performance, never a streak or a day count */
+const SIGS = new Set(['start', 'weeks', 'dis', 'hardSets', 'level', 'badges']);
+ok('every key names a known signal', H.every(i => i.keys.every(k => SIGS.has(k.sig))));
+ok('NO key is a streak or a day-run', H.every(i => i.keys.every(k => !/streak|day/i.test(k.sig))));
+/* at / just below, per key, with the exact copy */
+const at = (id, sigs) => hItems(sigs).filter(i => i.id === id)[0];
+is('slime is unlocked from the start (no signal needed)', [at('slime', {}).unlocked, at('slime', {}).copy], [true, 'Yours from the start.']);
+is('Natural colourway is unlocked from the start', at('natural', {}).unlocked, true);
+/* pebble: 2 weeks at target, OR Discipline 60 */
+const pb1 = at('pebble', { weeks: 1, dis: 0, hardSets: 0, level: 0, badges: 0, cover: 0 });
+is('pebble is LOCKED just below its week key, with the real distance', [pb1.unlocked, pb1.progress.have, pb1.progress.need, pb1.copy], [false, 1, 2, '2 weeks at your target — 1 to go']);
+const pb2 = at('pebble', { weeks: 2, dis: 0, hardSets: 0, level: 0, badges: 0, cover: 0 });
+is('pebble UNLOCKS at exactly 2 weeks', [pb2.unlocked, pb2.copy], [true, '2 weeks at your target — 0 to go']);
+const pbD = at('pebble', { weeks: 0, dis: 60, hardSets: 0, level: 0, badges: 0, cover: 0 });
+is('pebble ALSO unlocks on Discipline >= 60 (the OR key)', pbD.unlocked, true);
+const pbD1 = at('pebble', { weeks: 0, dis: 59, hardSets: 0, level: 0, badges: 0, cover: 0 });
+is('...and its Discipline line reads the real distance', [pbD1.unlocked, pbD1.copy], [false, 'Discipline 60 — 1 to go']);
+/* ember: 10 hard sets (drop/failure) logged */
+const em9 = at('ember', { weeks: 0, dis: 0, hardSets: 9, level: 0, badges: 0, cover: 0 });
+is('ember is LOCKED at 9 hard sets', [em9.unlocked, em9.progress.have, em9.copy], [false, 9, '10 hard sets — 1 to go']);
+is('ember UNLOCKS at 10 hard sets', at('ember', { hardSets: 10 }).unlocked, true);
+/* headband (level 3), belt (badges 3) */
+is('headband is Level 3 — 2 to go at level 1', [at('headband', { level: 1 }).copy, at('headband', { level: 3 }).unlocked], ['Level 3 — 2 to go', true]);
+is('belt is 3 badges — 2 to go at 1', [at('belt', { badges: 1 }).copy, at('belt', { badges: 3 }).unlocked], ['3 badges — 2 to go', true]);
+/* RE-EXPRESSED: the cape's `cover` key went with the cape itself (its ONLY
+   subject). The coverage signal still exists — it pays XP via intakeXp() — it is
+   simply no longer an unlock key, so nothing points to it here. */
+ok('no unlock key reads a signal the table no longer ships', H.every(i => i.keys.every(k => SIGS.has(k.sig))));
+/* colourway keys are weeks-at-target, and the filters differ from Natural */
+is('Blush needs 2 weeks at target', [at('blush', { weeks: 1 }).copy, at('blush', { weeks: 2 }).unlocked], ['2 weeks at your target — 1 to go', true]);
+is('a colourway carries a real CSS filter (zero new art)', H.filter(i => i.kind === 'colourway' && i.id !== 'natural').every(i => /hue-rotate|brightness|saturate/.test(i.filter || '')) && at('natural', {}).filter === 'none', true);
+/* every hero names a UNIQUE sheet path */
+is('the three heroes have three distinct sheets', new Set(H.filter(i => i.kind === 'hero').map(i => i.sheet)).size, 3);
+/* the sticky ever-unlocked FLOOR: a recorded unlock survives absent signals */
+const sticky = Object.assign({}, EMPTY, { hero: { unlocked: ['pebble'] } });
+is('a hero recorded in the ever-unlocked floor stays unlocked with no signal',
+  Engine.heroItems(sticky).filter(i => i.id === 'pebble')[0].unlocked, true);
+/* the engine reads the REAL lifetime hard-set count off state.workouts */
+const hardState = Object.assign({}, EMPTY, { workouts: [{ id: 'x', date: '2026-11-02', entries: [{ ex: 'squat', sets: [{ w: 80, r: 8, ty: 'drop' }, { w: 80, r: 6, ty: 'failure' }, { w: 80, r: 8 }] }] }] });
+is('hardSetCount counts logged drop/failure sets only', Engine.hardSetCount(hardState), 2);
+is('a real 2-hard-set log reads 8 to go for ember',
+  Engine.heroItems(hardState).filter(i => i.id === 'ember')[0].copy, '10 hard sets — 8 to go');
+
+/* ---- GEAR GEOMETRY (Engine.gearBox) -----------------------------------------
+   Every gear item declares an anchor/size/offset/z in CELL UNITS, and gearBox
+   resolves it against the hero's measured ANATOMY. This is the ONE computation
+   the stage, the roster and the header all use, so they cannot disagree. The
+   pixel-level cross-check against the real PNGs lives in tools/test_hero_gear.py;
+   here we pin the TABLE and the arithmetic. */
+console.log('\n-- gear geometry --');
+const gearItems = Engine.heroItems(EMPTY).filter(i => i.kind === 'gear');
+ok('every gear item declares an anchor, an art size, a fit, an offset and a z',
+  gearItems.every(g => typeof g.anchor === 'string' && g.size && g.size.w > 0 && g.size.h > 0 && g.fit && g.fit.band && g.offset && (g.z === 'front' || g.z === 'behind')));
+ok('both gear items sit IN FRONT of the body (the cape that draped behind is gone)',
+  gearItems.every(g => g.z === 'front'));
+ok('every hero declares head / shoulders anatomy with a MEASURED WIDTH (a waist may be null)',
+  Engine.HERO_ITEMS.filter(i => i.kind === 'hero').every(h => h.anatomy && h.anatomy.head && h.anatomy.head.w > 0 &&
+    h.anatomy.shoulders && h.anatomy.shoulders.w > 0 && ('waist' in h.anatomy)));
+is('the ember wisp has NO waist (a flame), and its belt falls back to the shoulders',
+  (function () {
+    const ember = Engine.HERO_ITEMS.filter(i => i.id === 'ember')[0];
+    const belt = gearItems.filter(g => g.id === 'belt')[0];
+    const b = Engine.gearBox(ember, belt);
+    return [ember.anatomy.waist, b.anchored, b.y];
+  })(), [null, false, 22]);
+/* PER-HERO SIZE, the whole point: the box WIDTH now comes from the hero's own
+   measured band, so the headband is the head's own width (a 10-unit golem head
+   gets a 10-unit band, never the art's 14) and the belt is INSET to 78%. */
+const heroes = Engine.HERO_ITEMS.filter(i => i.kind === 'hero');
+const hb = gearItems.filter(g => g.id === 'headband')[0];
+is('the headband width IS each hero\'s measured head width (never the art 14)',
+  heroes.map(h => Engine.gearBox(h, hb).w), heroes.map(h => h.anatomy.head.w));
+ok('...so the 10-unit golem and wisp heads get a 10-unit band, and the 12-unit slime brow a 12-unit band', 
+  Engine.gearBox(heroes.filter(h => h.id === 'pebble')[0], hb).w === 10 &&
+  Engine.gearBox(heroes.filter(h => h.id === 'ember')[0], hb).w === 10 &&
+  Engine.gearBox(heroes.filter(h => h.id === 'slime')[0], hb).w === 12);
+ok('the belt is INSET inside the band it lands on (78%, never wider)',
+  heroes.every(h => {
+    const b = Engine.gearBox(h, gearItems.filter(g => g.id === 'belt')[0]);
+    const band = h.anatomy.waist || h.anatomy.shoulders;
+    return b.w > 0 && b.w <= Math.round(band.w * 0.78) + 1;
+  }));
+/* every hero x item box stays inside the 32x32 cell, and inside its own band */
+ok('every hero x gear box fits the cell',
+  heroes.every(h => gearItems.every(g => {
+    const b = Engine.gearBox(h, g);
+    return b && b.x >= 0 && b.y >= 0 && b.x + b.w <= 32 && b.y + b.h <= 32 && b.artw > 0 && b.arth > 0;
+  })));
+/* ...and the headband really lands on the head band (not the cell corner), at a
+   per-hero position AND a per-hero width */
+is('the headband box differs per hero (it tracks the anatomy, not the corner)',
+  heroes.map(h => { const b = Engine.gearBox(h, hb); return b.x + ',' + b.y; }),
+  ['10,18', '11,13', '11,19']);
+is('...and its width tracks the head too', heroes.map(h => Engine.gearBox(h, hb).w), [12, 10, 10]);
+ok('gearBox is null-safe on a missing hero/gear', Engine.gearBox(null, gearItems[0]) === null && Engine.gearBox(heroes[0], null) === null);
+
 console.log(`\nengine: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

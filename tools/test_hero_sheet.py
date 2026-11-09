@@ -116,6 +116,95 @@ def main():
         check(all(m != neutral for m in movers) and movers[0] != movers[1],
               "row %s has two distinct moving frames (both differ from neutral)" % ROW_NAMES[r])
 
+    # --- the TWO NEW placeholder heroes share the SAME row contract -------------
+    # (pebble golem + ember wisp; see tools/make_hero_pebble.py / make_hero_ember.py)
+    def contract(path, label):
+        check(os.path.exists(path), "%s exists" % os.path.basename(path))
+        if not os.path.exists(path):
+            return
+        im = Image.open(path).convert("RGBA")
+        im.load()
+        rb = list(im.tobytes())
+
+        def Q(x, y):
+            i = (y * im.width + x) * 4
+            return (rb[i], rb[i + 1], rb[i + 2], rb[i + 3])
+
+        def cl(r, c):
+            return tuple(Q(c * CELL + x, r * CELL + y)
+                         for y in range(CELL) for x in range(CELL))
+
+        check(im.size == (W, H), "%s is EXACTLY 128x192" % label)
+        check(im.mode == "RGBA", "%s is RGBA (has an alpha channel)" % label)
+        corners = [(0, 0), (im.width - 1, 0), (0, im.height - 1), (im.width - 1, im.height - 1)]
+        check(all(Q(*c)[3] == 0 for c in corners), "%s background is transparent" % label)
+        empty = [(r, c) for r in range(ROWS) for c in range(COLS)
+                 if not any(aa > 0 for (_, _, _, aa) in cl(r, c))]
+        check(not empty, "%s all 24 cells carry ink (blank %s)" % (label, empty))
+        off = [(r, c) for r in range(ROWS) for c in range(COLS)
+               if (max([y for y in range(CELL) for x in range(CELL)
+                        if Q(c * CELL + x, r * CELL + y)[3] > 0] or [-1])) != CELL - 1]
+        check(not off, "%s the floor is level (every frame touches the last row; %s)" % (label, off))
+        n = cl(0, 0)
+        bad_first = [(r, c) for r in range(ROWS) for c in (0,) if cl(r, c) != n]
+        bad_last = [(r, c) for r in range(ROWS) for c in (COLS - 1,) if cl(r, c) != n]
+        check(not bad_first and not bad_last,
+              "%s every row's first AND last frame is the shared neutral" % label)
+        badrows = [ROW_NAMES[r] for r in range(ROWS)
+                   if cl(r, 1) == n or cl(r, 2) == n or cl(r, 1) == cl(r, 2)]
+        check(not badrows, "%s each row has two distinct moving frames (%s)" % (label, badrows))
+        ec = all(Q(c * CELL + x, r * CELL + y)[3] == 0
+                 for r in range(ROWS) for c in range(COLS)
+                 for x in (0, CELL - 1) for y in range(CELL))
+        ec = ec and all(Q(c * CELL + x, r * CELL + y)[3] == 0
+                        for r in range(ROWS) for c in range(COLS)
+                        for y in (0,) for x in range(CELL))
+        check(ec, "%s no frame bleeds sideways or upward" % label)
+
+    base = os.path.dirname(HERE)
+    contract(os.path.join(base, "img", "hero-pebble.png"), "the pebble golem sheet")
+    contract(os.path.join(base, "img", "hero-ember.png"), "the ember wisp sheet")
+
+    # --- the GEAR overlays: one 32x32 canvas each, the garment drawn at NATIVE
+    #     size in the canvas's TOP-LEFT box (so the overlay renderer can scale it
+    #     with the cell — see the `.gear-overlay` rule and tools/make_hero_gear.py).
+    #     The set of declared sizes is cross-checked against js/engine.js in
+    #     tools/test_hero_gear.py; here we pin the CANVAS + the origin anchoring.
+    for name in ("gear-headband", "gear-belt"):
+        gp = os.path.join(base, "img", name + ".png")
+        check(os.path.exists(gp), "%s.png exists" % name)
+        if not os.path.exists(gp):
+            continue
+        gi = Image.open(gp).convert("RGBA")
+        gi.load()
+        gb = list(gi.tobytes())
+
+        def G(x, y):
+            i = (y * CELL + x) * 4
+            return (gb[i], gb[i + 1], gb[i + 2], gb[i + 3])
+
+        check(gi.size == (CELL, CELL), "%s is one 32x32 cell (got %s)" % (name, str(gi.size)))
+        ink = [(x, y) for y in range(CELL) for x in range(CELL) if G(x, y)[3] > 0]
+        check(bool(ink), "%s carries ink" % name)
+        # the giant filled the WHOLE cell; now the art is anchored at the origin so
+        # `background-size: <cell>` shows exactly the garment, at its declared size.
+        bx0 = min(p[0] for p in ink)
+        by0 = min(p[1] for p in ink)
+        bx1 = max(p[0] for p in ink)
+        by1 = max(p[1] for p in ink)
+        check(bx0 == 0 and by0 == 0,
+              "%s art is anchored at the canvas ORIGIN (bbox starts %d,%d)" % (name, bx0, by0))
+        # the garment is EXACTLY its declared size (kept in step with js/engine.js
+        # HERO_ITEMS; tools/test_hero_gear.py checks the table against the art too)
+        dw, dh = {"gear-headband": (14, 4), "gear-belt": (14, 3)}[name]
+        check((bx1 - bx0 + 1, by1 - by0 + 1) == (dw, dh),
+              "%s art bbox is exactly its declared %dx%d px (got %dx%d)"
+              % (name, dw, dh, bx1 - bx0 + 1, by1 - by0 + 1))
+        # everything outside the art's own box is transparent (a clean cut-out)
+        clear = all(G(x, y)[3] == 0 for y in range(CELL) for x in range(CELL)
+                    if x > bx1 or y > by1)
+        check(clear, "%s keeps the canvas clear outside the garment box (no stray ink)" % name)
+
     print("\n%d passed, %d failed" % (pass_n, fail_n))
     return 1 if fail_n else 0
 

@@ -52,6 +52,13 @@ const Store = (() => {
     // too (source "off-missing"), so a dead end is not re-fetched. js/food.js
     // performs no I/O and owns no persistence; this is where its store lives.
     barcodes: {},
+    // The Hero tab's chosen character and cosmetics. Every field round-trips
+    // through export. `unlocked` is the EVER-UNLOCKED floor (see
+    // Engine.heroItems): a performance key can fall, and a reward the user has
+    // earned is never taken back. `equipped` is a hero id, `colourway` a
+    // colourway id, `gear` the ids of the equipped overlays (an array, so more
+    // than one may sit on the sprite). The two from-the-start ids are seeded.
+    hero: { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] },
     settings: { seeded: false },
   });
 
@@ -123,6 +130,22 @@ const Store = (() => {
     // rather than trusted, the same defensive shape the other maps get.
     out.barcodes = (out.barcodes && typeof out.barcodes === "object" && !Array.isArray(out.barcodes))
       ? out.barcodes : {};
+    // The Hero tab's state. An older export carries NO `hero` field at all, so
+    // this seeds the defaults (slime equipped, Natural colourway, no gear) and
+    // NEVER invents an unlock: the floor starts at the two from-the-start ids and
+    // grows only from a signal actually met. Bad-typed fields fall back rather
+    // than crash the tab. Idempotent on a second load.
+    {
+      const dh = d.hero;
+      const ih = (s && s.hero && typeof s.hero === "object" && !Array.isArray(s.hero)) ? s.hero : {};
+      const strs = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+      out.hero = {
+        equipped: (typeof ih.equipped === "string" && ih.equipped) ? ih.equipped : dh.equipped,
+        colourway: (typeof ih.colourway === "string" && ih.colourway) ? ih.colourway : dh.colourway,
+        gear: strs(ih.gear),
+        unlocked: Array.from(new Set(dh.unlocked.concat(strs(ih.unlocked)))),
+      };
+    }
     // The dated profile log, sorted at the same single point every load passes
     // through. A state written before this field existed has none — seed exactly
     // one row from the current profile (see seedProfileLog) so a past month still

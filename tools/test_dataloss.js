@@ -323,6 +323,37 @@ function env({ ls = {}, files = {}, failRead = false, corruptMirror = false } = 
     eq("the live draft was NOT clobbered by the stale mirror", e.Store.readDraftRaw(), freshDraft);
   }
 
+  console.log("--- the HERO state: an older export with NO hero field migrates safely ---");
+  {
+    const e = env({ ls: mkState(2, 1) });   // mkState carries NO `hero` field at all
+    eq("an older export gains the hero defaults at load",
+      e.Store.state.hero, { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] });
+  }
+  {
+    const withHero = Object.assign(mkState(1, 1), {
+      hero: { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush", "headband"] },
+    });
+    const e = env({ ls: withHero });
+    eq("a stored hero/colourway/gear choice round-trips through load",
+      e.Store.state.hero, { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush", "headband"] });
+    eq("...and survives a JSON export -> migrate round-trip",
+      e.Store.migrate(JSON.parse(JSON.stringify(e.Store.state))).hero,
+      { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush", "headband"] });
+  }
+  {
+    const bad = Object.assign(mkState(1, 1), { hero: { equipped: 5, colourway: null, gear: "cape", unlocked: "nope" } });
+    const e = env({ ls: bad });
+    eq("bad-typed hero fields fall back instead of crashing the tab",
+      e.Store.state.hero, { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] });
+  }
+  {
+    /* a hero field written before the floor existed (no `unlocked` array) still
+       keeps its chosen ids and gains the two from-the-start floor ids. */
+    const e = env({ ls: Object.assign(mkState(1, 1), { hero: { equipped: "ember", colourway: "frost", gear: ["belt"] } }) });
+    eq("a partial hero object keeps its choices and seeds the floor",
+      e.Store.state.hero, { equipped: "ember", colourway: "frost", gear: ["belt"], unlocked: ["slime", "natural"] });
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();

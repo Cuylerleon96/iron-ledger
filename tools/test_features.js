@@ -1127,17 +1127,22 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
   ROW_NAMES.forEach((row) => {
     truthy(`a .hero.${row} row class exists`, new RegExp("\\.topbar \\.hero\\." + row + "\\b").test(css));
     truthy(`@keyframes hero-${row} exists`, new RegExp("@keyframes hero-" + row + "\\b").test(css));
+    /* RE-EXPRESSED (gear layering): the row animation now lives on the SPRITE
+       element (js/hero.js creates it) so a "behind" overlay can sit behind the
+       body. Intent unchanged: one row per animation, 4 columns, steps(4). */
     truthy(`.hero.${row} runs hero-${row} with steps(4)`,
-      new RegExp("\\.topbar \\.hero\\." + row + "\\s*\\{[^}]*animation:\\s*hero-" + row + "\\s[^;]*steps\\(4\\)").test(css));
+      new RegExp("\\.topbar \\.hero\\." + row + "\\s+\\.hero-sprite\\s*\\{[^}]*animation:\\s*hero-" + row + "\\s[^;]*steps\\(4\\)").test(css));
   });
   truthy("the rows are idle / walk / pickup / lift-a / lift-b / celebrate in that order",
-    /\.hero\.idle\s*\{[^}]*hero-idle[\s\S]*?\.hero\.walk\s*\{[^}]*hero-walk[\s\S]*?\.hero\.pickup\s*\{[^}]*hero-pickup[\s\S]*?\.hero\.lift-a\s*\{[^}]*hero-lift-a[\s\S]*?\.hero\.lift-b\s*\{[^}]*hero-lift-b[\s\S]*?\.hero\.celebrate\s*\{[^}]*hero-celebrate/.test(css));
+    /\.hero\.idle\s*\.hero-sprite\s*\{[^}]*hero-idle[\s\S]*?\.hero\.walk\s*\.hero-sprite\s*\{[^}]*hero-walk[\s\S]*?\.hero\.pickup\s*\.hero-sprite\s*\{[^}]*hero-pickup[\s\S]*?\.hero\.lift-a\s*\.hero-sprite\s*\{[^}]*hero-lift-a[\s\S]*?\.hero\.lift-b\s*\.hero-sprite\s*\{[^}]*hero-lift-b[\s\S]*?\.hero\.celebrate\s*\.hero-sprite\s*\{[^}]*hero-celebrate/.test(css));
   truthy("a static NEUTRAL .stand frame exists for the settle beat",
-    /\.topbar \.hero\.stand\s*\{[^}]*animation:\s*none/.test(css));
+    /\.topbar \.hero\.stand\s*\.hero-sprite\s*\{[^}]*animation:\s*none/.test(css));
 
-  /* (4) the geometry is an exact integer DEVICE size */
-  truthy("the cell is 64 device px square: calc(64px / 2.625)",
-    /width:\s*calc\(64px \/ 2\.625\)/.test(css) && /height:\s*calc\(64px \/ 2\.625\)/.test(css));
+  /* (4) the geometry is an exact integer DEVICE size, and the CELL is declared
+     in ONE place (--cell) that every gear overlay derives from, so no overlay px
+     size is hard-coded. RE-EXPRESSED when the overlays moved off fixed 128/64/100%. */
+  truthy("the cell is 64 device px square: --cell: calc(64px / 2.625)",
+    /--cell:\s*calc\(64px \/ 2\.625\)/.test(css) && /width:\s*var\(--cell\)/.test(css) && /height:\s*var\(--cell\)/.test(css));
   truthy("background-size is the whole 4x6 sheet at 2x (256x384 device px)",
     /background-size:\s*calc\(256px \/ 2\.625\) calc\(384px \/ 2\.625\)/.test(css));
   truthy("the sprite is drawn pixelated",
@@ -1147,7 +1152,7 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
 
   /* (5) pause + reduced motion */
   truthy("a .paused class holds the animation",
-    /\.topbar \.hero\.paused\s*\{[^}]*animation-play-state:\s*paused/.test(css));
+    /\.topbar \.hero\.paused\s*\.hero-sprite\s*\{[^}]*animation-play-state:\s*paused/.test(css));
   truthy("visibilitychange toggles .paused (hidden pauses, visible resumes)",
     /visibilitychange/.test(hero) && /classList\.add\("paused"\)/.test(hero) && /classList\.remove\("paused"\)/.test(hero));
   eq("there is exactly ONE prefers-reduced-motion block",
@@ -1171,11 +1176,19 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
   eq("the slot runs NO render loop (no requestAnimationFrame, no setInterval)",
     /requestAnimationFrame|setInterval/.test(heroCode), false);
   eq("the slot binds no click/tap handler", /addEventListener\("(click|pointer|touch)/.test(hero), false);
-  truthy("the runtime keeps the sheet path in ONE place", /const SHEET = "img\/hero-sheet\.png"/.test(hero));
+  /* RE-EXPRESSED (Hero tab). The sheet was ONE hard-coded const; now the
+     EQUIPPED hero's sheet comes from the engine's ONE table via setHero(), with
+     the slime sheet kept only as the FALLBACK default. Intent unchanged: exactly
+     ONE place names a default sheet path, and the director stays hero-agnostic. */
+  truthy("the runtime keeps the DEFAULT sheet path in ONE place",
+    /const DEFAULT_SHEET = "img\/hero-sheet\.png"/.test(hero));
+  truthy("...and the equipped hero's sheet comes from the engine's table via setHero",
+    /function setHero\(/.test(hero) && /item\.sheet/.test(hero) && /Hero\.setHero\(/.test(app) &&
+    /DEFAULT_SHEET/.test(hero));
   /* the director's contract */
-  truthy("a per-tab behaviour PROFILE table covers all six tabs",
+  truthy("a per-tab behaviour PROFILE table covers all seven tabs",
     /const PROFILE = \{/.test(hero) &&
-    ["dash", "log", "history", "library", "nutrition", "profile"].every((t) => new RegExp("\\b" + t + ":").test(hero)));
+    ["dash", "log", "nutrition", "hero", "history", "library", "profile"].every((t) => new RegExp("\\b" + t + ":").test(hero)));
   truthy("the Dashboard profile is the randomised one, the rest idle",
     /dash:\s*\{\s*kind:\s*"random"\s*\}/.test(hero) && /const IDLE = \{ kind: "idle" \}/.test(hero));
   truthy("a SEEDED RNG is used and the seed/sequence are exposed",
@@ -1186,11 +1199,71 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
     /scaleX\(-1\)/.test(hero));
   truthy("transient rows chain on animationend (never interrupt a cycle)",
     /addEventListener\("animationend"/.test(hero));
-  /* RE-EXPRESSED (walk motion moved from `transform` to the individual `translate`
-     property so the mirror can never be interpolated: see js/hero.js). Intent
-     unchanged: the walk's own transition duration is derived from the cycle. */
-  truthy("a `translate` transition is derived from the walk cycle (no skate)",
-    /STRIDE_CSS/.test(hero) && /WALK_CYCLE_MS/.test(hero) && /translate " \+ dur \+ "ms linear/.test(hero));
+  /* RE-EXPRESSED (walk motion moved to `transform: translateX(…)` on the SLOT and
+     the facing mirror to `transform: scaleX(-1)` on an INNER body element, so
+     neither the individual `translate` property (Chrome 104+) nor a transitioned
+     mirror can return: see js/hero.js). Intent unchanged: the walk's own
+     transition duration is derived from the cycle. */
+  truthy("a `transform` transition is derived from the walk cycle (no skate)",
+    /STRIDE_CSS/.test(hero) && /WALK_CYCLE_MS/.test(hero) && /transform " \+ dur \+ "ms linear/.test(hero));
+}
+
+console.log("=== Hero tab: tab order, new hero sheets, roster rendering (static) ===");
+{
+  const html = fs.readFileSync(path.join(B, "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(B, "css", "style.css"), "utf8");
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const tab = fs.readFileSync(path.join(B, "js", "herotab.js"), "utf8");
+  const nav = (html.match(/<nav class="tabs" id="tabs">([\s\S]*?)<\/nav>/) || [])[1] || "";
+  const order = [...nav.matchAll(/data-tab="([a-z]+)"[^>]*>([^<]+)</g)].map((m) => [m[1], m[2].trim()]);
+  /* THE ORDER (the owner, corrected 2026-11-09). Exact, left to right. */
+  eq("the tab bar reads exactly: Dashboard | Log | Nutrition | Hero | History | Exercises | Profile",
+    order.map((o) => o[1]), ["Dashboard", "Log", "Nutrition", "Hero", "History", "Exercises", "Profile"]);
+  eq("...with the data-tab ids in the same order",
+    order.map((o) => o[0]), ["dash", "log", "nutrition", "hero", "history", "library", "profile"]);
+  truthy("Profile stays the LAST tab", order.length === 7 && order[6][0] === "profile");
+  truthy("Nutrition sits between Log and Hero (an insertion AND a move)",
+    order[1][0] === "log" && order[2][0] === "nutrition" && order[3][0] === "hero");
+  truthy("Hero sits between Nutrition and History", order[4][0] === "history" && order[5][0] === "library");
+  truthy("the initial active tab is still Dashboard", /data-tab="dash" class="on"/.test(nav));
+  truthy("the bar scrolls horizontally, so every tab stays reachable at 412px",
+    /\.tabs \{[^}]*overflow-x:\s*auto/.test(css));
+  truthy("render() dispatches the hero view", /else if \(view === "hero"\) renderHero\(host\)/.test(app));
+  truthy("index.html loads js/herotab.js before app.js",
+    /js\/herotab\.js[\s\S]*?js\/app\.js/.test(html));
+
+  /* the two NEW placeholder sheets exist at the ONE lookup's paths, 128x192 */
+  ["hero-pebble.png", "hero-ember.png"].forEach((name) => {
+    const p = path.join(B, "img", name);
+    truthy(`the ${name} placeholder sheet exists`, fs.existsSync(p));
+    const b = fs.existsSync(p) ? fs.readFileSync(p) : Buffer.alloc(0);
+    eq("...and is exactly 128x192 (4 cols x 6 rows of 32x32)", (b.readUInt32BE(16) + "x" + b.readUInt32BE(20)), "128x192");
+  });
+  /* RE-EXPRESSED (the CAPE was REMOVED: the heroes' bodies are wider than it, so
+     it was 100% occluded — measured 0 visible pixels on all three heroes — and it
+     cannot be made visible without per-hero art. Two gear items remain.) */
+  ["gear-headband.png", "gear-belt.png"].forEach((name) => {
+    const p = path.join(B, "img", name);
+    truthy(`the ${name} gear overlay art exists`, fs.existsSync(p));
+    const b = fs.existsSync(p) ? fs.readFileSync(p) : Buffer.alloc(0);
+    eq("...and is one 32x32 cell", (b.readUInt32BE(16) + "x" + b.readUInt32BE(20)), "32x32");
+  });
+
+  /* the ROSTER: a locked tile is a REAL button carrying the engine's plain line
+     (never dead UI), and the silhouettes + the two axes are present. */
+  truthy("a roster tile is a real <button> (live, not dead UI)", /<button class=/.test(tab));
+  truthy("a locked tile carries its plain unlock line (the engine's copy)",
+    /class="tile-line">\$\{esc\(item\.copy\)\}/.test(tab));
+  truthy("a locked tile uses a SILHOUETTE (brightness(0) ghost), never a padlock glyph",
+    /\.roster-tile \.sil \{ filter: brightness\(0\) invert\(1\)/.test(css) && !/\uD83D\uDD12/.test(tab));
+  truthy("the roster grid, colourway grid and gear grid share one tile renderer",
+    /tileHTML\(i, "hero"/.test(tab) && /tileHTML\(i, "colourway"/.test(tab) && /tileHTML\(i, "gear"/.test(tab));
+  truthy("the stage draws the equipped hero at 4x on a floor line",
+    /\.stage-floor \{[^}]*border-bottom: 3px solid var\(--cream\)/.test(css) && /STAGE_SCALE = 4/.test(tab));
+  truthy("WYSIWYG: the header is kept in step from the ONE model (syncHeroHeader -> Hero.setHero)",
+    /function syncHeroHeader\(\)/.test(app) && /Hero\.setHero\(\{ sheet: m\.hero\.sheet, filter/.test(app));
+  truthy("the app wires equip / colourway / gear taps and a locked tap explains itself",
+    /\[data-equip\]/.test(app) && /\[data-cw\]/.test(app) && /\[data-gear\]/.test(app) && /heroLockedToast/.test(app));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

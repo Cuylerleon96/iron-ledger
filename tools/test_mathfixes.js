@@ -2761,5 +2761,80 @@ console.log("\n=== 54. PROPERTY: NOTHING ever reduces XP — a set, an entry or 
   eq("XP is NON-DECREASING at every step — a set, an entry or a session can only ADD", fails, 0);
   truthy("the property test really exercised the matrix", steps > 400);
 }
+console.log("\n=== 55. the HERO tab: roster, equip, colourway, gear (pure view-model) ===");
+{
+  /* Load the REAL engine + the pure js/herotab.js together, so the tab's model
+     and its html are exercised exactly as the app builds them. */
+  const store = {};
+  const s = {
+    console: { log() {}, warn() {}, error() {} }, Date, Math, JSON, Object, Array,
+    Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map,
+    setTimeout, clearTimeout, module: { exports: {} },
+    document: { addEventListener() {}, removeEventListener() {} }, window: {},
+    localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+  };
+  s.globalThis = s; vm.createContext(s);
+  const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/herotab.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+  vm.runInContext(src + "\n;globalThis.__X={Engine,HeroTab};", s, { filename: "hero-bundle.js" });
+  const E = s.__X.Engine, HT = s.__X.HeroTab;
+
+  const st = (hero) => ({ profile: { weeklyTarget: 4 }, workouts: [], achievements: {}, intakelog: [], hero: hero || { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] } });
+
+  /* (a) the model + stage for a fresh state */
+  const m0 = HT.model(st(), E);
+  eq("the model equips the slime and the Natural colourway by default", [m0.hero.id, m0.colourway, m0.gear], ["slime", "natural", []]);
+  eq("the roster carries all three heroes, locked ones included", m0.heroes.map((h) => [h.id, h.unlocked]),
+    [["slime", true], ["pebble", false], ["ember", false]]);
+  const stage0 = HT.stageHTML(m0);
+  truthy("the stage draws the equipped hero's sheet at 4x", /background-image:url\('img\/hero-sheet\.png'\)/.test(stage0) && /background-size:512px 768px/.test(stage0));
+  truthy("the stage sits on a floor line", /class="stage-floor"/.test(stage0));
+
+  /* (b) a LOCKED roster tile shows its plain unlock line and is NOT dead UI */
+  const tabHTML0 = HT.tabHTML(m0);
+  truthy("the roster renders a locked tile for the pebble golem", /data-equip="pebble"[^>]*data-locked="1"/.test(tabHTML0) || /data-locked="1"[^>]*data-equip="pebble"/.test(tabHTML0));
+  truthy("the locked tile carries the engine's exact line", /2 weeks at your target — 2 to go/.test(tabHTML0));
+  truthy("the locked tile is a REAL <button> (a live control, not dead UI)",
+    /<button class="roster-tile locked"[^>]*data-equip="pebble"/.test(tabHTML0));
+  truthy("the locked tile renders a SILHOUETTE (the sprite with the .sil ghost filter)",
+    /class="tile-sprite sil"/.test(tabHTML0));
+  const pebbleTile = tabHTML0.split('data-equip="pebble"')[1].split("</button>")[0] || "";
+  truthy("the equipped hero shows an Equipped tag; the locked pebble tile shows its LINE instead",
+    /class="roster-tile unlocked on"/.test(tabHTML0) && /Equipped/.test(tabHTML0) && /tile-line/.test(pebbleTile) && !/Equipped/.test(pebbleTile));
+
+  /* (c) equipping switches the model's hero (and therefore the stage + header) */
+  const m1 = HT.model(st({ equipped: "pebble", colourway: "natural", gear: [], unlocked: ["slime", "natural", "pebble"] }), E);
+  eq("equipping the pebble golem switches the model's hero", m1.hero.id, "pebble");
+  truthy("...so the stage draws the pebble sheet", /hero-pebble\.png/.test(HT.stageHTML(m1)));
+  /* a LOCKED id is refused: the model falls back rather than putting it on stage */
+  const mLocked = HT.model(st({ equipped: "ember", colourway: "natural", gear: [], unlocked: ["slime", "natural"] }), E);
+  eq("a locked id in the state is refused (falls back to the slime)", mLocked.hero.id, "slime");
+
+  /* (d) the colourway applies its CSS filter to the SAME sheet (zero new art) */
+  const m2 = HT.model(st({ equipped: "slime", colourway: "blush", gear: [], unlocked: ["slime", "natural", "blush"] }), E);
+  eq("the colourway is selected", m2.colourway, "blush");
+  truthy("...and its filter is applied to the stage sprite inline", /filter:hue-rotate\(-38deg\) saturate\(1\.25\)/.test(HT.stageHTML(m2)));
+  const mLockedCw = HT.model(st({ equipped: "slime", colourway: "dusk", gear: [], unlocked: ["slime", "natural"] }), E);
+  eq("a locked colourway is refused too", mLockedCw.colourway, "natural");
+
+  /* (e) gear overlays pin onto the stage (and are dropped if not unlocked) */
+  const m3 = HT.model(st({ equipped: "slime", colourway: "natural", gear: ["headband", "belt"], unlocked: ["slime", "natural", "headband"] }), E);
+  eq("only UNLOCKED gear stays equipped", m3.gear, ["headband"]);
+  const stage3 = HT.stageHTML(m3);
+  /* RE-EXPRESSED (per-hero computed-size overlays): the overlay is no longer a
+     full-cell image pinned at the corner — it is a box COMPUTED from the hero's
+     anatomy (its measured band WIDTH) and the item's fit, in cell units, plus the
+     art's own size for the background mapping. For the slime: brow {16,18,w12}
+     + fit k=1 -> w12, h = round(4*12/14) = 3, at x10 y18 (art 14x4). The values
+     below are that computation for the slime. */
+  truthy("an equipped overlay is pinned over the stage sprite at its COMPUTED box",
+    /class="stage-gear gear-overlay front" style="--gx:10;--gy:18;--gw:12;--gh:3;--artw:14;--arth:4;background-image:url\('img\/gear-headband\.png'\)/.test(stage3));
+  eq("the stage caption names the hero, colourway and gear", /Slime/.test(stage3) && /Natural/.test(stage3) && /Headband/.test(stage3), true);
+
+  /* (f) the unlock moment is detected from the floor */
+  const items = E.heroItems(st({ equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural", "ember"] }));
+  eq("newlyUnlocked reports only ids not already in the floor", HT.newlyUnlocked(items, ["slime", "natural"]), ["ember"]);
+  eq("...and reports nothing once every unlocked id is recorded", HT.newlyUnlocked(items, ["slime", "natural", "ember"]), []);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);

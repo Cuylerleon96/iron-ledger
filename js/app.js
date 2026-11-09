@@ -507,6 +507,7 @@
     else if (view === "history") renderHistory(host);
     else if (view === "library") renderLibrary(host);
     else if (view === "nutrition") renderNutrition(host);
+    else if (view === "hero") renderHero(host);
     else renderProfile(host);
     renderHUD();
   }
@@ -535,6 +536,77 @@
     $("#hud-xpbar").style.width = s.level.pct + "%";
     $("#hud-week").innerHTML = weekHudText(weekProgress(S));
     $("#btn-units").textContent = U.label().toUpperCase();
+  }
+
+  /* ================= hero (roster + customisation) ================= */
+  /* The header creature IS the equipped hero (WYSIWYG): one equipped hero, one
+     colourway filter and the equipped gear are shared by the stage and the
+     header. The director is hero-agnostic — it only ever receives a sheet path
+     and a filter from the engine's ONE table (via HeroTab's model). */
+  function syncHeroHeader() {
+    try {
+      if (typeof Hero === "undefined" || !Hero) return;
+      const m = HeroTab.model(S, Engine);
+      Hero.setHero({ sheet: m.hero.sheet, filter: (m.cw && m.cw.filter) || "none" });
+      /* Each overlay carries its COMPUTED box (cell units) from the engine's ONE
+         table, so the header's gear tracks the equipped hero's anatomy exactly
+         like the stage's does. */
+      Hero.setGear(m.gearOverlays.map((o) => ({ src: o.src, box: o.box })));
+    } catch (e) { /* decorative — never let it break navigation */ }
+  }
+  /* A locked tile is NOT dead UI: a tap explains the real remaining distance
+     rather than doing nothing. */
+  function heroLockedToast(it) {
+    if (!it) return;
+    toast(it.name + " — " + it.copy, "", 3400);
+  }
+  /* THE UNLOCK MOMENT. When a key is newly met, record it in the ever-unlocked
+     floor, play the header's `celebrate` and toast — an event the user SEES.
+     Idempotent: nothing fires once the id is in the floor. */
+  function checkHeroUnlocks() {
+    try {
+      const items = Engine.heroItems(S);
+      const prev = (S.hero && S.hero.unlocked) || [];
+      const fresh = HeroTab.newlyUnlocked(items, prev);
+      if (!fresh.length) return false;
+      S.hero.unlocked = prev.concat(fresh.filter((id) => prev.indexOf(id) === -1));
+      Store.save(true);
+      heroPlay("celebrate");
+      const names = items.filter((i) => fresh.indexOf(i.id) !== -1).map((i) => i.name);
+      toast("Unlocked: " + names.join(", "), "good", 4200);
+      return true;
+    } catch (e) { return false; }
+  }
+  function renderHero(host) {
+    const m = HeroTab.model(S, Engine);
+    const c = el("section", { class: "hero-wrap" });
+    c.innerHTML = HeroTab.tabHTML(m);
+    host.append(c);
+    /* equip a hero — one tap. A locked tile is live and explains itself. */
+    $$("[data-equip]", c).forEach((b) => b.addEventListener("click", () => {
+      const it = m.heroes.filter((x) => x.id === b.getAttribute("data-equip"))[0];
+      if (!it) return;
+      if (!it.unlocked) { heroLockedToast(it); return; }
+      S.hero.equipped = it.id; Store.save(true); render(); toast("Equipped " + it.name, "good");
+    }));
+    /* colourway — one tap; zero new art, a tint of the SAME sheet. */
+    $$("[data-cw]", c).forEach((b) => b.addEventListener("click", () => {
+      const it = m.colourways.filter((x) => x.id === b.getAttribute("data-cw"))[0];
+      if (!it) return;
+      if (!it.unlocked) { heroLockedToast(it); return; }
+      S.hero.colourway = it.id; Store.save(true); render();
+    }));
+    /* gear — one tap to put on or take off (an array, so several may be worn). */
+    $$("[data-gear]", c).forEach((b) => b.addEventListener("click", () => {
+      const it = m.gears.filter((x) => x.id === b.getAttribute("data-gear"))[0];
+      if (!it) return;
+      if (!it.unlocked) { heroLockedToast(it); return; }
+      const g = Array.isArray(S.hero.gear) ? S.hero.gear : (S.hero.gear = []);
+      const i = g.indexOf(it.id);
+      if (i === -1) g.push(it.id); else g.splice(i, 1);
+      Store.save(true); render();
+    }));
+    syncHeroHeader();
   }
 
   /* ================= dashboard ================= */
@@ -1321,6 +1393,27 @@
   function heroPlay(row) {
     try { if (typeof Hero !== "undefined" && Hero && typeof Hero.play === "function") Hero.play(row); }
     catch (e) { /* the slot is decorative; never let it break a save */ }
+    if (row === "celebrate") stageCelebrate();
+  }
+
+  /* The STAGE's own celebrate: the SAME event the header plays, shown on the Hero
+     tab's big sprite (sheet row 5, the hop). Purely decorative, and every
+     transient row STARTS and ENDS on the shared neutral pose, so reverting to
+     `idle` (frame 0 = neutral) on animationend cannot pop. A no-op whenever the
+     stage is not on screen — the header still celebrates on its own. */
+  function stageCelebrate() {
+    try {
+      const s = document.getElementById("stage-sprite");
+      if (!s || !s.classList || typeof s.addEventListener !== "function") return;
+      s.classList.remove("idle");
+      s.classList.add("celebrate");
+      const back = () => {
+        s.removeEventListener("animationend", back);
+        s.classList.remove("celebrate");
+        s.classList.add("idle");
+      };
+      s.addEventListener("animationend", back);
+    } catch (e) { /* decorative — never let it break a save */ }
   }
 
   /* The ONE save path. Everything that awards a badge, a PR or a level-up hangs
@@ -1364,6 +1457,7 @@
        crossing plays "celebrate"; a freshly logged session plays "lift". */
     heroPlay(ev.length || (!weeklyMetBefore && weekProgress(Store.state).met) ? "celebrate" : (isNew ? "lift" : "idle"));
     render();
+    checkHeroUnlocks();
   }
 
   /* ================= celebration ================= */
@@ -1423,6 +1517,7 @@
       { level: after.level.level, title: after.title }, prs || [], newB);
     if (ev.length) celebrate(ev);
     heroPlay(ev.length ? "celebrate" : "idle");
+    checkHeroUnlocks();
   }
 
   /* ================= import dialog ================= */
@@ -2883,6 +2978,8 @@
       setTimeout(() => toast("Add your bodyweight in Profile — it makes Strength scores real", "warn", 6000), 900);
     }
     render();                       // paint FIRST — nothing below is allowed to gate it
+    syncHeroHeader();               // the header creature IS the equipped hero
+    checkHeroUnlocks();             // celebrate any key newly met since the last run
     /* First-run walkthrough. AFTER the first paint, so a modal overlay lands on an
        already-drawn dashboard and can never delay or blank the UI. It is opened
        only when this build's version has not been recorded in
@@ -2965,6 +3062,7 @@
   // parsing path rather than a copy of it — the lb/kg bug lived exactly here.
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
+    checkHeroUnlocks, syncHeroHeader,
     /* draft autosave — exposed so a suite can read the live draft and drive the
        real persist/restore path instead of a copy of it. */
     persistDraft, getDraft: () => draft, restoreDraft,
