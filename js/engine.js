@@ -1981,18 +1981,18 @@ const Engine = (() => {
                            // weigh-ins in a day is one week, so it cannot be
                            // farmed by volume, and it is calendar-bounded so it
                            // cannot be farmed by count. Matches INTAKE_WEEK.
-    ENTRY_CAP: 8,          // the per-ENTRY term (see sessionXp) is paid for at
-                           // most this many entries in one session. It used to be
-                           // a flat 5 XP for every entry, so logging N exercises
-                           // paid 5N and a session stuffed with forty one-set
-                           // rows was worth 200 XP for the typing alone — the
-                           // same per-entry, farm-by-volume shape the weigh-in
-                           // term was rebalanced out of. A session is rewarded for
-                           // HAPPENING (XP.SESSION) and for the WORK logged, not
-                           // for how many rows the user typed. A realistic session
-                           // logs 4-6 exercises (his export: 4 and 6), so nothing
-                           // normal is touched; past the cap an extra entry adds
-                           // nothing.
+    /* --- the per-ENTRY term is DELIBERATELY UNCAPPED (see sessionXp). ---
+       It was capped at 8 by the v1.1.2 anti-farming measure (XP.ENTRY_CAP),
+       which is now REMOVED. The cap was the wrong tool: it silently stopped
+       paying for work a genuinely big session really did — a 40-exercise day
+       earned the SAME entry term as an 8-exercise one, so XP stopped tracking
+       the work logged. Entries and sets now pay LINEARLY: each COUNTED entry
+       pays 5 XP and each valid set 2 XP, however many there are.
+       The anti-farm guard is NOT a row count. It is (a) the VALIDITY filter —
+       an entry is only counted at all once it carries at least one real set
+       (see validSet/entryStats), so a row with no real reps/time/load earns
+       nothing; and (b) the VOLUME factor — work past a muscle group's MRV is
+       halved by XP.OVER_MRV, so overreaching volume is priced, not rewarded. */
     /* --- effort XP: a HARD set pays extra, and that extra is CAPPED. ---
        A drop or failure set is harder than a straight one, so — alongside the
        muscle-group effort path — it earns a little extra XP for the extra
@@ -2002,7 +2002,7 @@ const Engine = (() => {
        values that make the extra effort visible, chosen to sit well under a PR
        so effort can never out-earn getting stronger. This is the one place to
        tune them.
-       HARD_SET_CAP is the same farm-proofing as XP.ENTRY_CAP: past the cap an
+       HARD_SET_CAP is the farm-proofing for the EFFORT term: past the cap an
        extra hard set adds nothing, so a session cannot be farmed by marking
        every set "failure". A realistic session has a handful of hard sets; the
        cap only bites a session built to game the term. */
@@ -2109,8 +2109,16 @@ const Engine = (() => {
     const wk = weekKeyOf(w.date);
     const weekSets = wks[wk] || (wks[wk] = weekGroupSets(state, wk));
 
-    let tonnage = 0, sets = 0;
-    for (const en of w.entries || []) { const s = entryStats(en); tonnage += s.tonnage; sets += s.sets; }
+    let tonnage = 0, sets = 0, countedEntries = 0;
+    for (const en of w.entries || []) {
+      const s = entryStats(en);
+      tonnage += s.tonnage; sets += s.sets;
+      /* An entry counts toward the per-entry term only once it carries at least
+         ONE valid set. A row with no real reps/time/load is not logged work, so
+         it earns nothing — this is the validity filter applied to the entry
+         count, the anti-farm guard that replaced the old XP.ENTRY_CAP. */
+      if (s.sets > 0) countedEntries++;
+    }
     /* Hard sets (a drop or failure type) pay extra for the extra effort. The
        extra is proportional to each set's effort multiplier above a straight set
        (drop 1.25 pays 5 XP, failure 1.2 pays 4) and is CAPPED at XP.HARD_SET_CAP
@@ -2132,13 +2140,15 @@ const Engine = (() => {
     }
     const hardPaid = Math.min(hardSets, XP.HARD_SET_CAP);
     const nPr = prs[w.date] || 0;
-    /* The per-entry term is CAPPED (XP.ENTRY_CAP). It is paid per exercise logged,
-       but only up to a realistic session's worth; beyond that an extra entry adds
-       nothing, so a session cannot be farmed by stuffing rows. Volume the user
-       actually did is still rewarded through tonnage and the per-set term, and its
-       overreaching is priced by the volume factor — see the XP block above. */
+    /* The per-entry term is LINEAR and UNCAPPED: each COUNTED entry (one that
+       carries at least one valid set) pays 5 XP, however many a real session
+       has. A genuinely big session must pay what it earned — the old
+       XP.ENTRY_CAP silently stopped paying past 8 entries. The anti-farm guard
+       is not a row count: an entry with no valid set is not counted at all (the
+       validity filter), and volume past a group's MRV is priced by the volume
+       factor below. */
     const base = XP.SESSION + Math.round(tonnage / 1000) + sets * 2
-               + Math.min((w.entries || []).length, XP.ENTRY_CAP) * 5 + nPr * XP.PR
+               + countedEntries * 5 + nPr * XP.PR
                + effortXp;
 
     const improvement = nPr > 0 ? XP.IMPROVEMENT : 1;

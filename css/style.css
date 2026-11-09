@@ -527,6 +527,18 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .set-row .setty { flex: 0 0 auto; padding: .24rem .2rem; font-size: .62rem; max-width: 6.6rem; }
 .set-row.is-hard { border-color: var(--gold); }
 .set-row.is-hard .set-n { color: var(--gold-l); }
+/* The hold timer for timed sets (mode "time" only). It takes a deliberate line
+   of its own (flex-basis 100%) so the row's existing controls — seconds, RPE,
+   rest, ✕ — keep EXACTLY the layout they had before the timer existed; the
+   timer displaces nothing and covers nothing. */
+.set-row .hold-wrap { display: inline-flex; align-items: center; gap: .3rem; flex: 1 0 100%; margin-top: .18rem; }
+.set-row .hold-btn { flex: 0 0 auto; padding: .22rem .44rem; font-size: .62rem; white-space: nowrap; }
+.set-row .hold-btn.running { border-color: var(--gold); color: var(--gold-l); }
+.set-row .hold-clock {
+  flex: 0 0 auto; min-width: 33px; text-align: right; font-size: .64rem;
+  color: #cfe0e8; font-variant-numeric: tabular-nums; text-shadow: var(--outline-sm);
+}
+.set-row .hold-target { flex: 0 0 auto; font-size: .58rem; }
 .entry-rest {
   display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
   margin: .5rem 0 .15rem; font-size: .64rem;

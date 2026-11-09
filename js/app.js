@@ -17,6 +17,26 @@
      fraction is meaningful. Aggregates (tonnage) still use fmt() at 0 dp. */
   const fmtW = (v) => { const n = Math.round(Number(v) * 100) / 100; return isFinite(n) ? String(n) : "0"; };
   const fmtRest = (sec) => { const s = Math.round(sec); return s < 60 ? s + "s" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+  /* mm:ss for the timed-set hold timer — a plank reads "1:05", not "65". */
+  const fmtClock = (sec) => { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+  /* A short beep when a hold reaches its target. Web Audio needs NO manifest
+     permission (unlike vibration, which would need android.permission.VIBRATE —
+     deliberately skipped for that reason). Guarded so the test stubs, and any
+     browser without audio, simply stay silent and never break logging. */
+  function holdChime() {
+    try {
+      const Ctx = (typeof window !== "undefined" && window) ? (window.AudioContext || window.webkitAudioContext) : null;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = "sine"; osc.frequency.value = 880;
+      gain.gain.value = 0.05;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+      setTimeout(() => { try { ctx.close(); } catch (e) { /* done */ } }, 500);
+    } catch (e) { /* the chime is optional — never let it interfere with logging */ }
+  }
   const fmt = (n, d = 0) => (isFinite(n) ? Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
 
   /* ---------- units ---------- */
@@ -1046,6 +1066,24 @@
       inner += `<span class="e1${capped ? " capped" : ""}${bwMov ? " bw" : ""}" title="${esc(title)}">${e1 ? (capped ? "≥" : "") + fmtW(U.w(e1)) + " e1RM" : ""}</span>`;
     }
     inner += `<button class="btn ghost tiny x" title="remove" aria-label="Remove ${sl.toLowerCase()}">✕</button>`;
+    /* The hold timer for TIMED sets only (planks, side planks, hollow holds,
+       dead hangs). One tap starts a live mm:ss on the row, the next stops it
+       and writes the elapsed seconds into the very same `t` the typed field
+       uses — so state, save, draft autosave and scoring are all untouched.
+       Placed LAST in the row so it takes its own line and displaces nothing:
+       every other control keeps the exact position it had before. If the
+       exercise already carries a personal target (state.targets — the field the
+       exercise sheet shows) the clock reads against it and a chime sounds on
+       reaching it; no target is ever invented. */
+    if (en.mode === "time") {
+      const holdTarget = (S.targets && S.targets[en.id] && Engine.num(S.targets[en.id].value) > 0)
+        ? Math.round(Engine.num(S.targets[en.id].value)) : 0;
+      inner += `<span class="hold-wrap">`
+        + `<button type="button" class="btn ghost tiny hold-btn" aria-label="${sl} hold timer — start the count" title="Start the hold timer — tap again to stop and log your time">Start</button>`
+        + `<span class="hold-clock" aria-hidden="true">0:00</span>`
+        + (holdTarget ? `<span class="hold-target muted" title="Your target for this exercise">/${fmtClock(holdTarget)}</span>` : "")
+        + `</span>`;
+    }
     row.innerHTML = inner;
     $$("input", row).forEach((inp) => inp.addEventListener("input", (e) => {
       const k = e.target.dataset.k;
@@ -1078,6 +1116,53 @@
        sign silently deleted the set, while the visible ✕ delete button did
        nothing at all. The multiplier is .times now and this is unambiguous. */
     $("button.x", row).addEventListener("click", () => { en.sets.splice(si, 1); persistDraft(true); render(); });
+    /* The hold timer (mode "time" only). It is a pure ADDITION to the row: the
+       typed `t` input above still works exactly as before, and `t` is written
+       ONLY on Stop — a count that is running never leaves the set half-logged.
+       Tapping Start again after a Stop begins a fresh count from 0. */
+    if (en.mode === "time") {
+      const btn = $(".hold-btn", row), clock = $(".hold-clock", row), tInp = $('[data-k="t"]', row);
+      const target = (S.targets && S.targets[en.id] && Engine.num(S.targets[en.id].value) > 0)
+        ? Math.round(Engine.num(S.targets[en.id].value)) : 0;
+      let t0 = null, iv = null, chimed = false;
+      const paint = (secs) => {
+        const s2 = secs != null ? secs : (t0 ? Math.max(0, Math.round((Date.now() - t0) / 1000)) : 0);
+        clock.textContent = fmtClock(s2);
+        if (target > 0 && s2 >= target && !chimed) { chimed = true; holdChime(); }
+      };
+      const start = () => {
+        t0 = Date.now(); chimed = false;
+        btn.textContent = "Stop";
+        btn.classList.add("running");
+        btn.setAttribute("aria-label", `${sl} hold timer — tap to stop and log`);
+        paint(0);
+        iv = setInterval(() => {
+          /* any re-render rebuilds the row; a detached row stops its own timer
+             rather than ticking forever against a node no longer on screen */
+          if (typeof row.isConnected === "boolean" && !row.isConnected) { clearInterval(iv); iv = null; return; }
+          paint();
+        }, 250);
+      };
+      const stop = () => {
+        if (iv) { clearInterval(iv); iv = null; }
+        const secs = t0 ? Math.round((Date.now() - t0) / 1000) : 0;
+        t0 = null;
+        btn.textContent = "Start";
+        btn.classList.remove("running");
+        btn.setAttribute("aria-label", `${sl} hold timer — start the count`);
+        if (secs >= 1) {
+          s.t = secs;                               // the ONE write, on Stop
+          if (tInp) tInp.value = String(secs);
+          paint(secs);
+          updateEntryFoot(idx);
+          persistDraft(true);
+        } else {
+          paint(0);
+          toast("That was under a second — nothing logged yet", "warn");
+        }
+      };
+      btn.addEventListener("click", () => { if (iv || t0) stop(); else start(); });
+    }
     return row;
   }
 

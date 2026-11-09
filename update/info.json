@@ -1,11 +1,11 @@
 {
-  "versionCode": 86,
-  "versionName": "1.2.8",
+  "versionCode": 87,
+  "versionName": "1.2.9",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "ad64ae88c11966f2a7baaf914d70591ba2a0bd675e2a1ba54e211bca5e59f57f",
-  "sizeBytes": 3906597,
+  "sha256": "395108da4986bc74af2dee375a88306c4fc3bead23694813b0d099df08b981a3",
+  "sizeBytes": 3908736,
   "published": "2026-11-09",
   "notes": [
-    "Drop and failure sets now earn extra XP for the extra effort - and the session history shows how much."
+    "Session XP now scales with the work you actually log - no cap on how many exercises or sets a real session has."
   ]
 }

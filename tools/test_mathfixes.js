@@ -1825,30 +1825,38 @@ console.log("\n=== 26. the age-adjusted basis line names the coefficient, its so
   truthy("...and still reads as the open-standard line", /published bodyweight standards/.test(line30));
 }
 
-console.log("\n=== 47. the per-session XP term is BOUNDED: entries cannot be farmed for volume ===");
+console.log("\n=== 47. the per-session XP entry term is LINEAR: what you log is what you earn ===");
 {
-  /* The per-ENTRY term (a flat 5 XP per logged exercise) used to be linear: N
-     entries paid 5N, so a session stuffed with one-set rows was farmed for XP —
-     the same per-entry, farm-by-volume shape the weigh-in term was rebalanced out
-     of. It is now paid for at most XP.ENTRY_CAP entries. Isolate the term by
-     logging entries that carry NO sets: they contribute nothing to tonnage or the
-     per-set term, so the ONLY thing that can move `base` is the entry count. */
+  /* The per-ENTRY term (5 XP per logged exercise) used to be CAPPED at
+     XP.ENTRY_CAP (8) by a v1.1.2 anti-farming measure. That cap is REMOVED: a
+     genuinely big session must pay what it earned, so N counted entries pay 5N,
+     LINEAR and uncapped. The anti-farm guard is NOT a row count — it is (a) the
+     validity filter (an entry counts only once it carries a real set) and (b) the
+     volume factor (work past a muscle group's MRV is halved). Isolate the entry
+     term by logging entries that carry NO sets: they contribute nothing to tonnage
+     or the per-set term, so the ONLY thing that can move `base` is the entry count
+     — and with the cap gone a session of empty rows earns NOTHING. */
   const e = env();
   const empty = (n) => ({ id: "w" + n, date: iso(1), note: "",
     entries: Array.from({ length: n }, () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [] })) });
+  const withSets = (n) => ({ id: "v" + n, date: iso(1), note: "",
+    entries: Array.from({ length: n }, () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10 }] })) });
   const baseOf = (n) => e.E.sessionXp(base({ workouts: [empty(n)] }), empty(n)).base;
+  const baseValid = (n) => e.E.sessionXp(base({ workouts: [withSets(n)] }), withSets(n)).base;
+  /* each valid entry = 1 set of 100x10: base = 50 + tonnage/1000 (n) + sets*2 (2n)
+     + entries*5 (5n) = 50 + 8n, so the ENTRY term alone is baseValid(n) - 50 - 3n. */
+  const entryTerm = (n) => baseValid(n) - 50 - 3 * n;
 
-  eq("the cap exists and is a real, small number", e.E.XP.ENTRY_CAP, 8);
+  eq("the arbitrary entry cap is GONE (no dead constant)", e.E.XP.ENTRY_CAP, undefined);
   eq("the XP.SESSION floor is untouched", baseOf(0), 50);            // 50 + no entries
-  eq("5 entries still pay 5 XP each (25)", baseOf(5) - 50, 25);
-  eq("8 entries still pay 5 XP each (40)", baseOf(8) - 50, 40);
-  eq("a 9th entry adds nothing — the term is capped, not linear", baseOf(9), baseOf(8));
-  eq("an 8-entry and a 40-entry session pay the SAME entry term", baseOf(40), baseOf(8));
-  eq("doubling entries past the cap does NOT double the term", baseOf(16) - baseOf(8), 0);
-  truthy("no entry count can push the term past the cap", baseOf(400) === baseOf(8));
+  eq("empty rows earn NOTHING — the validity filter, not a cap", [baseOf(5), baseOf(40), baseOf(400)], [50, 50, 50]);
+  eq("N counted entries pay 5N, LINEAR", [entryTerm(5), entryTerm(8), entryTerm(40)], [25, 40, 200]);
+  eq("doubling the entries doubles that term (2x -> 2x)", entryTerm(10), 2 * entryTerm(5));
+  eq("a 41st entry still pays (no 8-entry ceiling)", entryTerm(41) - entryTerm(40), 5);
+  eq("a genuinely big session scales with ALL its work", baseValid(40) - baseValid(20), 20 * 8);
 
-  /* A NORMAL session is unchanged: 5 exercises x 4 sets of 100x10 (entries 5 <=
-     cap) earns the same base and session XP it did before the cap. */
+  /* A NORMAL session is unchanged: 5 exercises x 4 sets of 100x10 (entries 5,
+     all valid) earns the same base and session XP it did before the cap. */
   const oneSet = (w) => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w, r: 10 }] });
   /* ONE entry carrying four sets of 100x10. */
   const entry4 = () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{w:100,r:10},{w:100,r:10},{w:100,r:10},{w:100,r:10}] });
@@ -1859,18 +1867,22 @@ console.log("\n=== 47. the per-session XP term is BOUNDED: entries cannot be far
   const fiveSet = base({ workouts: [wk(iso(1), Array.from({ length: 5 }, () => ({ w: 100, r: 10 })))] });
   eq("a 5-set session's base is unchanged", e.E.sessionXp(fiveSet, fiveSet.workouts[0]).base, 70);
 
-  /* A WEEK of sensible sessions must BEAT a farmer who stuffs one giant session
-     with 40 one-set entries. (Nothing is turned down; both compared at real XP.) */
+  /* A WEEK of sensible sessions must BEAT a farmer who stuffs one session with 40
+     one-set entries. Nothing is turned down any more; the anti-farm guard that
+     still bites is the VOLUME factor (40 one-set rows on one group is far past its
+     MRV, so the whole session is halved), never a row count. */
   const days = ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"];   // Mon-Thu, one week
   const week = base({ workouts: days.map((d, i) => ({ id: "k" + i, date: d, note: "",
     entries: [1,2,3,4,5].map(entry4) })) });
   const farm = base({ workouts: [{ id: "f", date: "2026-06-01", note: "",
     entries: Array.from({ length: 40 }, () => oneSet(100)) }] });
   const wkXp = e.E.xp(week), fXp = e.E.xp(farm);
+  const farmSx = e.E.sessionXp(farm, farm.workouts[0]);
   console.log(`     consistent week (4 sessions, 80 sets) ${wkXp} XP vs 40-set farmer (one session) ${fXp} XP`);
   truthy("a consistent week OUT-EARNS the 40-set farmer", wkXp > fXp);
-  truthy("the farmer's base is well under the old linear 5N=200 entry term",
-    e.E.sessionXp(farm, farm.workouts[0]).base < 50 + 40 * 5);
+  truthy("the farmer's VOLUME is priced, not his row count", farmSx.mult < 1 && farmSx.xp < farmSx.base);
+  eq("the farmer is discounted by the over-MRV volume factor, not by a cap",
+    farmSx.factors.volume, 0.75);
 }
 
 console.log("\n=== 48. the Save button's CLICK path really saves (the event-argument shadow) ===");
@@ -2177,8 +2189,8 @@ console.log("\n=== 51. drop/failure sets earn EXTRA XP, capped, and the session 
   /* The set-type multipliers fed the muscle-group effort path ONLY; a failure set
      paid nothing extra in `sessionXp`, which counted the raw set COUNT. A drop or
      failure set now earns extra XP for the extra effort — proportional to the
-     set-type multiplier above a straight set — and is CAPPED per session (the
-     same farm-proofing as XP.ENTRY_CAP), so marking every set "failure" cannot
+     set-type multiplier above a straight set — and is CAPPED per session (its
+     own farm-proofing, HARD_SET_CAP), so marking every set "failure" cannot
      inflate it. The term only ADDS to the base, so XP never goes down. */
   const e = env();
   const sx = (sets) => { const s = base({ workouts: [wk(iso(1), sets)] }); return e.E.sessionXp(s, s.workouts[0]); };
@@ -2220,6 +2232,242 @@ console.log("\n=== 51. drop/failure sets earn EXTRA XP, capped, and the session 
   truthy("the XP breakdown reports the effort row", /fmt\(sx\.base - sx\.effortXp\)/.test(appSrc) && /term\("hard-sets", "Hard sets"\)/.test(appSrc));
   truthy("'Hard sets' is the term used, not 'failed'", appSrc.includes("Hard sets") && !/Hard sets[^<]*failed/i.test(appSrc));
   truthy("the hard-set term has ONE glossary entry", GL.has("hard-sets"));
+}
+
+console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ===");
+{
+  /* The timer is DOM wiring inside app.js, so this drives the REAL app.js
+     behind a stub DOM that — unlike the §48 stub — can RENDER a set row and
+     retrieve the very button the app registered its listener on. The clock is a
+     fake Date.now the test advances, so Start -> advance -> Stop is deterministic
+     and the elapsed seconds that land in `t` are exactly what a real hold would
+     produce. */
+  const mkDom = () => {
+    let uid = 0, ivId = 0;
+    const ivs = new Map();
+    const mkNode = (tag) => {
+      const cls = new Set();
+      const q = new Map();
+      const ls = new Map();
+      const node = {
+        _uid: ++uid, tagName: tag || "div", _html: "", className: "", dataset: {}, style: {},
+        children: [], value: "", textContent: "", _attrs: {},
+        set innerHTML(v) { this._html = String(v); if (String(v) === "") this.children = []; },
+        get innerHTML() { return this._html; },
+        addEventListener(type, fn) { const a = ls.get(type) || []; a.push(fn); ls.set(type, a); },
+        removeEventListener() {},
+        setAttribute(k, v) { this._attrs[k] = v; }, getAttribute(k) { return this._attrs[k]; },
+        removeAttribute(k) { delete this._attrs[k]; },
+        append(c) { this.children.push(c); }, prepend() {}, remove() {}, click() {}, focus() {},
+        contains: () => false, closest: () => mkNode("closest"),
+        querySelector(sel) { if (!q.has(sel)) q.set(sel, mkNode("q:" + sel)); return q.get(sel); },
+        querySelectorAll: () => [],
+        getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+        classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), toggle: () => {}, contains: (c) => cls.has(c) },
+        _fire(type, evt) { const a = ls.get(type) || []; if (!a.length) throw new Error("no " + type + " listener"); return a[a.length - 1](evt); },
+        _has(type) { return (ls.get(type) || []).length > 0; },
+      };
+      return node;
+    };
+    const docs = new Map();
+    const get = (sel) => { if (!docs.has(sel)) docs.set(sel, mkNode("doc:" + sel)); return docs.get(sel); };
+    return { mkNode, get, ivs, nextIv: () => ++ivId };
+  };
+
+  const holdEnv = (seed) => {
+    const dom = mkDom();
+    const store = {};
+    let NOW = Date.parse("2026-06-02T12:00:00");
+    class FakeDate extends Date { constructor(...a) { if (a.length) super(...a); else super(NOW); } static now() { return NOW; } }
+    const s = {
+      console: { log() {}, warn() {}, error() {}, info() {} },
+      Date: FakeDate, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
+      isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+      setTimeout: () => 0, clearTimeout() {},
+      setInterval: (fn) => { const id = dom.nextIv(); dom.ivs.set(id, fn); return id; },
+      clearInterval: (id) => { dom.ivs.delete(id); },
+      document: {
+        addEventListener() {}, removeEventListener() {},
+        querySelector: dom.get, querySelectorAll: () => [], getElementById: dom.get,
+        createElement: (t) => dom.mkNode(t), createElementNS: () => dom.mkNode("ns"),
+        body: dom.mkNode("body"), visibilityState: "visible", activeElement: null,
+      },
+      navigator: { clipboard: { writeText: async () => {} } },
+      localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+      Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+    };
+    s.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+    s.window = s; s.globalThis = s;
+    vm.createContext(s);
+    vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(base(seed || {})))});`, s);
+    const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/app.js"]
+      .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+    vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "hold.js" });
+    const fire = (sel, type, evt) => dom.get(sel)._fire(type, evt);
+    // one render of the Log tab, then the draft is filled via the app's OWN
+    // "Repeat last session" control (draft is closure-private)
+    const boot = () => { s.__X.App.buildIndex(); s.__X.App.setView("log"); fire("#btn-repeat", "click", { type: "click" }); };
+    const view = () => dom.get("#view");
+    const entryCard = () => view().children[1];
+    const setRowNode = (idx, si) => entryCard().querySelector("#sets-" + (idx || 0)).children[si || 0];
+    return {
+      A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, fire, boot, view, entryCard, setRowNode,
+      tick: () => { [...dom.ivs.values()].forEach((fn) => fn()); },
+      setNow: (ms) => { NOW = ms; },
+      now: () => NOW,
+      toasts: () => (dom.get("#toasts").children.length),
+    };
+  };
+
+  const plankId = 1307;   // "Front Plank", mode "time" in the library
+  const plankSeed = (extra = {}) => Object.assign({
+    workouts: [{ id: "w1", date: "2026-05-28", note: "", entries: [
+      { id: plankId, name: "Front Plank", mode: "time", sets: [{ t: 45 }] }] }],
+  }, extra);
+
+  // ---- (a) Start -> advance -> Stop writes the elapsed seconds into `t` ----
+  const h = holdEnv(plankSeed());
+  h.boot();
+  const draftSet = h.A.getDraft().entries[0].sets[0];          // the repeat copies, so the DRAFT set
+  const row = h.setRowNode(0, 0);
+  const btn = row.querySelector(".hold-btn");
+  const clock = row.querySelector(".hold-clock");
+  truthy("a timed set row carries the hold control", /hold-btn/.test(row.innerHTML));
+  truthy("it also keeps the manual seconds input", /data-k="t"/.test(row.innerHTML));
+  /* the idle state is in the markup the row is built from (the stub does not
+     parse innerHTML, so the initial label is read from the template itself) */
+  truthy("the clock starts at 0:00", /class="hold-clock"[^>]*>0:00</.test(row.innerHTML));
+  truthy("the button starts as Start", /class="btn ghost tiny hold-btn"[^>]*>Start</.test(row.innerHTML));
+
+  // scope: this is the ONLY mode that got it
+  truthy("the row's other controls are unchanged (set-type control intact)", /class="mini setty"/.test(row.innerHTML));
+  eq("the draft set's t is what was repeated", draftSet.t, 45);
+  /* the timer writes NOTHING of its own: capture the key set before the run and
+     require Stop to leave it identical apart from t */
+  const keysBefore = Object.keys(draftSet).sort();
+
+  btn._fire("click", { type: "click" });                        // Start
+  eq("Start flips the control to Stop", btn.textContent, "Stop");
+  h.setNow(h.now() + 42400);                                    // 42.4 s held
+  h.tick();                                                     // the live repaint
+  eq("a running count does NOT touch the set's t", draftSet.t, 45);
+  eq("the live clock reads mm:ss", clock.textContent, "0:42");
+  btn._fire("click", { type: "click" });                        // Stop
+  eq("Stop writes the elapsed seconds into t", draftSet.t, 42);
+  eq("the typed seconds field is kept in step", row.querySelector('[data-k="t"]').value, "42");
+  eq("the control returns to Start", btn.textContent, "Start");
+  eq("the timer added NO new set field — only t changed", Object.keys(draftSet).sort(), keysBefore);
+
+  // ---- (b) tapping Start again begins a FRESH count from 0 ----
+  h.setNow(h.now() + 3600000);
+  btn._fire("click", { type: "click" });
+  eq("a new start resets the clock to 0:00", clock.textContent, "0:00");
+  h.setNow(h.now() + 5000); h.tick();
+  eq("...and counts from zero, not from the last hold", clock.textContent, "0:05");
+  btn._fire("click", { type: "click" });
+  eq("Stop records the FRESH elapsed (5 s), not a cumulative one", draftSet.t, 5);
+
+  // ---- (c) a sub-second tap must never leave a half-logged set ----
+  const before = draftSet.t, toastsBefore = h.toasts();
+  btn._fire("click", { type: "click" });                        // Start
+  h.setNow(h.now() + 300);                                      // 0.3 s
+  btn._fire("click", { type: "click" });                        // Stop
+  eq("an under-one-second hold leaves t untouched", draftSet.t, before);
+  truthy("...and says so, neutrally", h.toasts() > toastsBefore);
+
+  // ---- (d) a straight MANUAL time entry still works (the parser path) ----
+  eq("typing \"90\" in a time row still parses to 90 s", h.A.parseSet("90", "time").t, 90);
+  eq("clock shorthand still parses (1:30)", h.A.parseSet("1:30", "time").t, 90);
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the manual seconds field markup is untouched",
+    appSrc.includes('f("t", "secs", 64, `${sl} seconds`)'));
+
+  // ---- (e) SCOPE: no other mode gets a hold control ----
+  const otherEnv = (mode, name, sets) => {
+    const h2 = holdEnv({ workouts: [{ id: "w1", date: "2026-05-28", note: "",
+      entries: [{ id: 73, name, mode, sets }] }] });
+    h2.boot();
+    return { h2, row: h2.setRowNode(0, 0) };
+  };
+  const wr = otherEnv("weight_reps", "Bench Press", [{ w: 100, r: 10 }]);
+  truthy("a weight × reps row has NO hold control", !/hold-btn/.test(wr.row.innerHTML));
+  truthy("...and keeps its weight/reps inputs", /data-k="w"/.test(wr.row.innerHTML) && /data-k="r"/.test(wr.row.innerHTML));
+  const rp = otherEnv("reps", "Push Up", [{ r: 12 }]);
+  truthy("a reps row has NO hold control", !/hold-btn/.test(rp.row.innerHTML));
+  const dt = otherEnv("distance_time", "Run", [{ d: 5000, t: 1500 }]);
+  truthy("a distance × time row has NO hold control either", !/hold-btn/.test(dt.row.innerHTML));
+  eq("...and its t is only ever what is typed (no timer wiring)", dt.h2.A.getDraft().entries[0].sets[0].t, 1500);
+
+  // ---- (f) an EXISTING target drives the clock; none is ever invented ----
+  const tg = holdEnv(plankSeed({ targets: { [plankId]: { value: 60, set: "2026-05-01" } } }));
+  tg.boot();
+  const tgRow = tg.setRowNode(0, 0);
+  truthy("a per-exercise target is surfaced on the row", /hold-target/.test(tgRow.innerHTML) && tgRow.innerHTML.includes("/1:00"));
+  const tgBtn = tgRow.querySelector(".hold-btn");
+  tgBtn._fire("click", { type: "click" });
+  tg.setNow(tg.now() + 60000); tg.tick();          // reach the 60 s target — the beep fires (guarded)
+  tgBtn._fire("click", { type: "click" });
+  eq("reaching the target still logs the true elapsed time", tg.A.getDraft().entries[0].sets[0].t, 60);
+  const noTg = holdEnv(plankSeed());
+  noTg.boot();
+  truthy("with no target, no target is invented (clock only)", !/hold-target/.test(noTg.setRowNode(0, 0).innerHTML));
+
+  // ---- (g) the chime needs no permission; vibration was correctly skipped ----
+  truthy("the chime is guarded behind an AudioContext feature check", /window\.AudioContext \|\| window\.webkitAudioContext/.test(appSrc));
+  truthy("no navigator.vibrate call was added", !/navigator\s*\.\s*vibrate/.test(appSrc));
+  const manifest = fs.readFileSync(path.join(B, "android", "app", "src", "main", "AndroidManifest.xml"), "utf8");
+  truthy("the Android manifest still has no VIBRATE permission (no permission change)", !/VIBRATE/.test(manifest));
+}
+
+console.log("\n=== 53. XP scales with the work logged — and only ever GROWS as data is added ===");
+{
+  /* Two standing rules, pinned here after the entry cap came off:
+     (1) an INVALID row earns nothing — a row that carries no real reps/time/load
+         is not logged work, so it adds nothing beyond the session's flat floor;
+     (2) XP only ever GROWS as data is added — a level can never go down.
+     Rule (2) is pinned on the two axes the app actually appends on: more SESSIONS,
+     and more SETS on a session that already exists. (A known, PRE-EXISTING
+     exception: the over-MRV measure is summed per ENTRY, so SPLITTING the same
+     volume across more entries can raise the volume penalty; that behaviour is in
+     the volume factor the task kept unchanged and is not asserted either way
+     here. Level thresholds are coarse, so a small dip rarely moves a level.) */
+  const e = env();
+
+  // (1) invalid rows earn nothing ------------------------------------------
+  const bad = (n, sets) => ({ id: "b" + n, date: iso(1), note: "",
+    entries: Array.from({ length: n }, () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets })) });
+  const sessBase = (n, sets) => { const w = bad(n, sets); return e.E.sessionXp(base({ workouts: [w] }), w).base; };
+  eq("a row with NO sets adds nothing to the session", sessBase(1, []), sessBase(0, []));
+  eq("...and 40 such rows still add nothing", sessBase(40, []), 50);
+  eq("a row whose only set has no reps (invalid) earns nothing", sessBase(3, [{ w: 100, r: 0 }]), 50);
+  eq("...an empty set object earns nothing", sessBase(3, [{}]), 50);
+  eq("a bodyweight-style row with no reps earns nothing", sessBase(3, [{ w: 0, r: 0 }]), 50);
+  // a REAL set on the same row starts paying, so the filter is on validity, not on the row
+  truthy("the same row WITH a real set does earn", sessBase(1, [{ w: 100, r: 10 }]) > 50);
+
+  // (2) the invariant, on the two append axes ------------------------------
+  const oneEntry = (n) => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: Array.from({ length: n }, () => ({ w: 100, r: 10 })) });
+  let setDrops = 0;
+  for (let n = 1; n <= 60; n++) {
+    const w = { id: "w", date: "2026-06-01", note: "", entries: [oneEntry(n)] };
+    const st = base({ workouts: [w] });
+    if (n > 1 && e.E.sessionXp(st, w).xp < e.E.sessionXp(base({ workouts: [{ id: "w", date: "2026-06-01", note: "", entries: [oneEntry(n - 1)] }] }), { id: "w", date: "2026-06-01", note: "", entries: [oneEntry(n - 1)] }).xp) setDrops++;
+  }
+  eq("adding a set never lowers a session's XP (1..60 sets)", setDrops, 0);
+
+  const days = ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07"];
+  let sessionDrops = 0, prevTotal = 0;
+  for (let i = 1; i <= days.length; i++) {
+    const ws = days.slice(0, i).map((d, k) => ({ id: "s" + k, date: d, note: "",
+      entries: Array.from({ length: 5 }, () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: Array.from({ length: 6 }, () => ({ w: 100, r: 10 })) })) }));
+    const total = e.E.xp(base({ workouts: ws }));
+    if (i > 1 && total < prevTotal) sessionDrops++;
+    prevTotal = total;
+  }
+  eq("adding a session never lowers the total XP", sessionDrops, 0);
+  const oneDay = base({ workouts: [{ id: "s0", date: "2026-06-01", note: "",
+    entries: Array.from({ length: 5 }, () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: Array.from({ length: 6 }, () => ({ w: 100, r: 10 })) })) }] });
+  truthy("...and the total only ever climbs across a week", prevTotal > e.E.xp(oneDay));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
