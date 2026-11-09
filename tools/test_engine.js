@@ -43,7 +43,7 @@ console.log('\n-- after progressive session 10 Nov --');
 const A2=Engine.attributes(S,28);
 Engine.ATTRIBUTES.forEach(a=>console.log(`  ${a.key.padEnd(4)} ${String(A2[a.key].score).padStart(3)} delta ${A2[a.key].delta}`));
 const cmp=Engine.compareLast(S,'u1');
-console.log('  compareLast(Bench Press Machine):', JSON.stringify(cmp));
+console.log('  compareLast(Machine Chest Press):', JSON.stringify(cmp));
 
 /* ---- the same values, asserted (this is the count the run total reads) ---- */
 console.log('\n-- checks --');
