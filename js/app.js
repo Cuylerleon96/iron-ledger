@@ -792,7 +792,7 @@
       draft = { id: null, date: today(), note: w.note || "", entries: JSON.parse(JSON.stringify(w.entries)), dateTouched: false };
       render(); toast("Started from " + w.date + " — edit and save", "good");
     });
-    $("#btn-save").addEventListener("click", saveDraft);
+    $("#btn-save").addEventListener("click", () => saveDraft());
     const del = $("#btn-del"); if (del) del.addEventListener("click", () => {
       // Irreversible and it can be a whole session of work, so confirm once.
       if (!confirm("Delete this session? This cannot be undone.")) return;
@@ -1081,7 +1081,11 @@
      path with a draft it built; the app itself calls it with no argument and the
      live draft is used. */
   function saveDraft(draftIn) {
-    const d = draftIn || draft;
+    // Only a real draft (an object carrying an entries array) may override the
+    // live one. A truthy non-draft — a DOM MouseEvent handed in by a click
+    // listener bound directly to this function — must NEVER shadow it, or the
+    // first .map() throws before anything is written and Save silently dies.
+    const d = (draftIn && Array.isArray(draftIn.entries)) ? draftIn : draft;
     const entries = d.entries
       .map((en) => ({ ...en, sets: en.sets.filter((s) => Object.values(s).some((v) => v !== undefined && v !== null && v !== "")) }))
       .filter((en) => en.sets.length);

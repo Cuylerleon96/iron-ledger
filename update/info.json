@@ -1,11 +1,11 @@
 {
-  "versionCode": 79,
-  "versionName": "1.2.1",
+  "versionCode": 80,
+  "versionName": "1.2.2",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "0a76d643d05c002387671c13c7432db1587a10658386c804f0cdf43b346abd0f",
-  "sizeBytes": 3900615,
+  "sha256": "868ecc2cbfc8a31cd5da10f08e0c2e316ffb4296f11f67104f9313e36df3f5ef",
+  "sizeBytes": 3900903,
   "published": "2026-11-09",
   "notes": [
-    "The Nutrition tab now shows your day's macros as clear rows right under the search, and a few colours that read like warnings are now calm."
+    "Saving a session works again - a bug had stopped the Save button from doing anything."
   ]
 }

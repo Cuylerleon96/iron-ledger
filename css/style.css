@@ -654,7 +654,12 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .up-progress span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .62rem; text-shadow: var(--outline-sm); }
 
 /* ---------------- toasts ---------------- */
-#toasts { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 200; display: grid; gap: .35rem; width: min(94vw, 440px); }
+/* Toasts are non-interactive notices: the layer must never eat taps meant for
+   whatever sits under it (it overlaps the sticky save bar). Any toast that does
+   carry a control re-enables hits on that control alone. */
+#toasts { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 200; display: grid; gap: .35rem; width: min(94vw, 440px); pointer-events: none; }
+#toasts .toast, #toasts .toast * { pointer-events: none; }
+#toasts button, #toasts a, #toasts [role="button"] { pointer-events: auto; }
 .toast {
   padding: .55rem .7rem; border-radius: 8px; font-size: .66rem; line-height: 1.6;
   background: linear-gradient(180deg, var(--blue-3) 0%, var(--blue-2) 20%, var(--blue-1) 100%);

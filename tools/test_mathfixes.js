@@ -1864,5 +1864,103 @@ console.log("\n=== 47. the per-session XP term is BOUNDED: entries cannot be far
     e.E.sessionXp(farm, farm.workouts[0]).base < 50 + 40 * 5);
 }
 
+console.log("\n=== 48. the Save button's CLICK path really saves (the event-argument shadow) ===");
+{
+  /* The regression (v1.0.47): `$("#btn-save").addEventListener("click", saveDraft)`
+     handed the MouseEvent to saveDraft's `draftIn` parameter. The event is truthy,
+     so `const d = draftIn || draft` shadowed the live draft with the event and the
+     first `d.entries.map` threw INSIDE the listener — no toast, no on-screen error,
+     nothing saved, the draft left on screen. Save was dead on every device and every
+     input method. This section drives the listener the app ACTUALLY registers (the
+     CLICK path), with the entry data built through the app's own "Repeat last
+     session" button, so it fails against the old wiring and passes against the fix. */
+  const uiEnv = (seed) => {
+    const store = {}, nodes = {}, listeners = {};
+    const mkNode = (id) => ({
+      id, _html: "", className: "", dataset: {}, style: {}, children: [],
+      set innerHTML(v) { this._html = String(v); }, get innerHTML() { return this._html; },
+      addEventListener(type, fn) { (listeners[id + "|" + type] = listeners[id + "|" + type] || []).push(fn); },
+      removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+      append(c) { this.children.push(c); }, prepend() {}, remove() {}, click() {}, focus() {},
+      contains: () => false,
+      querySelector: () => mkNode("q"), querySelectorAll: () => [],
+      getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    });
+    const get = (sel) => (nodes[sel] = nodes[sel] || mkNode(sel));
+    const s = {
+      console: { log() {}, warn() {}, error() {}, info() {} },
+      Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
+      isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+      setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+      document: {
+        addEventListener() {}, removeEventListener() {},
+        querySelector: get, querySelectorAll: () => [], getElementById: get,
+        createElement: () => mkNode("e"), createElementNS: () => mkNode("ns"),
+        body: mkNode("body"), visibilityState: "visible", activeElement: null,
+      },
+      navigator: { clipboard: { writeText: async () => {} } },
+      localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+      Blob: function () {}, URL: { createObjectURL: () => "blob:x" },
+      module: { exports: {} },
+    };
+    s.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+    s.window = s; s.globalThis = s;
+    vm.createContext(s);
+    vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(base(seed || {})))});`, s);
+    const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/app.js"]
+      .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+    vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "clickpath.js" });
+    // fire the LAST listener registered for a selector+type, exactly as the live DOM
+    // would: the most recent render owns the node.
+    const fire = (sel, type, evt) => {
+      const ls = listeners[sel + "|" + type] || [];
+      if (!ls.length) throw new Error("no " + type + " listener was registered on " + sel);
+      return ls[ls.length - 1](evt);
+    };
+    const toasts = () => (nodes["#toasts"] ? nodes["#toasts"].children.length : 0);
+    return { A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, fire, toasts };
+  };
+
+  // a prior session exists, so the Log tab offers "Repeat last session" — the real
+  // way a user fills the live draft without touching closure-private state.
+  const seed = { workouts: [wk(iso(7), [{ w: 100, r: 8 }])] };
+
+  // ---- (a) the WIRING: a genuine click on #btn-save must save ----
+  const h = uiEnv(seed);
+  h.A.buildIndex();
+  h.A.setView("log");                       // renders the log tab -> registers listeners
+  h.fire("#btn-repeat", "click", { type: "click" });   // live draft = a copy of the last session
+  const before = h.S.state.workouts.length;
+  let wiringErr = null;
+  try { h.fire("#btn-save", "click", { type: "click", target: {}, preventDefault() {} }); }
+  catch (e) { wiringErr = e; }
+  if (wiringErr) console.log(`        (the click threw: ${wiringErr.constructor.name}: ${wiringErr.message})`);
+  eq("clicking Save does not throw inside the listener", wiringErr === null, true);
+  eq("clicking Save SAVED the session (workouts grew)", h.S.state.workouts.length, before + 1);
+  truthy("...and the save ran its toast path", h.toasts() >= 2);   // repeat-toast + save-toast
+
+  // ---- (b) the HARDENING: a non-draft first argument can never shadow the live draft ----
+  // This is the exact call the old wiring made (the event arrives as draftIn).
+  const g = uiEnv(seed);
+  g.A.buildIndex();
+  g.A.setView("log");
+  g.fire("#btn-repeat", "click", { type: "click" });
+  const gbefore = g.S.state.workouts.length;
+  let hardErr = null;
+  try { g.A.saveDraft({ type: "click", target: {}, preventDefault() {} }); }   // a MouseEvent-shaped object
+  catch (e) { hardErr = e; }
+  eq("saveDraft(<a MouseEvent>) does not throw", hardErr === null, true);
+  eq("...and it saves the LIVE draft instead of shadowing it", g.S.state.workouts.length, gbefore + 1);
+
+  // ---- (c) a REAL draft passed as draftIn still drives the save (tests depend on it) ----
+  const k = uiEnv({});
+  k.A.buildIndex();
+  const real = { id: null, date: iso(0), note: "", entries: [
+    { id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 90, r: 5 }] }] };
+  k.A.saveDraft(real);
+  eq("a real draft argument is still honoured", k.S.state.workouts.length, 1);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
