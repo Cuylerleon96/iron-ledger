@@ -2278,7 +2278,7 @@ const Engine = (() => {
 
   /* ---------- heroes & cosmetics: ONE UNLOCK TABLE ----------
 
-     Every hero and every cosmetic (a colourway, a gear overlay) is ONE row here,
+     Every hero and every colourway is ONE row here,
      and the row names the KEY that unlocks it plus a plain progress read. Keys are
      THRESHOLDS on signals the app ALREADY tracks — never a new thing to collect:
 
@@ -2347,45 +2347,15 @@ const Engine = (() => {
     badges:   (have, need) => `${need} ${need === 1 ? "badge" : "badges"} — ${Math.max(0, need - have)} to go`,
   };
 
-  /* THE TABLE. Sheet/img paths are the director's ONE lookup (js/hero.js reads
+  /* THE TABLE. Sheet paths are the director's ONE lookup (js/hero.js reads
      `sheet`), so the app never hard-codes a hero anywhere. */
-  /* ANATOMY: where each hero's head/waist/shoulders are, in CELL UNITS (0..32,
-     origin top-left of the sprite cell — the SAME coordinate space the sheets
-     use).   MEASURED from the generated PNGs (solid silhouette, alpha >= 200; the
-   ember's alpha-70 glow halo is excluded), not guessed — see
-   tools/test_hero_gear.py, which re-measures the art and checks every gear
-   overlay lands on the band it names. The points are the LINE an item of that
-   kind pins to, and `w` is the MEASURED WIDTH of that band (the silhouette's
-   x-span at that row):
-       head       the brow line a headband sits on          (w = head width)
-       shoulders  the shoulder line a garment hangs from    (w = shoulder width)
-       waist      the waist line a belt sits on (null = the creature has none)
-   The WIDTHS are what makes a garment FIT: the golem's head is only 10 units
-   wide, so a fixed 14-unit headband overhung it by 2 a side and read as a bar.
-   Engine.gearBox sizes each item against the band it lands on (see the gear
-   row's `fit`), so ONE drawing still fits every hero. Every hero is a different
-   shape (the golem is squat, the slime is a low dome with no neck, the wisp is
-   a tapering flame), which is exactly why neither ONE drawing nor ONE size can
-   fit them all. */
-  const HERO_ANATOMY = {
-    //        brow            shoulders          waist          facing
-    // slime: the dome runs rows 16..31 with its EYES measured at rows 25..26, so
-    // `head` is the BROW row 18 (band 18..21 — on the forehead, clear of the eyes)
-    // and `waist` is row 28 (belt 28..31 — BELOW the face; row 26 used to clip the
-    // eyes' lower row). Widths are the silhouette's x-span at that row.
-    slime:  { head: { x: 16, y: 18, w: 12 }, shoulders: { x: 16, y: 22, w: 18 }, waist: { x: 16, y: 28, w: 24 }, facing: "right" },
-    pebble: { head: { x: 16, y: 13, w: 10 }, shoulders: { x: 16, y: 19, w: 16 }, waist: { x: 16, y: 24, w: 22 }, facing: "right" },
-    ember:  { head: { x: 16, y: 19, w: 10 }, shoulders: { x: 16, y: 22, w: 12 }, waist: null,                          facing: "right" },
-  };
-
   const HERO_ITEMS = [
     { id: "slime",  kind: "hero", name: "Slime",        sheet: "img/hero-sheet.png",
-      anatomy: HERO_ANATOMY.slime, keys: [{ sig: "start" }] },
+      keys: [{ sig: "start" }] },
     { id: "pebble", kind: "hero", name: "Pebble golem", sheet: "img/hero-pebble.png",
-      anatomy: HERO_ANATOMY.pebble,
       keys: [{ sig: "weeks", need: 2 }, { sig: "dis", need: 60 }] },
     { id: "ember",  kind: "hero", name: "Ember wisp",   sheet: "img/hero-ember.png",
-      anatomy: HERO_ANATOMY.ember, keys: [{ sig: "hardSets", need: 10 }] },
+      keys: [{ sig: "hardSets", need: 10 }] },
     /* --- COLOURWAYS: ZERO new art. Each is a CSS filter applied to the SAME sheet,
        so a colourway costs nothing to draw and can never drift from the sprite. --- */
     { id: "natural", kind: "colourway", name: "Natural", filter: "none",
@@ -2396,58 +2366,7 @@ const Engine = (() => {
       keys: [{ sig: "weeks", need: 5 }] },
     { id: "frost",   kind: "colourway", name: "Frost",   filter: "hue-rotate(150deg) brightness(1.12) saturate(.7)",
       keys: [{ sig: "weeks", need: 10 }] },
-    /* --- GEAR OVERLAYS: a small static PNG pinned to a NAMED anchor on whatever
-       hero is worn. Geometry is in CELL UNITS (0..32) so it is exact at every
-       scale: the renderer computes left/top/width/height as cellSize · (v / 32)
-       (see the `.gear-overlay` rule in css/style.css). `anchor` names the anatomy
-       point the item pins to; `size` is the ART's own footprint in the 32-canvas
-       (tools/make_hero_gear.py draws it at native size in the canvas's top-left
-       box); `fit` says how the box is DERIVED from that hero's band WIDTH, so ONE
-       drawing fits every shape — `{ band: "head", k: 1 }` gives the headband the
-       head's own measured width (a 10-unit golem head gets a 10-unit band, never
-       the art's 14), and `{ band: "waist", k: .78 }` insets the belt to 78 % of
-       the waist. `offset` then nudges it (the horizontal centring is computed
-       from the fitted width, so it is never hard-coded); `z` is "front" of the
-       sprite. There is no CAPE: the bodies are wider than it, so it was 100 %
-       occluded on every hero (measured 0 visible pixels) — see the hero report. */
-    { id: "headband", kind: "gear", name: "Headband", img: "img/gear-headband.png",
-      anchor: "head", size: { w: 14, h: 4 }, fit: { band: "head", k: 1 }, offset: { x: 0, y: 0 }, z: "front",
-      keys: [{ sig: "level", need: 3 }] },
-    { id: "belt",     kind: "gear", name: "Belt",     img: "img/gear-belt.png",
-      anchor: "waist", size: { w: 14, h: 3 }, fit: { band: "waist", k: 0.78 }, offset: { x: 0, y: 0 }, z: "front",
-      keys: [{ sig: "badges", need: 3 }] },
   ];
-
-  /* Where a gear item's overlay box sits on a given hero, in CELL UNITS.
-     PURE and single-sourced: the stage markup, the roster preview and the header
-     all call this, so they cannot disagree. `anchor` picks the hero's anatomy
-     point, the item's `fit` sizes the box against that band's MEASURED WIDTH (so
-     the garment fits THIS hero, not the art's native 14 units), the height then
-     follows the art's own aspect, and `offset` nudges it. A hero with NO such
-     point (the ember wisp has no waist) falls back to the nearest one it does
-     have, so an item is never silently dropped — the copy reports the wisp has
-     no waist, see the hero report. */
-  function gearBox(hero, gear) {
-    if (!hero || !gear || !gear.size) return null;
-    const a = hero.anatomy || {};
-    const key = a[gear.anchor] ? gear.anchor : (a.shoulders ? "shoulders" : "head");
-    const p = a[key] || { x: 16, y: 16, w: gear.size.w };
-    const art = gear.size;
-    const fit = gear.fit || {};
-    const bandW = num(p.w) || art.w;
-    let w = art.w;
-    if (fit.band) w = Math.max(4, Math.round(bandW * (num(fit.k) || 1)));
-    const h = Math.max(1, Math.round(art.h * w / art.w));       // the art's own aspect, kept
-    const off = gear.offset || { x: 0, y: 0 };
-    return {
-      x: p.x - Math.floor(w / 2) + (off.x || 0), y: p.y + (off.y || 0),
-      w: w, h: h,
-      artw: art.w, arth: art.h,
-      anchor: gear.anchor,
-      anchored: !!a[gear.anchor],
-      z: gear.z === "behind" ? "behind" : "front",
-    };
-  }
 
   function heroItems(state, sigs) {
     const sig = sigs || heroSignals(state);
@@ -2478,9 +2397,7 @@ const Engine = (() => {
         : KEY_SAYS[lead.sig](lead.have, lead.need);
       return {
         id: it.id, kind: it.kind, name: it.name,
-        sheet: it.sheet || null, img: it.img || null, filter: it.filter || null,
-        anatomy: it.anatomy || null,
-        anchor: it.anchor || null, size: it.size || null, fit: it.fit || null, offset: it.offset || null, z: it.z || null,
+        sheet: it.sheet || null, filter: it.filter || null,
         keys, unlocked, progress: { have: lead.have, need: lead.need }, copy,
       };
     });
@@ -2810,7 +2727,7 @@ const Engine = (() => {
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
     intakeDays, intakeCoverWeeks, intakeFoods, intakeXp, NUTRI_COVER_DAYS,
-    heroItems, heroSignals, HERO_ITEMS, HERO_ANATOMY, gearBox, hardSetCount, badgeCount,
+    heroItems, heroSignals, HERO_ITEMS, hardSetCount, badgeCount,
     bodylogCoverWeeks, bodylogXp,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,

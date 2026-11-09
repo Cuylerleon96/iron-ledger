@@ -442,33 +442,24 @@
     playOnce(r, () => setClass("idle"));
   }
 
-  /* --- the equipped hero + its cosmetics (WYSIWYG) -------------------------
+  /* --- the equipped hero (WYSIWYG) -----------------------------------------
      The director never branches on a hero id: setHero() takes ONE row from the
-     engine's table (Engine.heroItems) — { sheet, filter } — and setGear() takes
-     the equipped overlays with their COMPUTED geometry (Engine.gearBox). The
-     colourway is a pure CSS `filter` on the SAME sheet (zero new art), applied to
-     THE SPRITE ONLY so it never tints the gear (a garment is its own cloth).
+     engine's table (Engine.heroItems) — { sheet, filter }. The colourway is a
+     pure CSS `filter` on the SAME sheet (zero new art), applied to THE SPRITE.
 
      LAYERING. The sprite is drawn on an inner `.hero-sprite` element (created
-     here, never in index.html, so the static header markup stays image-free).
-     That is what lets a "behind" overlay (the cape) really sit BEHIND the body:
-     a CSS background cannot be occluded by a child, but a sibling can. The gear
-     overlays are positioned by the SAME cell-unit mechanism as the stage
-     (css/style.css `.gear-overlay`: left/top/width/height = --cell · v/32), so
-     the header (--cell 24.375), the roster (64) and the stage (128) share ONE
-     formula and there are no 128/64/100% hard-codes left. */
+     here, never in index.html, so the static header markup stays image-free),
+     inside the inner `.hero-body` that carries the FACING MIRROR, so a flip
+     turns the whole creature. */
   let filterCss = "";
-  let gearSrcs = [];
-  let gearImgs = [];
   let bodyEl = null;                     // the INNER flip element (motion vs mirror)
   let spriteEl = null;
 
-  /* The INNER body element, created lazily. It wraps the sprite AND every gear
-     overlay, so a facing flip turns the whole creature with its kit, while the
-     SLOT's `transform` stays free for the motion. Returns null when this
-     environment has no real DOM (the vm test stubs), in which case the sheet is
-     painted on the slot itself and the mirror is simply not drawn — the director
-     still runs. */
+  /* The INNER body element, created lazily. It wraps the sprite, so a facing
+     flip turns the whole creature, while the SLOT's `transform` stays free for
+     the motion. Returns null when this environment has no real DOM (the vm test
+     stubs), in which case the sheet is painted on the slot itself and the mirror
+     is simply not drawn — the director still runs. */
   function ensureBody() {
     if (bodyEl && bodyEl.parentNode === h) return bodyEl;
     if (typeof document === "undefined" || !document.createElement || !h) return null;
@@ -482,9 +473,8 @@
     } catch (e) { bodyEl = null; return null; }
   }
 
-  /* The sprite child, created lazily inside the body (so the cape can really sit
-     BEHIND the body, and the mirror flips the sprite with the gear). Returns null
-     when this environment has no real DOM; the slot then carries the background. */
+  /* The sprite child, created lazily inside the body. Returns null when this
+     environment has no real DOM; the slot then carries the background. */
   function ensureSprite() {
     const body = ensureBody();
     const parent = body || h;
@@ -517,33 +507,6 @@
     try { target.style.filter = filterCss || ""; } catch (e) { /* decorative */ }
   }
 
-  function applyDecor() {
-    if (!h) return;
-    applyFilter();
-    const parent = (bodyEl && bodyEl.parentNode === h) ? bodyEl : h;
-    for (const im of gearImgs) { try { if (im.parentNode === parent) parent.removeChild(im); } catch (e) { /* none */ } }
-    gearImgs = [];
-    if (!gearSrcs.length) return;
-    if (typeof document === "undefined" || !document.createElement) return;
-    for (const g of gearSrcs) {
-      try {
-        const im = document.createElement("span");
-        im.className = "hero-gear gear-overlay " + (g.box && g.box.z === "behind" ? "behind" : "front");
-        im.setAttribute("aria-hidden", "true");
-        const b = g.box || { x: 0, y: 0, w: 32, h: 32, artw: 32, arth: 32 };
-        im.style.setProperty("--gx", String(b.x));
-        im.style.setProperty("--gy", String(b.y));
-        im.style.setProperty("--gw", String(b.w));
-        im.style.setProperty("--gh", String(b.h));
-        im.style.setProperty("--artw", String(b.artw || b.w));
-        im.style.setProperty("--arth", String(b.arth || b.h));
-        im.style.backgroundImage = 'url("' + g.src + '")';
-        parent.appendChild(im);
-        gearImgs.push(im);
-      } catch (e) { /* a stub without appendChild simply shows no overlay */ }
-    }
-  }
-
   /* Apply the equipped hero: its sheet + its colourway filter. Called by app.js
      on boot and on every equip. Never called with a locked item. */
   function setHero(item) {
@@ -552,18 +515,8 @@
     filterCss = (item.filter && item.filter !== "none") ? item.filter : "";
     if (h) {
       setSheetImage();
-      applyDecor();
+      applyFilter();
     }
-  }
-
-  /* Apply the equipped gear overlays. Each entry is an overlay object
-     { src, box } (box in CELL UNITS from Engine.gearBox); a bare string is
-     accepted for a back-compat call and pinned over the whole cell. */
-  function setGear(list) {
-    gearSrcs = (Array.isArray(list) ? list : [])
-      .map((x) => (typeof x === "string" ? { src: x, box: null } : (x && typeof x.src === "string" ? x : null)))
-      .filter(Boolean);
-    applyDecor();
   }
 
   function engage() {
@@ -571,7 +524,7 @@
     if (!h || live) return;
     live = true;
     setSheetImage();
-    applyDecor();
+    applyFilter();
     /* the Dashboard is RANDOMISED per load — seed it now (window.HERO_SEED pins
        it, so the render harness can reproduce an exact sequence). */
     seed = (typeof window.HERO_SEED === "number") ? (window.HERO_SEED >>> 0)
@@ -634,7 +587,7 @@
 
   /* Exposed surface — runtime + the pinnable pieces tests use. */
   window.Hero = {
-    play, setTab, setHero, setGear, ROWS, PROFILE,
+    play, setTab, setHero, ROWS, PROFILE,
     plan, expand, clampPatrol, mulberry32,
     walkSpeedCss, maxStepFor, traceIsContinuous,
     SEEDS: { STRIDE_CSS, CELL_CSS, WALK_CYCLE_MS, SETTLE_MS, DPR },

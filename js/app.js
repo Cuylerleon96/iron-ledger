@@ -539,19 +539,15 @@
   }
 
   /* ================= hero (roster + customisation) ================= */
-  /* The header creature IS the equipped hero (WYSIWYG): one equipped hero, one
-     colourway filter and the equipped gear are shared by the stage and the
-     header. The director is hero-agnostic — it only ever receives a sheet path
-     and a filter from the engine's ONE table (via HeroTab's model). */
+  /* The header creature IS the equipped hero (WYSIWYG): one equipped hero and
+     one colourway filter are shared by the stage and the header. The director is
+     hero-agnostic — it only ever receives a sheet path and a filter from the
+     engine's ONE table (via HeroTab's model). */
   function syncHeroHeader() {
     try {
       if (typeof Hero === "undefined" || !Hero) return;
       const m = HeroTab.model(S, Engine);
       Hero.setHero({ sheet: m.hero.sheet, filter: (m.cw && m.cw.filter) || "none" });
-      /* Each overlay carries its COMPUTED box (cell units) from the engine's ONE
-         table, so the header's gear tracks the equipped hero's anatomy exactly
-         like the stage's does. */
-      Hero.setGear(m.gearOverlays.map((o) => ({ src: o.src, box: o.box })));
     } catch (e) { /* decorative — never let it break navigation */ }
   }
   /* A locked tile is NOT dead UI: a tap explains the real remaining distance
@@ -595,16 +591,6 @@
       if (!it) return;
       if (!it.unlocked) { heroLockedToast(it); return; }
       S.hero.colourway = it.id; Store.save(true); render();
-    }));
-    /* gear — one tap to put on or take off (an array, so several may be worn). */
-    $$("[data-gear]", c).forEach((b) => b.addEventListener("click", () => {
-      const it = m.gears.filter((x) => x.id === b.getAttribute("data-gear"))[0];
-      if (!it) return;
-      if (!it.unlocked) { heroLockedToast(it); return; }
-      const g = Array.isArray(S.hero.gear) ? S.hero.gear : (S.hero.gear = []);
-      const i = g.indexOf(it.id);
-      if (i === -1) g.push(it.id); else g.splice(i, 1);
-      Store.save(true); render();
     }));
     syncHeroHeader();
   }

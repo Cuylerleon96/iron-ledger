@@ -56,9 +56,8 @@ const Store = (() => {
     // through export. `unlocked` is the EVER-UNLOCKED floor (see
     // Engine.heroItems): a performance key can fall, and a reward the user has
     // earned is never taken back. `equipped` is a hero id, `colourway` a
-    // colourway id, `gear` the ids of the equipped overlays (an array, so more
-    // than one may sit on the sprite). The two from-the-start ids are seeded.
-    hero: { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] },
+    // colourway id. The two from-the-start ids are seeded.
+    hero: { equipped: "slime", colourway: "natural", unlocked: ["slime", "natural"] },
     settings: { seeded: false },
   });
 
@@ -131,10 +130,12 @@ const Store = (() => {
     out.barcodes = (out.barcodes && typeof out.barcodes === "object" && !Array.isArray(out.barcodes))
       ? out.barcodes : {};
     // The Hero tab's state. An older export carries NO `hero` field at all, so
-    // this seeds the defaults (slime equipped, Natural colourway, no gear) and
-    // NEVER invents an unlock: the floor starts at the two from-the-start ids and
-    // grows only from a signal actually met. Bad-typed fields fall back rather
-    // than crash the tab. Idempotent on a second load.
+    // this seeds the defaults (slime equipped, Natural colourway) and NEVER
+    // invents an unlock: the floor starts at the two from-the-start ids and grows
+    // only from a signal actually met. Bad-typed fields fall back rather than
+    // crash the tab. An export that still carries the removed `gear` field has it
+    // dropped silently here — the field is gone from the schema, so it is never
+    // read, surfaced or re-written. Idempotent on a second load.
     {
       const dh = d.hero;
       const ih = (s && s.hero && typeof s.hero === "object" && !Array.isArray(s.hero)) ? s.hero : {};
@@ -142,7 +143,6 @@ const Store = (() => {
       out.hero = {
         equipped: (typeof ih.equipped === "string" && ih.equipped) ? ih.equipped : dh.equipped,
         colourway: (typeof ih.colourway === "string" && ih.colourway) ? ih.colourway : dh.colourway,
-        gear: strs(ih.gear),
         unlocked: Array.from(new Set(dh.unlocked.concat(strs(ih.unlocked)))),
       };
     }

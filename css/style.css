@@ -166,33 +166,29 @@ b, strong { font-weight: 700; }
   align-self: flex-end;
   margin-top: calc(.5rem);
   margin-bottom: calc(-1 * .5rem);
-  position: relative;                            /* anchor for the gear overlay */
-  /* THE CELL, in ONE place. Every gear overlay derives its left/top/width/
-     height from this ONE number (left = --cell · x/32), so no px overlay size is
-     ever hard-coded — the header, the roster and the stage share one formula. */
+  position: relative;                            /* anchors the inner .hero-body */
+  /* THE CELL, in ONE place: the slot (and the sprite that fills it) is exactly
+     one cell square. */
   --cell: calc(64px / 2.625);                    /* 64 device px = 2x a 32px cell */
   width: var(--cell);
   height: var(--cell);
   image-rendering: pixelated;
 }
 /* THE INNER BODY — the element that carries the FACING MIRROR. It wraps the
-   sprite AND the gear overlays (so a flip turns the whole creature with its kit),
-   and it lives on its OWN element so its `transform: scaleX(-1)` can never be
-   interpolated: the outgoing MOTION is `transform: translateX(…)` on the SLOT
-   (transitioned per walk), the mirror is `scaleX(-1)` here with NO transition, so
-   it SNAPS. The slot and this body are the only transform carriers, and neither
-   uses the individual `translate`/`rotate`/`scale` properties (Chrome 104+; this
-   app supports Android 5.1) — tools/test_css_compat.js enforces that. */
+   sprite, and it lives on its OWN element so its `transform: scaleX(-1)` can
+   never be interpolated: the outgoing MOTION is `transform: translateX(…)` on the
+   SLOT (transitioned per walk), the mirror is `scaleX(-1)` here with NO
+   transition, so it SNAPS. The slot and this body are the only transform
+   carriers, and neither uses the individual `translate`/`rotate`/`scale`
+   properties (Chrome 104+; this app supports Android 5.1) —
+   tools/test_css_compat.js enforces that. */
 .topbar .hero .hero-body {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   display: block; transform-origin: 50% 50%;
   transition: none;                              /* the mirror must SNAP, never interpolate */
 }
 /* the SPRITE ELEMENT, created by js/hero.js (the header MARKUP stays image-free).
-   It is a CHILD of the body, not the slot's own background, so a "behind" gear
-   overlay (the cape) can really sit BEHIND the body — a CSS background can never
-   be occluded by a child, but a sibling can. Filling the body exactly, it changes
-   no layout. */
+   It is a CHILD of the body and fills it exactly, so it changes no layout. */
 .topbar .hero .hero-sprite {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   background-repeat: no-repeat;
@@ -247,34 +243,10 @@ b, strong { font-weight: 700; }
 @keyframes hero-stage-idle      { from { background-position: 0 0; }     to { background-position: -512px 0; } }
 @keyframes hero-stage-celebrate { from { background-position: 0 -640px; } to { background-position: -512px -640px; } }
 
-/* ONE overlay mechanism, shared by the stage, the header and the gear preview.
-   Every overlay declares its box in CELL UNITS (0..32) and resolves it against
-   its OWN surface's rendered cell (`--cell`): left = --cell·x/32, width =
-   --cell·w/32 — exact at 24 px (header), 64 px (roster) and 128 px (stage) with
-   no 128/64/100% hard-codes anywhere. This header/stage overlay is a 32x32 canvas
-   with the ART at native size inside its top-left `artw x arth` box, and it is
-   SIZED PER HERO by Engine.gearBox, so the garment is scaled to fit that hero's
-   band: `background-size: --cell·gw/artw` maps the whole canvas so the art lands
-   exactly on the computed box (the declared art height follows from the width, so
-   the aspect is preserved and 4x stays crisp). */
-.gear-overlay {
-  position: absolute;
-  left: calc(var(--cell) * var(--gx) / 32);
-  top: calc(var(--cell) * var(--gy) / 32);
-  width: calc(var(--cell) * var(--gw) / 32);
-  height: calc(var(--cell) * var(--gh) / 32);
-  background-repeat: no-repeat;
-  background-size: calc(var(--cell) * var(--gw) / var(--artw, 32));
-  background-position: 0 0;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-.gear-overlay.front  { z-index: 3; }                    /* worn over the body */
-.gear-overlay.behind { z-index: 1; }                    /* the cape drapes behind */
 .stage-cap { text-align: center; margin: 0; }
 .stage-cap .muted { display: block; font-size: .55rem; }
 
-/* The ROSTER grid, shared by the heroes, the colourways and the gear. */
+/* The ROSTER grid, shared by the heroes and the colourways. */
 .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: .4rem; }
 .roster-tile {
   display: flex; flex-direction: column; align-items: center; gap: .2rem;
@@ -286,18 +258,7 @@ b, strong { font-weight: 700; }
 }
 .roster-tile.on { background: linear-gradient(180deg, var(--gold-l), var(--gold) 50%, var(--gold-d)); color: var(--ink); text-shadow: none; }
 .roster-tile.locked { background: linear-gradient(180deg, #12203a, #0d1a2e); }
-.roster-tile .tile-art { display: flex; align-items: center; justify-content: center; width: var(--cell); height: var(--cell); }
 .roster-tile .tile-sprite { display: block; width: var(--cell); height: var(--cell); background-repeat: no-repeat; image-rendering: pixelated; }
-/* the garment alone, at 3x — its box is COMPUTED from the item's declared size
-   (--gw/--gh in cell units), never a fixed 64x64. */
-.roster-tile .gear-prev {
-  --cell: 96px;
-  display: block;
-  width: calc(var(--cell) * var(--gw) / 32);
-  height: calc(var(--cell) * var(--gh) / 32);
-  background-repeat: no-repeat; background-size: var(--cell) var(--cell); background-position: 0 0;
-  image-rendering: pixelated;
-}
 .roster-tile .sil { filter: brightness(0) invert(1); opacity: .22; }
 .roster-tile .tile-name { font-weight: 700; }
 .roster-tile .tile-line { font-size: .55rem; line-height: 1.3; color: var(--cream); opacity: .92; }

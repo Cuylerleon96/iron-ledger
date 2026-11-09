@@ -1127,9 +1127,8 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
   ROW_NAMES.forEach((row) => {
     truthy(`a .hero.${row} row class exists`, new RegExp("\\.topbar \\.hero\\." + row + "\\b").test(css));
     truthy(`@keyframes hero-${row} exists`, new RegExp("@keyframes hero-" + row + "\\b").test(css));
-    /* RE-EXPRESSED (gear layering): the row animation now lives on the SPRITE
-       element (js/hero.js creates it) so a "behind" overlay can sit behind the
-       body. Intent unchanged: one row per animation, 4 columns, steps(4). */
+    /* the row animation lives on the SPRITE element (js/hero.js creates it).
+       Intent unchanged: one row per animation, 4 columns, steps(4). */
     truthy(`.hero.${row} runs hero-${row} with steps(4)`,
       new RegExp("\\.topbar \\.hero\\." + row + "\\s+\\.hero-sprite\\s*\\{[^}]*animation:\\s*hero-" + row + "\\s[^;]*steps\\(4\\)").test(css));
   });
@@ -1139,8 +1138,7 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
     /\.topbar \.hero\.stand\s*\.hero-sprite\s*\{[^}]*animation:\s*none/.test(css));
 
   /* (4) the geometry is an exact integer DEVICE size, and the CELL is declared
-     in ONE place (--cell) that every gear overlay derives from, so no overlay px
-     size is hard-coded. RE-EXPRESSED when the overlays moved off fixed 128/64/100%. */
+     in ONE place (--cell) that the slot and the sprite derive from. */
   truthy("the cell is 64 device px square: --cell: calc(64px / 2.625)",
     /--cell:\s*calc\(64px \/ 2\.625\)/.test(css) && /width:\s*var\(--cell\)/.test(css) && /height:\s*var\(--cell\)/.test(css));
   truthy("background-size is the whole 4x6 sheet at 2x (256x384 device px)",
@@ -1239,15 +1237,8 @@ console.log("=== Hero tab: tab order, new hero sheets, roster rendering (static)
     const b = fs.existsSync(p) ? fs.readFileSync(p) : Buffer.alloc(0);
     eq("...and is exactly 128x192 (4 cols x 6 rows of 32x32)", (b.readUInt32BE(16) + "x" + b.readUInt32BE(20)), "128x192");
   });
-  /* RE-EXPRESSED (the CAPE was REMOVED: the heroes' bodies are wider than it, so
-     it was 100% occluded — measured 0 visible pixels on all three heroes — and it
-     cannot be made visible without per-hero art. Two gear items remain.) */
-  ["gear-headband.png", "gear-belt.png"].forEach((name) => {
-    const p = path.join(B, "img", name);
-    truthy(`the ${name} gear overlay art exists`, fs.existsSync(p));
-    const b = fs.existsSync(p) ? fs.readFileSync(p) : Buffer.alloc(0);
-    eq("...and is one 32x32 cell", (b.readUInt32BE(16) + "x" + b.readUInt32BE(20)), "32x32");
-  });
+  /* RE-EXPRESSED (the CAPE was REMOVED and then the whole gear system was):
+     there is no gear art left in the repo at all. */
 
   /* the ROSTER: a locked tile is a REAL button carrying the engine's plain line
      (never dead UI), and the silhouettes + the two axes are present. */
@@ -1256,14 +1247,19 @@ console.log("=== Hero tab: tab order, new hero sheets, roster rendering (static)
     /class="tile-line">\$\{esc\(item\.copy\)\}/.test(tab));
   truthy("a locked tile uses a SILHOUETTE (brightness(0) ghost), never a padlock glyph",
     /\.roster-tile \.sil \{ filter: brightness\(0\) invert\(1\)/.test(css) && !/\uD83D\uDD12/.test(tab));
-  truthy("the roster grid, colourway grid and gear grid share one tile renderer",
-    /tileHTML\(i, "hero"/.test(tab) && /tileHTML\(i, "colourway"/.test(tab) && /tileHTML\(i, "gear"/.test(tab));
+  truthy("the roster grid and colourway grid share one tile renderer",
+    /tileHTML\(i, "hero"/.test(tab) && /tileHTML\(i, "colourway"/.test(tab));
   truthy("the stage draws the equipped hero at 4x on a floor line",
     /\.stage-floor \{[^}]*border-bottom: 3px solid var\(--cream\)/.test(css) && /STAGE_SCALE = 4/.test(tab));
   truthy("WYSIWYG: the header is kept in step from the ONE model (syncHeroHeader -> Hero.setHero)",
     /function syncHeroHeader\(\)/.test(app) && /Hero\.setHero\(\{ sheet: m\.hero\.sheet, filter/.test(app));
-  truthy("the app wires equip / colourway / gear taps and a locked tap explains itself",
-    /\[data-equip\]/.test(app) && /\[data-cw\]/.test(app) && /\[data-gear\]/.test(app) && /heroLockedToast/.test(app));
+  truthy("the app wires equip / colourway taps and a locked tap explains itself",
+    /\[data-equip\]/.test(app) && /\[data-cw\]/.test(app) && /heroLockedToast/.test(app));
+  truthy("the gear system is GONE: no data-gear tap, no gear art, no gear CSS",
+    !/data-gear/.test(app) && !/data-gear/.test(tab) &&
+    !fs.existsSync(path.join(B, "img", "gear-headband.png")) &&
+    !fs.existsSync(path.join(B, "img", "gear-belt.png")) &&
+    !/\.gear-overlay/.test(css) && !/\.gear-prev/.test(css));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

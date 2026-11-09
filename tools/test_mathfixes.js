@@ -2761,7 +2761,7 @@ console.log("\n=== 54. PROPERTY: NOTHING ever reduces XP — a set, an entry or 
   eq("XP is NON-DECREASING at every step — a set, an entry or a session can only ADD", fails, 0);
   truthy("the property test really exercised the matrix", steps > 400);
 }
-console.log("\n=== 55. the HERO tab: roster, equip, colourway, gear (pure view-model) ===");
+console.log("\n=== 55. the HERO tab: roster, equip, colourway (pure view-model) ===");
 {
   /* Load the REAL engine + the pure js/herotab.js together, so the tab's model
      and its html are exercised exactly as the app builds them. */
@@ -2779,11 +2779,13 @@ console.log("\n=== 55. the HERO tab: roster, equip, colourway, gear (pure view-m
   vm.runInContext(src + "\n;globalThis.__X={Engine,HeroTab};", s, { filename: "hero-bundle.js" });
   const E = s.__X.Engine, HT = s.__X.HeroTab;
 
-  const st = (hero) => ({ profile: { weeklyTarget: 4 }, workouts: [], achievements: {}, intakelog: [], hero: hero || { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] } });
+  const st = (hero) => ({ profile: { weeklyTarget: 4 }, workouts: [], achievements: {}, intakelog: [], hero: hero || { equipped: "slime", colourway: "natural", unlocked: ["slime", "natural"] } });
 
   /* (a) the model + stage for a fresh state */
   const m0 = HT.model(st(), E);
-  eq("the model equips the slime and the Natural colourway by default", [m0.hero.id, m0.colourway, m0.gear], ["slime", "natural", []]);
+  eq("the model equips the slime and the Natural colourway by default", [m0.hero.id, m0.colourway], ["slime", "natural"]);
+  eq("...and carries NO gear surface at all (the whole system is gone)",
+    ["gear", "gears", "gearOverlays"].filter((k) => k in m0), []);
   eq("the roster carries all three heroes, locked ones included", m0.heroes.map((h) => [h.id, h.unlocked]),
     [["slime", true], ["pebble", false], ["ember", false]]);
   const stage0 = HT.stageHTML(m0);
@@ -2803,36 +2805,31 @@ console.log("\n=== 55. the HERO tab: roster, equip, colourway, gear (pure view-m
     /class="roster-tile unlocked on"/.test(tabHTML0) && /Equipped/.test(tabHTML0) && /tile-line/.test(pebbleTile) && !/Equipped/.test(pebbleTile));
 
   /* (c) equipping switches the model's hero (and therefore the stage + header) */
-  const m1 = HT.model(st({ equipped: "pebble", colourway: "natural", gear: [], unlocked: ["slime", "natural", "pebble"] }), E);
+  const m1 = HT.model(st({ equipped: "pebble", colourway: "natural", unlocked: ["slime", "natural", "pebble"] }), E);
   eq("equipping the pebble golem switches the model's hero", m1.hero.id, "pebble");
   truthy("...so the stage draws the pebble sheet", /hero-pebble\.png/.test(HT.stageHTML(m1)));
   /* a LOCKED id is refused: the model falls back rather than putting it on stage */
-  const mLocked = HT.model(st({ equipped: "ember", colourway: "natural", gear: [], unlocked: ["slime", "natural"] }), E);
+  const mLocked = HT.model(st({ equipped: "ember", colourway: "natural", unlocked: ["slime", "natural"] }), E);
   eq("a locked id in the state is refused (falls back to the slime)", mLocked.hero.id, "slime");
 
   /* (d) the colourway applies its CSS filter to the SAME sheet (zero new art) */
-  const m2 = HT.model(st({ equipped: "slime", colourway: "blush", gear: [], unlocked: ["slime", "natural", "blush"] }), E);
+  const m2 = HT.model(st({ equipped: "slime", colourway: "blush", unlocked: ["slime", "natural", "blush"] }), E);
   eq("the colourway is selected", m2.colourway, "blush");
   truthy("...and its filter is applied to the stage sprite inline", /filter:hue-rotate\(-38deg\) saturate\(1\.25\)/.test(HT.stageHTML(m2)));
-  const mLockedCw = HT.model(st({ equipped: "slime", colourway: "dusk", gear: [], unlocked: ["slime", "natural"] }), E);
+  const mLockedCw = HT.model(st({ equipped: "slime", colourway: "dusk", unlocked: ["slime", "natural"] }), E);
   eq("a locked colourway is refused too", mLockedCw.colourway, "natural");
 
-  /* (e) gear overlays pin onto the stage (and are dropped if not unlocked) */
+  /* (e) NO gear anywhere: a legacy state that still carries the removed `gear`
+     field renders a plain stage — no overlay, no gear in the caption. */
   const m3 = HT.model(st({ equipped: "slime", colourway: "natural", gear: ["headband", "belt"], unlocked: ["slime", "natural", "headband"] }), E);
-  eq("only UNLOCKED gear stays equipped", m3.gear, ["headband"]);
   const stage3 = HT.stageHTML(m3);
-  /* RE-EXPRESSED (per-hero computed-size overlays): the overlay is no longer a
-     full-cell image pinned at the corner — it is a box COMPUTED from the hero's
-     anatomy (its measured band WIDTH) and the item's fit, in cell units, plus the
-     art's own size for the background mapping. For the slime: brow {16,18,w12}
-     + fit k=1 -> w12, h = round(4*12/14) = 3, at x10 y18 (art 14x4). The values
-     below are that computation for the slime. */
-  truthy("an equipped overlay is pinned over the stage sprite at its COMPUTED box",
-    /class="stage-gear gear-overlay front" style="--gx:10;--gy:18;--gw:12;--gh:3;--artw:14;--arth:4;background-image:url\('img\/gear-headband\.png'\)/.test(stage3));
-  eq("the stage caption names the hero, colourway and gear", /Slime/.test(stage3) && /Natural/.test(stage3) && /Headband/.test(stage3), true);
+  truthy("a legacy gear list leaves NO overlay on the stage and NO gear in the caption",
+    !/gear/.test(stage3) && !/Headband|Belt/.test(stage3));
+  eq("the stage caption names only the hero and the colourway",
+    /Slime/.test(stage3) && /Natural/.test(stage3) && !/Headband/.test(stage3), true);
 
   /* (f) the unlock moment is detected from the floor */
-  const items = E.heroItems(st({ equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural", "ember"] }));
+  const items = E.heroItems(st({ equipped: "slime", colourway: "natural", unlocked: ["slime", "natural", "ember"] }));
   eq("newlyUnlocked reports only ids not already in the floor", HT.newlyUnlocked(items, ["slime", "natural"]), ["ember"]);
   eq("...and reports nothing once every unlocked id is recorded", HT.newlyUnlocked(items, ["slime", "natural", "ember"]), []);
 }

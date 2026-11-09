@@ -264,30 +264,28 @@ truthy("and it fails at the jump, naming the offending step", verdict.i === 3 &&
    under the old scheme, also show as a mid-walk sign change — the separation plus
    the non-transitioned flip is what removes it (pinned structurally above). */
 
-console.log("\n=== hero director: the equipped hero + gear are hero-agnostic ===");
+console.log("\n=== hero director: the equipped hero is hero-agnostic ===");
 {
   /* setHero() takes ONE row from the engine's table — { sheet, filter } — and
      never branches on a hero id. The colourway is a pure CSS filter on the SAME
-     sheet, applied to the SPRITE CHILD ONLY (so the gear is never tinted); the
-     overlay creation lives on the inner `.hero-body` (so a mirror flips the whole
-     creature with its kit). */
+     sheet, applied to the SPRITE CHILD ONLY. The gear surface (setGear and its
+     overlays) was REMOVED with the gear system, so the director no longer has a
+     gear API at all. */
   const spriteImg = () => ((H._sprite() && H._sprite().style.backgroundImage) || "");
-  truthy("the director exposes setHero and setGear", typeof H.setHero === "function" && typeof H.setGear === "function");
+  truthy("the director exposes setHero and NO gear surface (setGear is gone)",
+    typeof H.setHero === "function" && !("setGear" in H) && typeof H.setGear === "undefined");
   H.setHero({ sheet: "img/hero-pebble.png", filter: "hue-rotate(-38deg) saturate(1.25)" });
   truthy("setHero points the SPRITE CHILD at the equipped hero's sheet", /hero-pebble\.png/.test(spriteImg()));
-  truthy("...and applies the colourway filter to the SPRITE ONLY (never the slot/gear)", H._sprite().style.filter === "hue-rotate(-38deg) saturate(1.25)");
+  truthy("...and applies the colourway filter to the SPRITE ONLY (never the slot)", H._sprite().style.filter === "hue-rotate(-38deg) saturate(1.25)");
   H.setHero({ sheet: "img/hero-ember.png", filter: "none" });
   truthy("a 'none' colourway clears the filter (Natural)", H._sprite().style.filter === "" || H._sprite().style.filter === "none");
   truthy("...and switches the sheet to the ember wisp", /hero-ember\.png/.test(spriteImg()));
   H.setHero(null);
   truthy("setHero(null) is a no-op (never blanks the equipped hero)", /hero-ember\.png/.test(spriteImg()));
-  H.setGear([{ src: "img/gear-headband.png", box: { x: 11, y: 13, w: 10, h: 3, artw: 14, arth: 4, z: "front" } }]);
-  const gearKid = (H._body()._kids || []).filter((k) => /hero-gear/.test(k.className || ""))[0];
-  truthy("setGear creates the overlay INSIDE the inner body (so the mirror flips it with the creature)", !!gearKid);
-  truthy("...and the overlay carries the per-hero box + art size as CSS vars",
-    gearKid && gearKid.style["--gx"] === "11" && gearKid.style["--gw"] === "10" && gearKid.style["--artw"] === "14");
-  truthy("the director keeps the hero-agnostic surface (ROWS + setTab + setHero + setGear)",
-    H.ROWS.length === 6 && typeof H.setTab === "function" && typeof H.setHero === "function" && typeof H.setGear === "function");
+  const gearKids = (H._body()._kids || []).filter((k) => /hero-gear|gear-overlay/.test(k.className || ""));
+  truthy("no gear overlay element is ever created on the inner body", gearKids.length === 0);
+  truthy("the director keeps the hero-agnostic surface (ROWS + setTab + setHero)",
+    H.ROWS.length === 6 && typeof H.setTab === "function" && typeof H.setHero === "function" && !("setGear" in H));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

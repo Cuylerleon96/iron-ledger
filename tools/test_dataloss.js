@@ -327,31 +327,42 @@ function env({ ls = {}, files = {}, failRead = false, corruptMirror = false } = 
   {
     const e = env({ ls: mkState(2, 1) });   // mkState carries NO `hero` field at all
     eq("an older export gains the hero defaults at load",
-      e.Store.state.hero, { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] });
+      e.Store.state.hero, { equipped: "slime", colourway: "natural", unlocked: ["slime", "natural"] });
   }
   {
     const withHero = Object.assign(mkState(1, 1), {
-      hero: { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush", "headband"] },
+      hero: { equipped: "pebble", colourway: "blush", unlocked: ["slime", "natural", "pebble", "blush"] },
     });
     const e = env({ ls: withHero });
-    eq("a stored hero/colourway/gear choice round-trips through load",
-      e.Store.state.hero, { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush", "headband"] });
+    eq("a stored hero/colourway choice round-trips through load",
+      e.Store.state.hero, { equipped: "pebble", colourway: "blush", unlocked: ["slime", "natural", "pebble", "blush"] });
     eq("...and survives a JSON export -> migrate round-trip",
       e.Store.migrate(JSON.parse(JSON.stringify(e.Store.state))).hero,
-      { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush", "headband"] });
+      { equipped: "pebble", colourway: "blush", unlocked: ["slime", "natural", "pebble", "blush"] });
   }
   {
-    const bad = Object.assign(mkState(1, 1), { hero: { equipped: 5, colourway: null, gear: "cape", unlocked: "nope" } });
+    /* an export that STILL carries the removed `gear` field: migrate must DROP it
+       silently — the field is gone from the schema, so it is never read, surfaced
+       or re-written, and it never crashes the load. */
+    const e = env({ ls: Object.assign(mkState(1, 1), {
+      hero: { equipped: "pebble", colourway: "blush", gear: ["headband"], unlocked: ["slime", "natural", "pebble", "blush"] } }) });
+    eq("a legacy `gear` field is dropped silently, never surfaced",
+      e.Store.state.hero, { equipped: "pebble", colourway: "blush", unlocked: ["slime", "natural", "pebble", "blush"] });
+    eq("...and the migrated hero carries NO gear key at all",
+      "gear" in e.Store.state.hero, false);
+  }
+  {
+    const bad = Object.assign(mkState(1, 1), { hero: { equipped: 5, colourway: null, unlocked: "nope" } });
     const e = env({ ls: bad });
     eq("bad-typed hero fields fall back instead of crashing the tab",
-      e.Store.state.hero, { equipped: "slime", colourway: "natural", gear: [], unlocked: ["slime", "natural"] });
+      e.Store.state.hero, { equipped: "slime", colourway: "natural", unlocked: ["slime", "natural"] });
   }
   {
     /* a hero field written before the floor existed (no `unlocked` array) still
        keeps its chosen ids and gains the two from-the-start floor ids. */
-    const e = env({ ls: Object.assign(mkState(1, 1), { hero: { equipped: "ember", colourway: "frost", gear: ["belt"] } }) });
+    const e = env({ ls: Object.assign(mkState(1, 1), { hero: { equipped: "ember", colourway: "frost" } }) });
     eq("a partial hero object keeps its choices and seeds the floor",
-      e.Store.state.hero, { equipped: "ember", colourway: "frost", gear: ["belt"], unlocked: ["slime", "natural"] });
+      e.Store.state.hero, { equipped: "ember", colourway: "frost", unlocked: ["slime", "natural"] });
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);
