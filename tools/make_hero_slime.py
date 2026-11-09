@@ -33,6 +33,11 @@ W, H = COLS * CELL, ROWS * CELL            # 128 x 96
 # --- palette: a handful of colours, tuned to sit on the dark-blue header -----
 # (the header is a #1a4a78 -> #10305a gradient; these greens read as a creature)
 OUTLINE = (10, 30, 20, 255)          # dark green rim
+INK_SHADOW = (8, 18, 32, 255)        # the GROUND-CONTACT shadow drawn on the base
+                                     # row: a darker blue ink than the header's own
+                                     # blue (#10305a) and than the green rim, so the
+                                     # contact with the floor reads at 1x and in a
+                                     # zoom. Still a blue/ink tone, not a new hue.
 DARK     = (28, 122, 66, 255)        # shaded lower-right of the body
 MID      = (52, 186, 100, 255)       # body
 LITE     = (112, 226, 150, 255)      # lit upper-left of the body
@@ -48,12 +53,16 @@ SPARK    = (255, 233, 138, 255)      # celebration sparkles (app-gold accent)
 #   dy       vertical offset of the whole body (negative = airborne).
 #   eyes     "open" | "blink" | "happy"
 #   arms     None | "down" | "up"
-BASE_Y = 24                    # the slime's ground line; the body is the half of
-                               # the dome ellipse ABOVE this line, so the base is
-                               # flat at BASE_Y. It sits a few px above the cell
-                               # bottom so the creature is CENTRED in its 32x32
-                               # box (the header slot is 2x a cell, so a
-                               # bottom-hugging sprite would ride low in the row).
+GROUND_ROW = CELL - 1          # the cell's LAST row = the floor contact row. The
+                               # dome's flat base is drawn ON this row (y <= cy), so
+                               # every frame touches the same pixel row and that row
+                               # IS the cell's bottom edge. css/style.css bottom-
+                               # aligns the cell on the topbar's cream border, so
+                               # that border line is literally the floor it stands
+                               # on: no gap, and no empty rows under the base.
+BASE_Y = GROUND_ROW            # cy for a GROUNDED frame; a hop lifts cy by |dy| and
+                               # comes back to it (the contact shadow stays behind
+                               # on GROUND_ROW, so leaving the ground is visible).
 FRAMES = [
     # --- row 0: idle, a breathing cycle (frames differ: in, out, blink) ------
     ("i0", 11.5, 15.0, 0, "open",  None),   # rest
@@ -62,8 +71,8 @@ FRAMES = [
     ("i3", 12.5, 13.2, 0, "open",  None),   # exhale: wider, flatter
     # --- row 1: lift, a crouch -> press-up -> hold -> settle beat ------------
     ("l0", 13.0, 11.0, 0, "open",  "down"),  # crouch / squeeze down
-    ("l1", 10.0, 17.5, 0, "open",  "up"),    # push up: tall, arms raised
-    ("l2", 10.4, 16.8, 0, "happy", "up"),    # hold the rep
+    ("l1", 10.0, 17.5, -3, "open",  "up"),   # push up: tall, arms raised, off the floor
+    ("l2", 10.4, 16.8, -2, "happy", "up"),   # hold the rep (bobbed, still up)
     ("l3", 12.2, 12.5, 0, "open",  "down"),  # settle back
     # --- row 2: celebrate, a hop with sparkles ------------------------------
     ("c0", 13.0, 11.2,  0, "open",  "down"),  # crouch before the hop
@@ -180,6 +189,22 @@ def draw_frame(sx, sy, dy, eyes, arms, sparkles):
                       (sxp, syp - 1), (sxp, syp + 1)]:
                 if 0 <= p[0] < CELL and 0 <= p[1] < CELL and p not in cell:
                     cell[p] = SPARK
+
+    # --- the GROUND CONTACT: a small shadow ON the cell's last row ------------
+    # It is drawn at the SAME row in every grounded frame (the floor is level),
+    # and it is the ONLY ink left on that row while the body is airborne — so a
+    # hop visibly LEAVES the ground and lands back on the same row. Kept small
+    # and centred: a contact cue, NOT a drawn floor line (the header's own cream
+    # border IS the line; this just makes the body meet it).
+    half = max(3, int(round(sx * (0.35 if dy == 0 else 0.28))))
+    for x in range(int(cx - half), int(cx + half) + 1):
+        if 0 <= x < CELL:
+            cell[(x, GROUND_ROW)] = INK_SHADOW
+    base_xs = [x for (x, y) in body if y == GROUND_ROW]
+    if base_xs:                      # grounded: a 1px shadow lip outside the base
+        for x in (min(base_xs) - 1, max(base_xs) + 1):
+            if 1 <= x <= CELL - 2:   # never in the outer column (no cell bleed)
+                cell[(x, GROUND_ROW)] = INK_SHADOW
     return cell
 
 
@@ -196,7 +221,7 @@ def build_sheet():
 def ascii_preview(sheet):
     """One character per pixel so the frames can be judged in a terminal."""
     glyph = {OUTLINE: "#", DARK: "+", MID: "o", LITE: "*",
-             GLINT: "@", EYE: "e", WHITE: ".", SPARK: "x"}
+             GLINT: "@", EYE: "e", WHITE: ".", SPARK: "x", INK_SHADOW: "s"}
     for i, fr in enumerate(FRAMES):
         row, col = divmod(i, COLS)
         print("  %s (row %d, col %d)" % (fr[0], row, col))

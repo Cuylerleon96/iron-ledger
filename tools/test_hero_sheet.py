@@ -4,7 +4,10 @@
 Guards the ONE asset the header harness (js/hero.js, commit d2cc956) renders:
 img/hero-sheet.png must exist, be EXACTLY 128x96 (4 columns x 3 rows of 32x32
 GBA cells), have a transparent background, and carry ink in all 12 cells. It
-also checks the rows are real CYCLES (the 4 frames of a row are not 4 copies).
+also checks the rows are real CYCLES (the 4 frames of a row are not 4 copies),
+and that the FLOOR IS LEVEL: every frame's lowest inked pixel row is the cell's
+LAST row, which is the row the header's cream topbar border (the floor the
+creature stands on) is aligned to. See GROUND_ROW in tools/make_hero_slime.py.
 
     python3 tools/test_hero_sheet.py     # exits non-zero on any failure
 """
@@ -67,9 +70,11 @@ def main():
                     if P(c * CELL + x, r * CELL + y)[3] > 0)
             check(n > 0, "cell row %d col %d has non-transparent pixels (%d inked)" % (r, c, n))
 
-    # every frame kept INSIDE its own cell: no frame touches its cell's first or
-    # last column, or its first/last row, so nothing can look clipped or bleed
-    # toward a neighbour (the ground line is BASE_Y=30, so row 31 stays clear).
+    # every frame kept INSIDE its own cell SIDEWAYS and at the TOP: no frame
+    # touches its cell's first/last column or its first row, so nothing can look
+    # clipped or bleed toward a neighbour. RE-EXPRESSED for the ground plane: the
+    # cell's LAST row is now the CONTACT row on purpose (the creature stands on
+    # it), so it must NOT be blank any more — see the floor checks below.
     edge_clear = all(
         P(c * CELL + x, r * CELL + y)[3] == 0
         for r in range(ROWS) for c in range(COLS)
@@ -77,8 +82,31 @@ def main():
     edge_clear = edge_clear and all(
         P(c * CELL + x, r * CELL + y)[3] == 0
         for r in range(ROWS) for c in range(COLS)
-        for y in (0, CELL - 1) for x in range(CELL))
-    check(edge_clear, "no frame bleeds: the outer column/row of every cell is blank")
+        for y in (0,) for x in range(CELL))
+    check(edge_clear, "no frame bleeds sideways or upward: the outer columns and "
+                      "the top row of every cell are blank")
+
+    # --- THE FLOOR IS LEVEL: the last cell row is the ground contact -----------
+    # (the sprite base is drawn ON the cell's last row, and css/style.css bottom-
+    # aligns that row on the header's cream border, so the border IS the floor)
+    def lowest_inked_row(c, r):
+        rows = [y for y in range(CELL) for x in range(CELL)
+                if P(c * CELL + x, r * CELL + y)[3] > 0]
+        return max(rows) if rows else -1    # -1 = empty cell (fails the checks)
+
+    for c in range(COLS):
+        low = lowest_inked_row(c, 0)
+        check(low == CELL - 1,
+              "idle frame %d is grounded on the last cell row (lowest inked row %s)" % (c, low))
+    idle_low = sorted({lowest_inked_row(c, 0) for c in range(COLS)})
+    check(idle_low == [CELL - 1],
+          "the floor is LEVEL across the idle row: one shared lowest row, the "
+          "cell's last (got %s)" % idle_low)
+    off_floor = [(r, c) for r in range(ROWS) for c in range(COLS)
+                 if lowest_inked_row(c, r) != CELL - 1]
+    check(not off_floor,
+          "all 12 frames touch the last cell row (no frame floats above or sinks "
+          "below the floor; offenders %s)" % off_floor)
 
     # each row is a real 4-frame cycle, not four copies of one frame
     for r in range(ROWS):

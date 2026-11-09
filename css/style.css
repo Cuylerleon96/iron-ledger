@@ -135,11 +135,33 @@ b, strong { font-weight: 700; }
      background-size = the whole sheet at 2x:
        4 cells * 64 = 256 device px -> calc(256px / 2.625) CSS px wide
        3 rows  * 64 = 192 device px -> calc(192px / 2.625) CSS px tall.
+
+   FLOOR: the cell's LAST row is the sprite's ground-contact row (GROUND_ROW in
+   tools/make_hero_slime.py), and the rule group below bottom-aligns the element
+   on the header's cream border, so that border IS the floor it stands on. The
+   hop lifts off that row and lands back on it.
    Scoped to .topbar: the app already uses .hero for the dashboard trainer
    card, which must not be touched. */
 .topbar .hero { display: none; }
 .topbar .hero.idle, .topbar .hero.lift, .topbar .hero.celebrate {
   display: block; flex: 0 0 auto;
+  /* GROUND PLANE — the line under the creature is the FLOOR it stands on.
+     The sheet's sprite base is its cell's LAST row (see GROUND_ROW in
+     tools/make_hero_slime.py), so the element's BOTTOM EDGE has to land on the
+     TOP EDGE of the header's cream border. Two steps do exactly that:
+       align-self: flex-end  -> the item's MARGIN box goes to the content box's
+                                bottom edge (its default centring left the base
+                                7.5 CSS px up, i.e. the topbar's bottom padding);
+       margin-bottom: -.5rem -> cancels that same bottom padding (identical rem,
+                                so they can never drift apart) and drops the
+                                element onto the PADDING box's bottom edge, which
+                                IS the border's top edge — the cream line.
+     The matching margin-top keeps the MARGIN box exactly one cell tall, so the
+     flex line — and therefore the header height — is unchanged: the logo, the
+     level/XP HUD, the weekly count and the units button do not move. */
+  align-self: flex-end;
+  margin-top: calc(.5rem);
+  margin-bottom: calc(-1 * .5rem);
   width: calc(64px / 2.625);                     /* 64 device px = 2x a 32px cell */
   height: calc(64px / 2.625);
   background-repeat: no-repeat;
