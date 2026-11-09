@@ -2262,10 +2262,28 @@ console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ==="
       const cls = new Set();
       const q = new Map();
       const ls = new Map();
+      /* Inputs rendered into innerHTML are parsed into live nodes so a selector
+         like ".hold-len" returns the very input a real browser would, with its
+         `value` taken from the markup — the prefill can then be asserted on the
+         LIVE DOM (el.value), not on the template string. */
+      const fields = new Map();
+      const parseFields = (html) => {
+        fields.clear();
+        const re = /<input\b([^>]*)>/g;
+        let m;
+        while ((m = re.exec(html))) {
+          const att = m[1];
+          const clsV = (att.match(/\bclass="([^"]*)"/) || [null, ""])[1];
+          const valV = (att.match(/\bvalue="([^"]*)"/) || [null, ""])[1];
+          for (const tok of clsV.split(/\s+/).filter(Boolean)) {
+            if (!fields.has(tok)) { const n = mkNode("input"); n.value = valV; fields.set(tok, n); }
+          }
+        }
+      };
       const node = {
         _uid: ++uid, tagName: tag || "div", _html: "", className: "", dataset: {}, style: {},
         children: [], value: "", textContent: "", _attrs: {},
-        set innerHTML(v) { this._html = String(v); if (String(v) === "") this.children = []; },
+        set innerHTML(v) { this._html = String(v); if (String(v) === "") this.children = []; parseFields(this._html); },
         get innerHTML() { return this._html; },
         addEventListener(type, fn) { const a = ls.get(type) || []; a.push(fn); ls.set(type, a); },
         removeEventListener() {},
@@ -2273,7 +2291,11 @@ console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ==="
         removeAttribute(k) { delete this._attrs[k]; },
         append(c) { this.children.push(c); }, prepend() {}, remove() {}, click() {}, focus() {},
         contains: () => false, closest: () => mkNode("closest"),
-        querySelector(sel) { if (!q.has(sel)) q.set(sel, mkNode("q:" + sel)); return q.get(sel); },
+        querySelector(sel) {
+          const mm = /^\.([\w-]+)$/.exec(sel);
+          if (mm && fields.has(mm[1])) return fields.get(mm[1]);
+          if (!q.has(sel)) q.set(sel, mkNode("q:" + sel)); return q.get(sel);
+        },
         querySelectorAll: () => [],
         getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
         classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), toggle: () => {}, contains: (c) => cls.has(c) },
@@ -2287,15 +2309,36 @@ console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ==="
     return { mkNode, get, ivs, nextIv: () => ++ivId };
   };
 
-  const holdEnv = (seed) => {
+  const holdEnv = (seed, holdlen) => {
     const dom = mkDom();
     const store = {};
+    /* A recording AudioContext so the chime can be asserted BEHAVIOURALLY: every
+       oscillator it starts, with its gain envelope, is captured. */
+    const CUE = { oscs: [], gains: [], opened: 0, closed: 0 };
+    const mkParam = (rec, key) => ({
+      set value(v) { rec[key] = v; }, get value() { return rec[key]; },
+      setValueAtTime(v, t) { (rec.env = rec.env || []).push(["set", v, t]); },
+      exponentialRampToValueAtTime(v, t) { (rec.env = rec.env || []).push(["exp", v, t]); },
+      linearRampToValueAtTime(v, t) { (rec.env = rec.env || []).push(["lin", v, t]); },
+    });
+    function FakeAudioContext() {
+      CUE.opened++; this.currentTime = 0; this.destination = {};
+      this.createOscillator = () => {
+        const rec = { type: "sine", freq: 0, start: null, stop: null };
+        CUE.oscs.push(rec);
+        return { set type(v) { rec.type = v; }, get type() { return rec.type; },
+          frequency: mkParam(rec, "freq"), connect() {}, start(t) { rec.start = t; }, stop(t) { rec.stop = t; } };
+      };
+      this.createGain = () => { const rec = { gain: 0, env: [] }; CUE.gains.push(rec); return { gain: mkParam(rec, "gain"), connect() {} }; };
+      this.close = () => { CUE.closed++; };
+    }
     let NOW = Date.parse("2026-06-02T12:00:00");
     class FakeDate extends Date { constructor(...a) { if (a.length) super(...a); else super(NOW); } static now() { return NOW; } }
     const s = {
       console: { log() {}, warn() {}, error() {}, info() {} },
       Date: FakeDate, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error,
       isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+      AudioContext: FakeAudioContext,
       setTimeout: () => 0, clearTimeout() {},
       setInterval: (fn) => { const id = dom.nextIv(); dom.ivs.set(id, fn); return id; },
       clearInterval: (id) => { dom.ivs.delete(id); },
@@ -2313,6 +2356,7 @@ console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ==="
     s.window = s; s.globalThis = s;
     vm.createContext(s);
     vm.runInContext(`localStorage.setItem("fitness-app-v1", ${JSON.stringify(JSON.stringify(base(seed || {})))});`, s);
+    if (holdlen) vm.runInContext(`localStorage.setItem("fitness-app-v1-holdlen", ${JSON.stringify(JSON.stringify(holdlen))});`, s);
     const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/app.js"]
       .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
     vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "hold.js" });
@@ -2325,6 +2369,7 @@ console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ==="
     const setRowNode = (idx, si) => entryCard().querySelector("#sets-" + (idx || 0)).children[si || 0];
     return {
       A: s.__X.App, E: s.__X.Engine, S: s.__X.Store, fire, boot, view, entryCard, setRowNode,
+      CUE, store,
       tick: () => { [...dom.ivs.values()].forEach((fn) => fn()); },
       setNow: (ms) => { NOW = ms; },
       now: () => NOW,
@@ -2430,6 +2475,150 @@ console.log("\n=== 52. the timed-set HOLD TIMER (planks, holds, dead hangs) ==="
   truthy("no navigator.vibrate call was added", !/navigator\s*\.\s*vibrate/.test(appSrc));
   const manifest = fs.readFileSync(path.join(B, "android", "app", "src", "main", "AndroidManifest.xml"), "utf8");
   truthy("the Android manifest still has no VIBRATE permission (no permission change)", !/VIBRATE/.test(manifest));
+
+  // ---- (h) LENGTH set BEFORE Start drives the goal + the soft cues ----
+  const L = holdEnv(plankSeed(), { [plankId]: 30 });     // remembered last-used = 30 s
+  L.boot();
+  const lRow = L.setRowNode(0, 0);
+  const lenInp = lRow.querySelector(".hold-len");
+  truthy("a timed row carries an editable LENGTH field", /class="inp num hold-len"/.test(lRow.innerHTML));
+  /* the prefill is read from the LIVE DOM input's value, not the template string */
+  eq("the LENGTH input pre-fills from the LAST length used when there is no target", lenInp.value, "30");
+  truthy("...and shows that length as the goal", /hold-target/.test(lRow.innerHTML) && lRow.innerHTML.includes("/0:30"));
+  eq("with no stored target, prefill invents none", JSON.stringify(L.S.state.targets), "{}");
+
+  lenInp.value = "45"; lenInp._fire("input", { type: "input" });
+  eq("typing a length moves the goal live", lRow.querySelector(".hold-target").textContent, "/0:45");
+  eq("...and the LIVE LENGTH input holds the typed length", lenInp.value, "45");
+  lenInp._fire("change", { type: "change" });
+  eq("the length is remembered as last-used", JSON.parse(L.store["fitness-app-v1-holdlen"])[plankId], 45);
+  eq("setting the length NEVER writes the stored per-exercise target", JSON.stringify(L.S.state.targets), "{}");
+
+  lenInp.value = ""; lenInp._fire("input", { type: "input" });
+  eq("clearing the length removes the goal", lRow.querySelector(".hold-target").textContent, "");
+  lenInp.value = "20"; lenInp._fire("input", { type: "input" });
+
+  const lBtn = lRow.querySelector(".hold-btn"), lClock = lRow.querySelector(".hold-clock");
+  const lSet = L.A.getDraft().entries[0].sets[0];
+  lBtn._fire("click", { type: "click" });                 // Start
+  eq("Start flips to Stop", lBtn.textContent, "Stop");
+  truthy("Start FREEZES the LENGTH box (goal cannot shift mid-count)", lenInp.disabled === true);
+  eq("a running count still writes nothing to t", lSet.t, 45);
+  L.setNow(L.now() + 12000); L.tick();
+  eq("the clock counts UP toward the goal", lClock.textContent, "0:12");
+  truthy("no visual cue before the goal", !lClock.classList.contains("hit"));
+  eq("no chime before the goal", L.CUE.oscs.length, 0);
+  L.setNow(L.now() + 8000); L.tick();                     // now exactly 20 s
+  eq("at the goal the clock shows the length", lClock.textContent, "0:20");
+  truthy("the VISUAL CUE fires ON the clock at the goal", lClock.classList.contains("hit"));
+  eq("the SOFT chime plays ONCE — two notes", L.CUE.oscs.length, 2);
+  truthy("every chime note is a gentle sine", L.CUE.oscs.every((o) => o.type === "sine"));
+  const peaks = L.CUE.gains.map((g) => Math.max(0, ...g.env.filter((r) => r[0] === "exp").map((r) => r[1])));
+  truthy("the chime is QUIET — peak gain <= 0.05 on every note", peaks.length === 2 && peaks.every((p) => p > 0 && p <= 0.05));
+  truthy("each note is SHORT — <= 0.2 s", L.CUE.oscs.every((o) => o.stop - o.start > 0 && o.stop - o.start <= 0.2));
+  truthy("two different pitches — a blip, not a buzz", L.CUE.oscs[0].freq !== L.CUE.oscs[1].freq);
+  L.setNow(L.now() + 30000); L.tick(); L.tick();
+  eq("the chime NEVER repeats however long the hold runs", L.CUE.oscs.length, 2);
+  const lKeys = Object.keys(lSet).sort();
+  lBtn._fire("click", { type: "click" });                 // Stop
+  eq("Stop writes the elapsed seconds into t (50 s)", lSet.t, 50);
+  eq("Stop re-enables the LENGTH box", lenInp.disabled, false);
+  eq("the timer adds NO set field — only t changed", Object.keys(lSet).sort(), lKeys);
+
+  // ---- (i) a blank length is exactly the old count-up: no goal, no chime ----
+  const B2 = holdEnv(plankSeed());
+  B2.boot();
+  const bRow = B2.setRowNode(0, 0);
+  truthy("a blank length leaves NO goal on the row", !/hold-target/.test(bRow.innerHTML));
+  eq("the LIVE LENGTH input is empty (never mandatory)", bRow.querySelector(".hold-len").value, "");
+  const bClock = bRow.querySelector(".hold-clock");
+  bRow.querySelector(".hold-btn")._fire("click", { type: "click" });
+  B2.setNow(B2.now() + 90000); B2.tick();
+  eq("a blank length just counts UP", bClock.textContent, "1:30");
+  truthy("...with no visual cue", !bClock.classList.contains("hit"));
+  eq("...and no chime", B2.CUE.oscs.length, 0);
+  bRow.querySelector(".hold-btn")._fire("click", { type: "click" });
+  eq("Stop still logs the elapsed time", B2.A.getDraft().entries[0].sets[0].t, 90);
+
+  // ---- (j) the LENGTH pre-fill read from the LIVE input, and OPEN holds ----
+  /* (a) a straight/normal timed set pre-fills its LIVE LENGTH input from the
+     saved per-exercise TARGET. */
+  const tgtEnv = holdEnv(plankSeed({ targets: { [plankId]: { value: 75, set: "2026-05-01" } } }));
+  tgtEnv.boot();
+  const tgtRow = tgtEnv.setRowNode(0, 0);
+  const tgtLen = tgtRow.querySelector(".hold-len");
+  eq("(a) a straight timed set pre-fills the LIVE input from the saved target", tgtLen.value, "75");
+  truthy("(a) ...and the goal reads that target", tgtRow.innerHTML.includes("/1:15"));
+  /* (c) a length typed by the user overrides that prefill, live. */
+  tgtLen.value = "45"; tgtLen._fire("input", { type: "input" });
+  eq("(c) a typed length overrides the prefill in the LIVE input", tgtLen.value, "45");
+  eq("(c) ...and replaces the goal", tgtRow.querySelector(".hold-target").textContent, "/0:45");
+
+  /* (b) a FAILURE or DROP set pre-fills the LIVE input BLANK — an open count-up
+     you stop yourself. A saved target (75) AND a remembered last length (40) are
+     BOTH present, and neither is used: a hold to failure has no time target. */
+  const hardSeed = (ty) => ({ workouts: [{ id: "w1", date: "2026-05-28", note: "", entries: [
+    { id: plankId, name: "Front Plank", mode: "time", sets: [{ t: 45, ty }] }] }],
+    targets: { [plankId]: { value: 75, set: "2026-05-01" } } });
+  const flEnv = holdEnv(hardSeed("failure"), { [plankId]: 40 });
+  flEnv.boot();
+  const flRow = flEnv.setRowNode(0, 0);
+  const flLen = flRow.querySelector(".hold-len");
+  eq("(b) a FAILURE set pre-fills the LIVE LENGTH input BLANK", flLen.value, "");
+  truthy("(b) ...so the failure hold carries NO goal", !/hold-target/.test(flRow.innerHTML));
+  const drEnv = holdEnv(hardSeed("drop"), { [plankId]: 40 });
+  drEnv.boot();
+  eq("(b) a DROP set pre-fills BLANK too", drEnv.setRowNode(0, 0).querySelector(".hold-len").value, "");
+
+  /* the user may still TYPE a length on a failure/drop set if they want one */
+  flLen.value = "20"; flLen._fire("input", { type: "input" });
+  eq("a length typed on a failure set is honoured (goal appears)", flRow.querySelector(".hold-target").textContent, "/0:20");
+  flLen.value = ""; flLen._fire("input", { type: "input" });
+
+  /* the OPEN path end to end: blank -> counts up, no goal, no chime; Stop writes
+     the elapsed seconds into t; a running count never writes t. */
+  const flBtn = flRow.querySelector(".hold-btn"), flClock = flRow.querySelector(".hold-clock");
+  const flSet = flEnv.A.getDraft().entries[0].sets[0];
+  const flT = flSet.t;
+  flBtn._fire("click", { type: "click" });                 // Start
+  eq("Start FREEZES the LENGTH box", flLen.disabled, true);
+  flEnv.setNow(flEnv.now() + 37000); flEnv.tick();
+  eq("an open failure hold counts UP freely (no goal to hit)", flClock.textContent, "0:37");
+  truthy("...no visual cue — there is no goal", !flClock.classList.contains("hit"));
+  eq("...and NO chime ever", flEnv.CUE.oscs.length, 0);
+  eq("a running count never writes t", flSet.t, flT);
+  flBtn._fire("click", { type: "click" });                 // Stop
+  eq("Stop writes the open elapsed seconds into t", flSet.t, 37);
+
+  /* marking a straight hold set as failure/drop blanks its LENGTH live */
+  const swEnv = holdEnv(plankSeed({ targets: { [plankId]: { value: 75 } } }));
+  swEnv.boot();
+  const swRow = swEnv.setRowNode(0, 0);
+  const swLen = swRow.querySelector(".hold-len");
+  const swSet = swEnv.A.getDraft().entries[0].sets[0];
+  eq("setup: the straight hold pre-fills from the target", swLen.value, "75");
+  swSet.ty = "failure"; swRow.querySelector(".setty")._fire("change", { type: "change" });
+  eq("marking the set FAILURE blanks the LENGTH live (open hold)", swLen.value, "");
+  eq("...and drops the goal", swRow.querySelector(".hold-target").textContent, "");
+  swSet.ty = "drop"; swRow.querySelector(".setty")._fire("change", { type: "change" });
+  eq("a DROP set blanks too", swLen.value, "");
+  delete swSet.ty; swRow.querySelector(".setty")._fire("change", { type: "change" });
+  eq("switching back to a straight set restores the target prefill", swLen.value, "75");
+
+  /* a failure-marked TIMED set still earns the capped effort XP (SET_TYPES /
+     HARD_SET_*) — the hold's type changes nothing about scoring. */
+  const E2 = flEnv.E;
+  const xpOfSets = (sets) => { const st = base({ workouts: [{ id: "w9", date: "2026-07-01", note: "",
+    entries: [{ id: plankId, name: "Front Plank", mode: "time", sets }] }] });
+    return E2.sessionXp(st, st.workouts[0]); };
+  const straightT = xpOfSets([{ t: 60 }]);
+  const failT = xpOfSets([{ t: 60, ty: "failure" }]);
+  eq("a straight timed set carries no extra effort", straightT.effortXp, 0);
+  truthy("a failure-marked TIMED set earns the capped effort XP", failT.effortXp > 0);
+  eq("...at the failure multiplier (1.2)", failT.effortXp, Math.round(E2.XP.HARD_SET_XP * 0.2));
+  eq("...and the breakdown counts one hard set", failT.hardSets, 1);
+  const nT = (n) => xpOfSets(Array.from({ length: n }, () => ({ t: 60, ty: "failure" })));
+  eq("...capped at HARD_SET_CAP like any other set", nT(20).effortXp, nT(E2.XP.HARD_SET_CAP).effortXp);
 }
 
 console.log("\n=== 53. XP scales with the work logged — and only ever GROWS as data is added ===");

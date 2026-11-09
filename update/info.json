@@ -1,11 +1,11 @@
 {
-  "versionCode": 88,
-  "versionName": "1.2.10",
+  "versionCode": 89,
+  "versionName": "1.2.11",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "61d76079857998537e983440d2657a575b3a8285ff5ebf9dc9936775d55e14ff",
-  "sizeBytes": 3909747,
+  "sha256": "7f1a2318dba0cd873251dcab0603eaefc55f616794681a08e65c01570ae47169",
+  "sizeBytes": 3912102,
   "published": "2026-11-09",
   "notes": [
-    "XP now only ever goes up - extra sets, exercises and sessions add to your total, and going past a muscle group's weekly volume is worth less per set instead of taking XP away."
+    "Timed holds now have a timer you can set a length for, with a soft cue when you reach it - or leave the length off and it just counts up until you stop it."
   ]
 }

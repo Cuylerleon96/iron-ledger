@@ -19,24 +19,66 @@
   const fmtRest = (sec) => { const s = Math.round(sec); return s < 60 ? s + "s" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
   /* mm:ss for the timed-set hold timer — a plank reads "1:05", not "65". */
   const fmtClock = (sec) => { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
-  /* A short beep when a hold reaches its target. Web Audio needs NO manifest
-     permission (unlike vibration, which would need android.permission.VIBRATE —
-     deliberately skipped for that reason). Guarded so the test stubs, and any
-     browser without audio, simply stay silent and never break logging. */
+  /* A SHORT, SOFT two-note blip when a hold reaches its length. Web Audio needs
+     NO manifest permission (unlike vibration, which would need
+     android.permission.VIBRATE — deliberately skipped for that reason).
+     Deliberately gentle: two brief sine notes with a rounded attack/decay and a
+     LOW peak gain, played ONCE — no alarm, no buzz, never repeating. Guarded so
+     the test stubs, and any browser without audio, simply stay silent and never
+     break logging. */
   function holdChime() {
     try {
       const Ctx = (typeof window !== "undefined" && window) ? (window.AudioContext || window.webkitAudioContext) : null;
       if (!Ctx) return;
       const ctx = new Ctx();
-      const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.type = "sine"; osc.frequency.value = 880;
-      gain.gain.value = 0.05;
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.18);
-      setTimeout(() => { try { ctx.close(); } catch (e) { /* done */ } }, 500);
+      const t0 = ctx.currentTime;
+      /* a calm rise — G5 then C6, ~0.11 s each, 0.12 s apart — one gentle "done" */
+      const NOTES = [[784.0, 0], [1046.5, 0.12]];
+      const PEAK = 0.035;                               // quiet: well under the old flat 0.05
+      NOTES.forEach(([freq, at]) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "sine"; osc.frequency.value = freq;
+        const s = t0 + at, e = s + 0.11;
+        gain.gain.setValueAtTime(0.0001, s);
+        gain.gain.exponentialRampToValueAtTime(PEAK, s + 0.02);   // soft attack, no click
+        gain.gain.exponentialRampToValueAtTime(0.0001, e);        // smooth decay
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(s); osc.stop(e + 0.02);
+      });
+      /* ONE AudioContext per blip, closed shortly after — no lingering node */
+      setTimeout(() => { try { ctx.close(); } catch (e) { /* done */ } }, 600);
     } catch (e) { /* the chime is optional — never let it interfere with logging */ }
   }
+  /* The LAST length the user actually set for a timed exercise — remembered in
+     local (UI) storage only, so a length carries over between sessions without
+     ever rewriting the exercise's saved TARGET (state.targets is a different
+     field, owned by the exercise sheet). A blank/0 length clears the memory. */
+  const HOLDLEN_KEY = "fitness-app-v1-holdlen";
+  let holdLen = (() => {
+    try { const r = JSON.parse(localStorage.getItem(HOLDLEN_KEY)); return (r && typeof r === "object") ? r : {}; }
+    catch (e) { return {}; }
+  })();
+  const lastHoldLen = (id) => { const v = Math.round(Engine.num(holdLen[id])); return v > 0 ? v : 0; };
+  const rememberHoldLen = (id, secs) => {
+    const n = Math.round(Engine.num(secs));
+    if (n > 0) holdLen[id] = n; else delete holdLen[id];
+    try { localStorage.setItem(HOLDLEN_KEY, JSON.stringify(holdLen)); } catch (e) { /* optional */ }
+  };
+  /* The exercise's saved per-exercise TARGET in whole seconds (0 = none). This
+     is the field the exercise sheet owns; the hold LENGTH never rewrites it. */
+  const holdTargetOf = (id) => (S.targets && S.targets[id] && Engine.num(S.targets[id].value) > 0)
+    ? Math.round(Engine.num(S.targets[id].value)) : 0;
+  /* The LENGTH a timed set's hold timer PRE-FILLS with. A set taken to FAILURE
+     (or a DROP set) has no time target — a hold taken to failure ends when you
+     fail — so it pre-fills BLANK: an open count-up you stop yourself, with no
+     goal and no chime. The field stays editable, so a length can still be typed
+     on a failure/drop set if you want one. A straight/normal timed set keeps the
+     saved per-exercise target, else the last length used for the exercise. */
+  const holdPrefill = (en, s) => {
+    if (s && (s.ty === "failure" || s.ty === "drop")) return 0;
+    const tgt = holdTargetOf(en.id);
+    return tgt > 0 ? tgt : lastHoldLen(en.id);
+  };
   const fmt = (n, d = 0) => (isFinite(n) ? Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
 
   /* ---------- units ---------- */
@@ -1071,22 +1113,31 @@
        and writes the elapsed seconds into the very same `t` the typed field
        uses — so state, save, draft autosave and scoring are all untouched.
        Placed LAST in the row so it takes its own line and displaces nothing:
-       every other control keeps the exact position it had before. If the
-       exercise already carries a personal target (state.targets — the field the
-       exercise sheet shows) the clock reads against it and a chime sounds on
-       reaching it; no target is ever invented. */
+       every other control keeps the exact position it had before.
+       The clock counts UP (the elapsed number is what gets logged); the LENGTH
+       field sets the goal it counts toward, e.g. "0:12 /0:45". The field is
+       pre-filled from the exercise's saved target when one exists, otherwise
+       from the last length used for this exercise; a blank/0 length is a plain
+       count-up with no goal and no chime, so the field is never mandatory. A
+       FAILURE or DROP set pre-fills BLANK — a hold to failure has no time
+       target, so it is an open count-up you stop yourself (a length can still
+       be typed). Setting the length never rewrites the stored target. */
     if (en.mode === "time") {
-      const holdTarget = (S.targets && S.targets[en.id] && Engine.num(S.targets[en.id].value) > 0)
-        ? Math.round(Engine.num(S.targets[en.id].value)) : 0;
+      const holdLen0 = holdPrefill(en, s);   // BLANK for a failure/drop set — an open hold
       inner += `<span class="hold-wrap">`
+        + `<label class="hold-len-wrap" title="Length of the hold in seconds — the clock counts up toward it. Leave blank to just count up.">`
+        + `<span class="hold-len-lab" aria-hidden="true">Length</span>`
+        + `<input class="inp num hold-len" type="number" inputmode="numeric" min="0" step="5" placeholder="secs" value="${holdLen0 > 0 ? holdLen0 : ""}" style="width:52px" aria-label="${sl} hold length, seconds">`
+        + `</label>`
         + `<button type="button" class="btn ghost tiny hold-btn" aria-label="${sl} hold timer — start the count" title="Start the hold timer — tap again to stop and log your time">Start</button>`
         + `<span class="hold-clock" aria-hidden="true">0:00</span>`
-        + (holdTarget ? `<span class="hold-target muted" title="Your target for this exercise">/${fmtClock(holdTarget)}</span>` : "")
+        + (holdLen0 > 0 ? `<span class="hold-target muted" title="Goal for this hold">/${fmtClock(holdLen0)}</span>` : "")
         + `</span>`;
     }
     row.innerHTML = inner;
     $$("input", row).forEach((inp) => inp.addEventListener("input", (e) => {
       const k = e.target.dataset.k;
+      if (!k) return;                     // the hold LENGTH box is not a set field
       const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
       s[k] = v;
       /* Exactly one rule for the weight: the field shows display units, the
@@ -1119,19 +1170,63 @@
     /* The hold timer (mode "time" only). It is a pure ADDITION to the row: the
        typed `t` input above still works exactly as before, and `t` is written
        ONLY on Stop — a count that is running never leaves the set half-logged.
-       Tapping Start again after a Stop begins a fresh count from 0. */
+       Tapping Start again after a Stop begins a fresh count from 0. The LENGTH
+       field sets the GOAL (and is remembered as last-used); it never writes the
+       stored per-exercise target. A blank/0 length → no goal, no chime. */
     if (en.mode === "time") {
       const btn = $(".hold-btn", row), clock = $(".hold-clock", row), tInp = $('[data-k="t"]', row);
-      const target = (S.targets && S.targets[en.id] && Engine.num(S.targets[en.id].value) > 0)
-        ? Math.round(Engine.num(S.targets[en.id].value)) : 0;
+      const lenInp = $(".hold-len", row);
+      let goalEl = $(".hold-target", row);          // present only when a goal was pre-filled
+      let target = holdPrefill(en, s);
       let t0 = null, iv = null, chimed = false;
+      const syncGoal = () => {
+        if (!goalEl) {
+          if (target <= 0) return;
+          goalEl = el("span", { class: "hold-target muted", title: "Goal for this hold" }, "");
+          const wrap = $(".hold-wrap", row);
+          if (wrap && wrap.appendChild) wrap.appendChild(goalEl);
+        }
+        goalEl.textContent = target > 0 ? "/" + fmtClock(target) : "";
+      };
+      const clearCue = () => {
+        clock.classList.remove("hit");
+        if (goalEl) goalEl.classList.remove("hit");
+      };
       const paint = (secs) => {
         const s2 = secs != null ? secs : (t0 ? Math.max(0, Math.round((Date.now() - t0) / 1000)) : 0);
         clock.textContent = fmtClock(s2);
-        if (target > 0 && s2 >= target && !chimed) { chimed = true; holdChime(); }
+        if (target > 0 && s2 >= target && !chimed) {
+          chimed = true;
+          holdChime();
+          clock.classList.add("hit");          // positive cue — calm gold/green, never a failure colour
+          if (goalEl) goalEl.classList.add("hit");
+        }
       };
+      /* setting the length (before Start) moves the goal live and remembers the
+         last length used; it never touches the stored per-exercise target */
+      if (lenInp) lenInp.addEventListener("input", () => {
+        const raw = String(lenInp.value).trim();
+        const n = raw === "" ? 0 : Math.max(0, Math.round(Engine.num(raw)));
+        target = isFinite(n) ? n : 0;
+        chimed = false; clearCue(); syncGoal();
+      });
+      if (lenInp) lenInp.addEventListener("change", () => { if (target > 0) rememberHoldLen(en.id, target); });
+      /* changing the SET TYPE to failure/drop (or back) re-applies the prefill:
+         a failure/drop hold has no time target, so its LENGTH goes BLANK — an
+         open count-up — while a straight set goes back to the target/last used.
+         A running count is left alone. */
+      const tySel = $(".setty", row);
+      if (tySel) tySel.addEventListener("change", () => {
+        if (iv || t0) return;
+        const pre = holdPrefill(en, s);
+        if (lenInp) lenInp.value = pre > 0 ? String(pre) : "";
+        target = pre;
+        chimed = false; clearCue(); syncGoal();
+      });
       const start = () => {
-        t0 = Date.now(); chimed = false;
+        if (lenInp) lenInp.disabled = true;            // the goal is frozen for the count
+        if (target > 0) rememberHoldLen(en.id, target);
+        t0 = Date.now(); chimed = false; clearCue();
         btn.textContent = "Stop";
         btn.classList.add("running");
         btn.setAttribute("aria-label", `${sl} hold timer — tap to stop and log`);
@@ -1145,6 +1240,7 @@
       };
       const stop = () => {
         if (iv) { clearInterval(iv); iv = null; }
+        if (lenInp) lenInp.disabled = false;
         const secs = t0 ? Math.round((Date.now() - t0) / 1000) : 0;
         t0 = null;
         btn.textContent = "Start";

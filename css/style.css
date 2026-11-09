@@ -539,6 +539,21 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
   color: #cfe0e8; font-variant-numeric: tabular-nums; text-shadow: var(--outline-sm);
 }
 .set-row .hold-target { flex: 0 0 auto; font-size: .58rem; }
+/* The LENGTH box on the hold line: a small editable field, set before Start. */
+.set-row .hold-len-wrap { display: inline-flex; align-items: center; gap: .24rem; flex: 0 0 auto; }
+.set-row .hold-len-lab { font-size: .5rem; letter-spacing: .05em; color: #cfe0e8; text-shadow: var(--outline-sm); }
+.set-row .hold-len { width: 52px; padding: .14rem .22rem; font-size: .6rem; text-align: center; }
+.set-row .hold-len:disabled { opacity: .5; }
+/* The positive "goal reached" cue sits ON the clock — a calm green/gold, never a
+   warning colour, with a soft pop (no flashing, no red). */
+@keyframes holdHitPop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+.set-row .hold-clock.hit {
+  color: var(--green-l);
+  text-shadow: 0 0 6px rgba(120, 200, 80, .6), var(--outline-sm);
+  animation: holdHitPop .5s ease-out;
+}
+.set-row .hold-clock.hit::after { content: " ✓"; color: var(--gold-l); }
+.set-row .hold-target.hit { color: var(--green-l); }
 .entry-rest {
   display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
   margin: .5rem 0 .15rem; font-size: .64rem;
