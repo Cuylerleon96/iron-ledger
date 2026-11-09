@@ -1,11 +1,11 @@
 {
-  "versionCode": 76,
-  "versionName": "1.1.1",
+  "versionCode": 77,
+  "versionName": "1.1.2",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "e3b29aa4197623cedcc1fa949b891c468c345100cb78df64b237a99af06f6854",
-  "sizeBytes": 3895284,
+  "sha256": "b9035638dc0c1868eac62826ec73af7b3b0df66599155bda80f64a18ce04f527",
+  "sizeBytes": 3895715,
   "published": "2026-11-09",
   "notes": [
-    "The scanner now asks for camera access, so scanning works on your phone."
+    "Sessions reward steady training more than sheer volume."
   ]
 }

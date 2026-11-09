@@ -1816,5 +1816,53 @@ console.log("\n=== 26. the age-adjusted basis line names the coefficient, its so
   truthy("...and still reads as the open-standard line", /published bodyweight standards/.test(line30));
 }
 
+console.log("\n=== 47. the per-session XP term is BOUNDED: entries cannot be farmed for volume ===");
+{
+  /* The per-ENTRY term (a flat 5 XP per logged exercise) used to be linear: N
+     entries paid 5N, so a session stuffed with one-set rows was farmed for XP —
+     the same per-entry, farm-by-volume shape the weigh-in term was rebalanced out
+     of. It is now paid for at most XP.ENTRY_CAP entries. Isolate the term by
+     logging entries that carry NO sets: they contribute nothing to tonnage or the
+     per-set term, so the ONLY thing that can move `base` is the entry count. */
+  const e = env();
+  const empty = (n) => ({ id: "w" + n, date: iso(1), note: "",
+    entries: Array.from({ length: n }, () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [] })) });
+  const baseOf = (n) => e.E.sessionXp(base({ workouts: [empty(n)] }), empty(n)).base;
+
+  eq("the cap exists and is a real, small number", e.E.XP.ENTRY_CAP, 8);
+  eq("the XP.SESSION floor is untouched", baseOf(0), 50);            // 50 + no entries
+  eq("5 entries still pay 5 XP each (25)", baseOf(5) - 50, 25);
+  eq("8 entries still pay 5 XP each (40)", baseOf(8) - 50, 40);
+  eq("a 9th entry adds nothing — the term is capped, not linear", baseOf(9), baseOf(8));
+  eq("an 8-entry and a 40-entry session pay the SAME entry term", baseOf(40), baseOf(8));
+  eq("doubling entries past the cap does NOT double the term", baseOf(16) - baseOf(8), 0);
+  truthy("no entry count can push the term past the cap", baseOf(400) === baseOf(8));
+
+  /* A NORMAL session is unchanged: 5 exercises x 4 sets of 100x10 (entries 5 <=
+     cap) earns the same base and session XP it did before the cap. */
+  const oneSet = (w) => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w, r: 10 }] });
+  /* ONE entry carrying four sets of 100x10. */
+  const entry4 = () => ({ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{w:100,r:10},{w:100,r:10},{w:100,r:10},{w:100,r:10}] });
+  const normal = base({ workouts: [{ id: "n", date: iso(1), note: "", entries: [1,2,3,4,5].map(entry4) }] });
+  const nr = e.E.sessionXp(normal, normal.workouts[0]);
+  eq("a 5-entry, 20-set session's base is unchanged", nr.base, 135);
+  eq("...and its session XP is unchanged", nr.xp, 135);
+  const fiveSet = base({ workouts: [wk(iso(1), Array.from({ length: 5 }, () => ({ w: 100, r: 10 })))] });
+  eq("a 5-set session's base is unchanged", e.E.sessionXp(fiveSet, fiveSet.workouts[0]).base, 70);
+
+  /* A WEEK of sensible sessions must BEAT a farmer who stuffs one giant session
+     with 40 one-set entries. (Nothing is turned down; both compared at real XP.) */
+  const days = ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"];   // Mon-Thu, one week
+  const week = base({ workouts: days.map((d, i) => ({ id: "k" + i, date: d, note: "",
+    entries: [1,2,3,4,5].map(entry4) })) });
+  const farm = base({ workouts: [{ id: "f", date: "2026-06-01", note: "",
+    entries: Array.from({ length: 40 }, () => oneSet(100)) }] });
+  const wkXp = e.E.xp(week), fXp = e.E.xp(farm);
+  console.log(`     consistent week (4 sessions, 80 sets) ${wkXp} XP vs 40-set farmer (one session) ${fXp} XP`);
+  truthy("a consistent week OUT-EARNS the 40-set farmer", wkXp > fXp);
+  truthy("the farmer's base is well under the old linear 5N=200 entry term",
+    e.E.sessionXp(farm, farm.workouts[0]).base < 50 + 40 * 5);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

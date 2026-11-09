@@ -2002,6 +2002,18 @@ const Engine = (() => {
                            // weigh-ins in a day is one week, so it cannot be
                            // farmed by volume, and it is calendar-bounded so it
                            // cannot be farmed by count. Matches INTAKE_WEEK.
+    ENTRY_CAP: 8,          // the per-ENTRY term (see sessionXp) is paid for at
+                           // most this many entries in one session. It used to be
+                           // a flat 5 XP for every entry, so logging N exercises
+                           // paid 5N and a session stuffed with forty one-set
+                           // rows was worth 200 XP for the typing alone — the
+                           // same per-entry, farm-by-volume shape the weigh-in
+                           // term was rebalanced out of. A session is rewarded for
+                           // HAPPENING (XP.SESSION) and for the WORK logged, not
+                           // for how many rows the user typed. A realistic session
+                           // logs 4-6 exercises (his export: 4 and 6), so nothing
+                           // normal is touched; past the cap an extra entry adds
+                           // nothing.
   };
 
   /* Monday-start week key for a date. Pure in the date itself, so XP does not
@@ -2104,8 +2116,13 @@ const Engine = (() => {
     let tonnage = 0, sets = 0;
     for (const en of w.entries || []) { const s = entryStats(en); tonnage += s.tonnage; sets += s.sets; }
     const nPr = prs[w.date] || 0;
+    /* The per-entry term is CAPPED (XP.ENTRY_CAP). It is paid per exercise logged,
+       but only up to a realistic session's worth; beyond that an extra entry adds
+       nothing, so a session cannot be farmed by stuffing rows. Volume the user
+       actually did is still rewarded through tonnage and the per-set term, and its
+       overreaching is priced by the volume factor — see the XP block above. */
     const base = XP.SESSION + Math.round(tonnage / 1000) + sets * 2
-               + (w.entries || []).length * 5 + nPr * XP.PR;
+               + Math.min((w.entries || []).length, XP.ENTRY_CAP) * 5 + nPr * XP.PR;
 
     const improvement = nPr > 0 ? XP.IMPROVEMENT : 1;
     const target = num(state.profile.weeklyTarget) || 4;
