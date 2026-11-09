@@ -210,9 +210,9 @@ const Updater = (() => {
         reason: "could not reach any update source — " + results.map((r) => r.error).join("; ") }, base);
     }
 
-    /* Installable payload candidates. The API is a candidate in its own right:
-       it carries a version-pinned apkUrl and a non-CDN checksum. An exact tie on
-       the build code prefers the API, so the download target is the pinned URL. */
+    /* Installable payload candidates. The payload supplies the build code and the
+       release notes/size; the DOWNLOAD target (below) is separately taken from the
+       API when it is at least as new, so a tie here need not prefer the API. */
     const cands = [];
     for (const g of goodJson) cands.push({ src: "json", code: g.code, name: g.name,
       apkUrl: g.feed.apkUrl, sha256: g.feed.sha256 || "", sizeBytes: g.feed.sizeBytes, feed: g.feed, url: g.url, pinned: false });
@@ -225,8 +225,7 @@ const Updater = (() => {
       if (!payload) { payload = c; continue; }
       const higherCode = c.code != null && (payload.code == null || c.code > payload.code);
       const newerNameAtSameCode = c.code === payload.code && c.name && payload.name && versionNewer(c.name, payload.name) === true;
-      const apiWinsTie = c.code === payload.code && c.name === payload.name && c.src === "api" && payload.src !== "api";
-      if (higherCode || newerNameAtSameCode || apiWinsTie) payload = c;
+      if (higherCode || newerNameAtSameCode) payload = c;
     }
 
     /* Name channel: the newest version NAME seen anywhere, atom and API included.
@@ -260,12 +259,16 @@ const Updater = (() => {
     if (api.ok && api.name) freshNames.push(api.name);
     const staleFeed = !!(payload && payload.name && freshNames.some((n) => versionNewer(n, payload.name) === true));
 
-    // Two independent channels. null = "could not be compared".
-    const byCode = payload && payload.code != null && info.versionCode != null ? payload.code > info.versionCode : null;
+    // Two independent channels. null = "could not be compared". The build code
+    // comes from the authoritative API when it carries one, so a fresh release
+    // build is detected even when every cached feed still shows the old number.
+    const bestCode = api.ok && api.code != null ? api.code
+      : (payload && payload.code != null ? payload.code : null);
+    const byCode = bestCode != null && info.versionCode != null ? bestCode > info.versionCode : null;
     const byName = newestName && info.versionName ? versionNewer(newestName, info.versionName) : null;
 
     const shared = Object.assign({ feedUrl: newestUrl,
-      latest: payload && payload.code != null ? payload.code : (api.ok && api.code != null ? api.code : null),
+      latest: bestCode,
       versionName: newestName || (dl && dl.versionName) || null,
       byCode, byName, staleFeed, pinned: !!(dl && dl.pinned),
     }, base);
@@ -276,9 +279,8 @@ const Updater = (() => {
         return Object.assign({ state: "unknown",
           reason: "v" + (newestName || "?") + " is out, but the download details could not be fetched" }, shared);
       }
-      // When the download target came from the API it describes the CURRENT
-      // release; otherwise a stale feed's notes/size describe a different
-      // release and are withheld rather than presented as this update's.
+      // Notes/size must describe THIS update. A stale feed's notes belong to a
+      // different release, so they are withheld rather than misattributed.
       const notesFrom = (payload && payload.feed && !staleFeed) ? payload.feed : null;
       const notes = notesFrom ? (Array.isArray(notesFrom.notes) ? notesFrom.notes : (notesFrom.notes ? [String(notesFrom.notes)] : [])) : [];
       const sizeBytes = dl.sizeBytes != null ? dl.sizeBytes : (payload && payload.sizeBytes != null ? payload.sizeBytes : null);

@@ -1,9 +1,9 @@
 {
-  "versionCode": 82,
-  "versionName": "1.2.4",
+  "versionCode": 83,
+  "versionName": "1.2.5",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d7033b4adec295159fcc2237e5f5749990dfc9c495af2f1e08763129e5ed5d0f",
-  "sizeBytes": 3906723,
+  "sha256": "8ab1f7dd512567e2c6d3d61ef94669bd2be376c8427a10f90b67e3b15445c585",
+  "sizeBytes": 3906774,
   "published": "2026-11-09",
   "notes": [
     "Checking for updates now sees a new version right away instead of waiting on a cached copy."

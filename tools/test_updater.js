@@ -287,6 +287,22 @@ const API_REL = (name, code, apkSha, apkUrl) => ({
     eq("the API was queried a second time", apiCalls, 2);
   }
 
+  console.log("--- release notes survive when the API supplies the download target ---");
+  {
+    const S = hex("7");
+    const U = run({ installed: INST_106, routes: [
+      ["releases.atom", ATOM_XML("1.0.8")],
+      ["releases/latest/download/info.json", { versionCode: 9, versionName: "1.0.8", sha256: S, sizeBytes: 3903849, notes: ["note one", "note two"], apkUrl: PINNED("1.0.8") }],
+      ["raw.githubusercontent.com", { versionCode: 9, versionName: "1.0.8", sha256: S, sizeBytes: 3903849, notes: ["note one", "note two"], apkUrl: PINNED("1.0.8") }],
+      ["api.github.com", API_REL("1.0.8", 9, S)],
+    ] });
+    const r = await U.check();
+    eq("available", r.state, "available");
+    eq("the release notes still reach the prompt", r.notes, ["note one", "note two"]);
+    eq("but the download is the API-pinned one", r.sha256, S);
+    eq("and marked pinned", r.pinned, true);
+  }
+
   console.log("--- install downloads from the pinned URL and the API checksum ---");
   {
     const S = hex("1");
