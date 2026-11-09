@@ -37,7 +37,17 @@ const Food = (() => {
              separately, so the SAME food lands a few percent apart (banana: 97
              vs 89 kcal = 8% — merged); a genuinely different food does not sit
              that close ("Kale, raw" 35 vs 43 kcal = 23% — deliberately NOT
-             merged). Without (2) a pure name collision could hide a real food.
+             merged). Without (2) a pure name collision could hide a real food;
+             AND
+         (3) their per-100 g MACRO VECTOR agrees — protein, fat, carb and (when
+             both sides state it) fibre — see the gate below. Without (3) two
+             DIFFERENT products whose energy merely coincides are folded into one
+             row and the loser's macros are silently hidden. THE TRADE-OFF:
+             (3) is deliberately strict, so near-twins whose data GENUINELY
+             differs stay as SEPARATE rows and a search can show two
+             similar-looking entries again. That is the correct outcome — two
+             honest rows, each with its own macros, beat one row hiding the
+             other. Do NOT loosen (3) to make a list look tidier.
 
      THE PLURAL CASE, and the one qualifier that comes with it. The trailing
      plural is normalised word by word (-s, -ies, -es after ch/sh/ss/x/z, -oes);
@@ -73,6 +83,22 @@ const Food = (() => {
          snapshots its own name and macros at log time (see js/store.js). */
   const KCAL_TOL_REL = 0.15, KCAL_TOL_ABS = 5;
 
+  /* (3) the MACRO-VECTOR gate, in ADDITION to the energy gate. Energy alone is
+     NOT identity: measured on the shipped kcal-only rule, "Lamb, ground, raw"
+     (282 kcal, P 16.56, F 23.41) and "Lamb, ground" (281 kcal, P 24.55, F 19.49)
+     merged — different products, ~8 g protein/100 g apart, and collapsing them
+     hid the other value. So a twin must also agree on protein, fat and carb
+     (fibre too when both sides state it). Tolerance per nutrient: <= 1 g OR
+     <= 15% of the smaller value — the same relative width as the energy gate,
+     and 1 g/100 g sits inside the spread between the two USDA databases for the
+     SAME food (banana: protein 0.74 vs 1.09 = 0.35 g; fibre 1.7 vs 2.6 = 0.9 g
+     — both still merge), while a different product is left apart (lamb: 8 g).
+     ABSENT IS NOT ZERO: a nutrient present on ONE side only is a disagreement,
+     not a zero, and blocks the merge; only a nutrient absent from BOTH is
+     skipped. */
+  const MACRO_TOL_REL = 0.15, MACRO_TOL_ABS = 1;
+  const MACRO_KEYS = ["protein", "fat", "carb", "fibre"];
+
   /* lower-case + strip punctuation + fold English plurals word by word.
      "Bananas, raw" and "Banana, raw" collapse to one key; "Radishes, raw" and
      "Radish" fold to "radish"/"radish raw"; "Banana, baked" stays apart. */
@@ -96,21 +122,36 @@ const Food = (() => {
   };
 
 
-  const kcalPer100 = (f) =>
-    (f && f.per100 && typeof f.per100.kcal === "number" && isFinite(f.per100.kcal)) ? f.per100.kcal : null;
+  const nutrientPer100 = (f, k) =>
+    (f && f.per100 && typeof f.per100[k] === "number" && isFinite(f.per100[k])) ? f.per100[k] : null;
+  const kcalPer100 = (f) => nutrientPer100(f, "kcal");
+
+  /* the macro vector must agree. A nutrient present on ONE side only is a
+     disagreement (absent is not zero); a nutrient absent from BOTH is skipped. */
+  const macrosAgree = (a, b) => {
+    for (let i = 0; i < MACRO_KEYS.length; i++) {
+      const va = nutrientPer100(a, MACRO_KEYS[i]), vb = nutrientPer100(b, MACRO_KEYS[i]);
+      if (va == null && vb == null) continue;
+      if (va == null || vb == null) return false;
+      if (Math.abs(va - vb) > Math.max(MACRO_TOL_ABS, MACRO_TOL_REL * Math.min(va, vb))) return false;
+    }
+    return true;
+  };
   const measureScore = (f) =>
     ((f && Array.isArray(f.measures)) ? f.measures : [])
       .filter((m) => m && m.label && isFinite(m.grams) && m.grams > 0).length;
   const nutrientCount = (f) => (f && f.per100) ? Object.keys(f.per100).length : 0;
 
-  /* the twin test: MATCH-KEY identity AND an agreeing energy figure. Two rows
-     with no usable energy are NEVER merged (nothing is guessed). */
+  /* the twin test: MATCH-KEY identity AND an agreeing energy figure AND an
+     agreeing macro vector. Two rows with no usable energy are NEVER merged
+     (nothing is guessed), and neither are rows that disagree on a macro. */
   const isTwin = (a, b) => {
     if (!a || !b || a === b) return false;
     if (twinKey(a.name) !== twinKey(b.name)) return false;
     const ka = kcalPer100(a), kb = kcalPer100(b);
     if (ka == null || kb == null) return false;
-    return Math.abs(ka - kb) <= Math.max(KCAL_TOL_ABS, KCAL_TOL_REL * Math.min(ka, kb));
+    if (Math.abs(ka - kb) > Math.max(KCAL_TOL_ABS, KCAL_TOL_REL * Math.min(ka, kb))) return false;
+    return macrosAgree(a, b);
   };
 
   /* which of two twins to KEEP (deterministic). */
@@ -358,6 +399,7 @@ const Food = (() => {
     foodsOf, norm, round2,
     /* duplicate collapse (FNDDS vs SR Legacy) */
     dedupe, nameKey, twinKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS, OPTIONAL_TAIL,
+    nutrientPer100, macrosAgree, MACRO_KEYS, MACRO_TOL_REL, MACRO_TOL_ABS,
   };
 })();
 if (typeof module !== "undefined") module.exports = Food;

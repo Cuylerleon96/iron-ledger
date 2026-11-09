@@ -296,8 +296,10 @@ ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.te
    RESULT LIST only (never the dataset). RULE: equal MATCH key — normalised name
    with English plurals folded (radishes -> radish) and ONE optional trailing "raw"
    dropped (FNDDS omits the stated raw state) — AND per-100 g energy within 5 kcal
-   or 15%, keeping the row with more usable portioning measures (or the row the
-   query names). See js/food.js. */
+   or 15% AND an AGREEING MACRO VECTOR (protein/fat/carb, plus fibre when both
+   sides carry it) within 1 g or 15%, keeping the row with more usable portioning
+   measures (or the row the query names). Absent nutrients are never treated as 0.
+   See js/food.js. */
 console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
 {
   /* the normaliser folds exactly the plural that separates the real pair */
@@ -343,7 +345,7 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
 
   /* dataset-wide: exactly the real duplicate rows collapse, and nothing else */
   const dedup = Food.dedupe(DB.foods);
-  eq('the rule merges exactly the 137 real duplicate rows', dedup.removed, 137);
+  eq('the rule merges exactly the 119 real duplicate rows (macro gate applied)', dedup.removed, 119);
   eq('...keeping every other row', dedup.list.length, DB.foods.length - dedup.removed);
   const groups = new Map();
   DB.foods.forEach((f) => { const k = Food.twinKey(f.name); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); });
@@ -355,8 +357,8 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
     for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++) if (Food.isTwin(v[i], v[j])) { twinPairs++; any = true; }
     if (!any) groupsHeldApart++;
   });
-  eq('exactly the 137 twin pairs are collapsible', twinPairs, 137);
-  eq('same-KEY groups with NO energy agreement are held apart (deliberately not merged)', groupsHeldApart, 20);
+  eq('exactly the 119 twin pairs are collapsible (energy AND macro vector)', twinPairs, 119);
+  eq('same-KEY groups with NO agreeing pair are held apart (energy or macro gates them)', groupsHeldApart, 38);
   eq('the collapsed + kept rows account for every food', dedup.list.length + dedup.removed, DB.foods.length);
 
   /* the DATASET is never modified — a returned row is a copy, the record is not */
@@ -514,7 +516,11 @@ console.log('\n--- (k) plural twins (the -es plural + the implied raw state) ---
   ok('...and the dataset record itself is untouched',
     DB.foods.some((f) => f.code === radishS.code) && DB.foods.some((f) => f.code === radishF.code));
 
-  /* (6) the extension's blast radius on the real dataset: exactly 5 more pairs */
+  /* (6) the blast radius on the real dataset, under the TIGHTENED gate.
+     countPairs(twinKey,true) applies the FULL twin test (energy AND macro
+     vector); countPairs(nameKey,false) is the bare plural key with ENERGY-ONLY
+     agreement. Tightening the guard merges FEWER rows, not more: the macro gate
+     now holds the near-twins whose data genuinely differs apart. */
   const countPairs = (keyFn, viaKey) => {
     const g = new Map();
     DB.foods.forEach((f) => { const k = keyFn(f.name); if (!g.has(k)) g.set(k, []); g.get(k).push(f); });
@@ -531,9 +537,12 @@ console.log('\n--- (k) plural twins (the -es plural + the implied raw state) ---
     });
     return n;
   };
-  eq('the plural + optional-raw key merges exactly 5 pairs more than the bare key',
-    countPairs(Food.twinKey, true) - countPairs(Food.nameKey, false), 5);
-  eq('...so the dataset-wide collapse is 137 rows, not 132', Food.dedupe(DB.foods).removed, 137);
+  eq('the match key under the tightened gate collapsible-pair count is 119',
+    countPairs(Food.twinKey, true), 119);
+  eq('...the bare key with energy-only agreement would touch 132 (13 MORE)',
+    countPairs(Food.nameKey, false), 132);
+  eq('...so the tightened dataset-wide collapse is 119 rows, not 137',
+    Food.dedupe(DB.foods).removed, 119);
 
   /* (7) LOGGED HISTORY IS UNTOUCHED — the log snapshots its own macros */
   const ls = {};
@@ -559,6 +568,122 @@ console.log('\n--- (k) plural twins (the -es plural + the implied raw state) ---
   eq('the log is byte-identical after a re-dedupe + search', JSON.stringify(JS.intakesOn(today)), logBefore);
   eq('both twins keep their OWN snapshotted kcal (16 each)', JS.intakesOn(today).map((e) => e.macros.kcal).join(','), '16,16');
   eq('the day total is the sum of the snapshots (a collapsed row is not lost)', JS.dayTotals(today).kcal, 32);
+}
+
+console.log('\n--- (l) macro-vector gate (identity is more than calories) ---');
+{
+  const lambSr = DB.foods.find((f) => f.code === 174370);   // SR   "Lamb, ground, raw" 282 kcal P16.56 F23.41 C0
+  const lambFn = DB.foods.find((f) => f.code === 2705907);  // FNDDS "Lamb, ground"     281 kcal P24.55 F19.49 C0
+  const vealSr = DB.foods.find((f) => f.code === 175290);   // SR   "Veal, ground, raw" 197 kcal P18.58 F13.06 C0
+  const vealFn = DB.foods.find((f) => f.code === 2705910);  // FNDDS "Veal, ground"     213 kcal P25.62 F11.69 C1.5
+  const radF = DB.foods.find((f) => f.code === 2709803);
+  const radS = DB.foods.find((f) => f.code === 169276);
+  const tamF = DB.foods.find((f) => f.code === 2709269);
+  const tamS = DB.foods.find((f) => f.code === 167763);
+  const kcalOk = (a, b) => Math.abs(a.per100.kcal - b.per100.kcal) <=
+    Math.max(Food.KCAL_TOL_ABS, Food.KCAL_TOL_REL * Math.min(a.per100.kcal, b.per100.kcal));
+
+  /* the DEFECT reproduced: the energy agrees, so the OLD kcal-only rule merged
+     them — yet they are DIFFERENT products, ~8 g / ~7 g protein per 100 g apart */
+  ok('lamb ground: energy DOES agree (why the old kcal-only guard merged them)',
+    kcalOk(lambSr, lambFn), [lambSr.per100.kcal, lambFn.per100.kcal]);
+  ok('veal ground: energy DOES agree (old guard merged them)',
+    kcalOk(vealSr, vealFn), [vealSr.per100.kcal, vealFn.per100.kcal]);
+  ok('lamb ground: protein is ~8 g apart (a different product, not the same data)',
+    Math.abs(lambSr.per100.protein - lambFn.per100.protein) > 1, [lambSr.per100.protein, lambFn.per100.protein]);
+  ok('veal ground: protein is ~7 g apart',
+    Math.abs(vealSr.per100.protein - vealFn.per100.protein) > 1, [vealSr.per100.protein, vealFn.per100.protein]);
+  ok('the lamb ground pair does NOT merge under the tightened guard',
+    !Food.isTwin(lambSr, lambFn), 'P ' + lambSr.per100.protein + ' vs ' + lambFn.per100.protein);
+  ok('the veal ground pair does NOT merge under the tightened guard',
+    !Food.isTwin(vealSr, vealFn), 'P ' + vealSr.per100.protein + ' vs ' + vealFn.per100.protein);
+
+  /* the per-100-IDENTICAL pairs still merge (nothing was over-tightened) */
+  ok('Radish / Radishes, raw (per-100-identical) still merge', Food.isTwin(radF, radS));
+  ok('Tamarind / Tamarinds, raw (per-100-identical) still merge', Food.isTwin(tamF, tamS));
+  ok('...the two identical pairs agree on every macro too',
+    Food.macrosAgree(radF, radS) && Food.macrosAgree(tamF, tamS));
+  ok('the banana pair (the SAME food sampled apart) still merges',
+    Food.isTwin(fnddsBanana, srBanana));
+
+  /* ABSENT is NOT zero: a nutrient present on ONE side only blocks the merge */
+  const ax = [
+    { code: 90011, name: 'Groat', per100: { kcal: 100, protein: 10, fat: 5, carb: 20 }, measures: [] },
+    { code: 90012, name: 'Groats', per100: { kcal: 101, fat: 5, carb: 20 }, measures: [] },  // protein ABSENT
+  ];
+  ok('a nutrient present on ONE side only is NOT zero -> no merge',
+    !Food.isTwin(ax[0], ax[1]), 'protein ' + ax[0].per100.protein + ' vs ' + ax[1].per100.protein);
+  ok('...their keys agree, so the ABSENCE is what stopped it (not the name)',
+    Food.twinKey(ax[0].name) === Food.twinKey(ax[1].name) && kcalOk(ax[0], ax[1]));
+  /* a nutrient absent from BOTH is skipped, not compared as 0 */
+  const bx = [
+    { code: 90013, name: 'Baz', per100: { kcal: 100, protein: 10, fat: 5 }, measures: [] },
+    { code: 90014, name: 'Bazes', per100: { kcal: 100, protein: 10, fat: 5 }, measures: [] },
+  ];
+  ok('a nutrient absent from BOTH is skipped (still a twin)', Food.isTwin(bx[0], bx[1]),
+    bx[0].per100);
+  /* a both-present vector within 1 g / 15% merges */
+  const cx = [
+    { code: 90015, name: 'Quark', per100: { kcal: 100, protein: 10, fat: 5, carb: 20 }, measures: [] },
+    { code: 90016, name: 'Quarks', per100: { kcal: 101, protein: 10.5, fat: 5.4, carb: 20.6 }, measures: [] },
+  ];
+  ok('a both-present vector within 1 g / 15% merges', Food.isTwin(cx[0], cx[1]),
+    [cx[0].per100, cx[1].per100]);
+  /* a genuinely different food sharing the stem is untouched */
+  const seed2 = DB.foods.find((f) => f.name === 'Radish seeds, sprouted, raw');
+  ok('a genuinely different food sharing the stem is untouched (radish seeds)',
+    !Food.isTwin(radF, seed2), seed2 && seed2.per100.kcal);
+
+  /* the SEARCH list now shows the lamb/veal pairs as TWO rows, both alive */
+  const lambRows = Food.search(DB, 'lamb, ground', 50).filter((f) => Food.twinKey(f.name) === 'lamb ground');
+  eq('searching "lamb, ground" shows the pair as TWO rows', lambRows.length, 2);
+  ok('...both rows are alive in the returned list',
+    lambRows.some((f) => f.code === 174370) && lambRows.some((f) => f.code === 2705907),
+    lambRows.map((f) => f.code));
+  ok('...neither is hidden as an .alternate of the other',
+    lambRows.every((f) => !(f.alternates || []).some((a) => a.code === 174370 || a.code === 2705907)),
+    lambRows.map((f) => (f.alternates || []).map((a) => a.code)));
+  const vealRows = Food.search(DB, 'veal, ground', 50).filter((f) => Food.twinKey(f.name) === 'veal ground');
+  eq('searching "veal, ground" shows the pair as TWO rows', vealRows.length, 2);
+  /* a non-merged entry stays reachable by its EXACT name */
+  ok('the non-merged twin is still found by its exact name',
+    Food.search(DB, lambFn.name, 50).some((f) => f.code === lambFn.code));
+
+  /* when a merge DOES happen the kept row is the one with the better measure set */
+  const dm = Food.dedupe([
+    { code: 90021, name: 'Zed', per100: { kcal: 100, protein: 5, fat: 2, carb: 3 }, measures: [] },
+    { code: 90022, name: 'Zeds', per100: { kcal: 100, protein: 5, fat: 2, carb: 3 },
+      measures: [{ label: 'a', grams: 10 }, { label: 'b', grams: 20 }] },
+  ]);
+  eq('a merge keeps the better-measured row', dm.list.length === 1 && dm.list[0].code, 90022);
+
+  /* LOGGED HISTORY IS UNTOUCHED: log BOTH lamb rows, re-dedupe + search, the log
+     is byte-identical and each entry keeps its OWN snapshotted kcal. */
+  const ls2 = {};
+  const c5 = { console, module: { exports: {} }, JSON, Math, Object, Array, Number, String,
+    Boolean, RegExp, Error, Promise, isFinite, parseFloat, parseInt, Map, Set, setTimeout, clearTimeout, Date,
+    localStorage: { getItem: (k) => (k in ls2 ? ls2[k] : null), setItem: (k, v) => { ls2[k] = String(v); }, removeItem: (k) => { delete ls2[k]; } } };
+  c5.globalThis = c5; vm.createContext(c5);
+  vm.runInContext(['js/food.js', 'js/nutrition.js', 'js/store.js']
+    .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n;')
+    + ';globalThis.__K={Nutrition,Store};', c5, { filename: 'macro-intake-bundle.js' });
+  const KN = c5.__K.Nutrition, KS = c5.__K.Store;
+  const cl = (o) => JSON.parse(JSON.stringify(o));
+  const dd = new Date();
+  const day = dd.getFullYear() + '-' + String(dd.getMonth() + 1).padStart(2, '0') + '-' + String(dd.getDate()).padStart(2, '0');
+  KS.importJSON(JSON.stringify({ version: 1, createdAt: '2026-01-01T00:00:00.000Z',
+    profile: {}, workouts: [], bodylog: [], custom: [], achievements: {}, overrides: {}, targets: {}, settings: {} }), 'replace');
+  KS.logIntake(KN.intakeEntry(cl(lambSr), 100));
+  KS.logIntake(KN.intakeEntry(cl(lambFn), 100));
+  const logB = JSON.stringify(KS.intakesOn(day));
+  Food.dedupe(DB.foods);
+  Food.search(DB, 'lamb, ground', 50);
+  eq('the log is byte-identical after a re-dedupe + search', JSON.stringify(KS.intakesOn(day)), logB);
+  eq('both lamb rows keep their OWN snapshotted kcal (282 and 281)',
+    KS.intakesOn(day).map((e) => e.macros.kcal).sort((a, b) => a - b).join(','), '281,282');
+  eq('...and their own snapshotted protein (the wrong value is never shown)',
+    KS.intakesOn(day).map((e) => e.macros.protein).sort((a, b) => a - b).join(','), '16.56,24.55');
+  eq('the day total is the sum of the snapshots', KS.dayTotals(day).kcal, 563);
 }
 
 console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
