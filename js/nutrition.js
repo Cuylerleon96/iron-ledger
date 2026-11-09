@@ -162,7 +162,7 @@ const Nutrition = (() => {
            number the engine would not give --- */
     if (plan.refused) {
       const html =
-        '<div class="card-head"><h3>Nutrition</h3><span class="muted">not for this profile</span></div>' +
+        '<div class="card-head"><h3>Nutrition</h3><span class="muted">one more detail</span></div>' +
         '<p class="n-refusal" id="nutrition-refusal">' + esc(plan.reason) + "</p>" +
         '<p class="muted small">No calorie or macro number is shown here, on purpose.</p>';
       return Object.assign(base, { state: "refused", age, reason: plan.reason, targets: null, html });
@@ -194,7 +194,7 @@ const Nutrition = (() => {
     const activityText = activity.method === "observed"
       ? "OBSERVED from " + Math.round(activity.spanDays || 0) + " days of your intake and weigh-ins"
       : activity.method === "declared" ? "YOU SET THIS — a starting estimate"
-      : activity.method === "fallback" ? "the default start (no activity level set, no training logged)"
+      : activity.method === "fallback" ? "the default start — no activity level set and no training logged"
       : "derived from your logged training";
     const r2 = (x) => Math.round(x * 100) / 100;
     const declared = Macros.activityLevelFor(profile.activityLevel);

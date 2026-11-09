@@ -1,11 +1,11 @@
 {
-  "versionCode": 61,
-  "versionName": "1.0.60",
+  "versionCode": 62,
+  "versionName": "1.0.61",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "0deb0dfcc80e4d011c809d4d164143affa66557d61c43d240d4c3f760303bba1",
-  "sizeBytes": 3863668,
+  "sha256": "d68b046066e4c1e5388cac687424a554efbb2ee979cbe6c66afcd9757c4269b2",
+  "sizeBytes": 3863684,
   "published": "2026-11-08",
   "notes": [
-    "Sex is now optional when a body-fat % is set \u2014 and the Profile field explains itself."
+    "Clearer, kinder wording on the Nutrition tab \u2014 the maintenance activity line and the details-needed card now read plainly."
   ]
 }

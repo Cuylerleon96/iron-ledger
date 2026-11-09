@@ -686,5 +686,53 @@ console.log("\n--- (20) Nutrition tab: sexless profile with a body-fat % ---");
   eq("...and it contains no 'must'", /\bmust\b/i.test(v4.html), false);
 }
 
+/* ---------- (21) COPY: the two defect classes — malformed text + rejection framing ---------- */
+console.log("\n--- (21) copy: balanced parens and no rejection-framed headers ---");
+{
+  const truthy3 = (label, got) => eq(label, !!got, true);
+  const srcN = fs.readFileSync(path.join(__dirname, "..", "js", "macros.js"), "utf8") + "\n;\n"
+    + fs.readFileSync(path.join(__dirname, "..", "js", "nutrition.js"), "utf8");
+  const cN = { console, module: { exports: {} }, Date, Math, JSON, Object, Array, Set, Map,
+    isFinite, parseFloat, parseInt, Number, String, Boolean, RegExp, Error, setTimeout, clearTimeout };
+  cN.globalThis = cN; vm.createContext(cN);
+  vm.runInContext(srcN + "\n;globalThis.__N9={Nutrition};\n", cN, { filename: "nutrition9.js" });
+  const N9 = cN.__N9.Nutrition;
+  const NO_TRAIN = { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 };
+
+  /* (a) the maintenance activity-factor line: one clean parenthetical, no nesting */
+  const FB = N9.view({ name: "C", sex: "M", heightCm: 178, weightKg: 80, bodyFatPct: 20, birthYear: 1994 },
+    { year: 2026, training: NO_TRAIN });
+  eq("no activity level and no training -> the 'fallback' activity tier", FB.maintenance.activity.method, "fallback");
+  const line = ((FB.html.match(/Activity factor[\s\S]*?<\/p>/) || [""])[0]).replace(/<[^>]*>/g, "");
+  /* the earlier default-start text nested a second "(" inside the factor's own "(...)". */
+  eq("the activity-factor line carries EXACTLY one open paren", (line.match(/\(/g) || []).length, 1);
+  eq("...and exactly one close paren", (line.match(/\)/g) || []).length, 1);
+  eq("...so no nested parenthetical remains", /\([^()]*\(/.test(line), false);
+  truthy3("...the meaning is kept (no level set, no training logged)", /no activity level set and no training logged/.test(line));
+
+  /* (b) the refusal card header must not tell the user they are the problem */
+  const REF = N9.view({ name: "C", sex: undefined, heightCm: 178, weightKg: 80, bodyFatPct: null, birthYear: 1994 },
+    { year: 2026, training: NO_TRAIN });
+  eq("a missing-required-field profile still refuses (no numbers)", REF.state, "refused");
+  eq("the refusal header is NOT 'not for this profile'", /not for this profile/i.test(REF.html), false);
+  truthy3("...it reads the forward-looking 'one more detail'", /one more detail/.test(REF.html));
+  eq("the no-birth-year header is neutral too", /not for this profile/i.test(
+    N9.view({ name: "C", sex: "M", heightCm: 178, weightKg: 80, birthYear: null }, { year: 2026, training: NO_TRAIN }).html), false);
+
+  /* (c) source sweep: no user-facing string anywhere carries a rejection phrase.
+         Comments are stripped first — a code comment is never on screen. */
+  const jsDir = path.join(__dirname, "..", "js");
+  const BANNED = ["not for this profile", "invalid", "you failed"];
+  const hits = [];
+  for (const f of fs.readdirSync(jsDir).filter((x) => x.endsWith(".js"))) {
+    const raw = fs.readFileSync(path.join(jsDir, f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    for (const p of BANNED) if (raw.toLowerCase().includes(p)) hits.push(f + " -> " + p);
+  }
+  const idxRaw = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  for (const p of BANNED) if (idxRaw.toLowerCase().includes(p)) hits.push("index.html -> " + p);
+  eq("no user-facing string, header or badge carries a banned rejection phrase", hits, []);
+}
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

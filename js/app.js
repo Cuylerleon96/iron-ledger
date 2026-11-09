@@ -1162,7 +1162,7 @@
     $("#imp-x").addEventListener("click", closeModal);
     $("#imp-go").addEventListener("click", () => {
       const parsed = parseNotes($("#imp-ta").value);
-      if (!parsed.length) { toast("Nothing recognised", "warn"); return; }
+      if (!parsed.length) { toast("Nothing to import from that text.", "warn"); return; }
       parsed.forEach((p) => draft.entries.push({ id: p.id, name: p.name, mode: p.mode, sets: p.sets }));
       closeModal();
       toast(`Imported ${parsed.length} exercises — review before saving`, "good");
@@ -1547,7 +1547,7 @@
           $("#up-x").addEventListener("click", closeModal);
           $("#up-s").addEventListener("click", () => { Updater.openInstallSettings(); closeModal(); });
         } else {
-          toast("Update failed: " + msg, "warn", 6000);
+          toast("Couldn't install the update — " + msg, "warn", 6000);
         }
         $("#up-go").disabled = false;
       }
@@ -1766,7 +1766,7 @@
     const g = pickedGrams();
     if (g == null) { toast("Enter a portion in grams.", "warn"); return; }
     const entry = Nutrition.intakeEntry(f, g, {});      // snapshots name + macros
-    if (!entry) { toast("That portion can't be logged.", "warn"); return; }
+    if (!entry) { toast("Pick a portion to log that food.", "warn"); return; }
     Store.logIntake(entry);                             // Store stamps LOCAL today
     toast("Added " + esc(entry.name) + " · " + fmtW(g) + " g");
     foodUI.picked = null; foodUI.measure = ""; foodUI.qty = "1"; foodUI.grams = "";
@@ -2004,7 +2004,7 @@
       const byRaw = g("#p-by").trim();
       const by = Nutrition.validBirthYear(byRaw, new Date().getFullYear());
       if (byRaw !== "" && by == null) {
-        toast("Birth year must be a 4-digit year, not in the future and within the last 120 years.", "warn", 8000);
+        toast("Enter a 4-digit birth year — not in the future, and within the last 120 years.", "warn", 8000);
         return;
       }
       const before = Engine.summary(S);      // level/title before this save, for the celebration
@@ -2101,7 +2101,7 @@
       const r = new FileReader();
       r.onload = () => {
         try { importData(r.result, mode); toast(mode === "replace" ? "Restored — replaced with the file" : "Imported (merged)", "good"); }
-        catch (e) { toast("Bad file", "warn"); }
+        catch (e) { toast("That file isn't a backup this app can read.", "warn"); }
       };
       r.readAsText(f);
     });
@@ -2122,7 +2122,7 @@
         toast("Saved to app storage — pick where to send it", "good", 6000);
         return r;
       } catch (e) {
-        toast("Export failed: " + ((e && e.message) || e), "warn", 7000);
+        toast("Couldn't export — " + ((e && e.message) || e), "warn", 7000);
         return null;
       }
     }

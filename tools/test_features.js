@@ -28,7 +28,12 @@ function env(ls = {}) {
   return { E: s.__X.Engine, S: s.__X.Store };
 }
 
-const iso = (off) => { const d = new Date(); d.setDate(d.getDate() - off); return d.toISOString().slice(0, 10); };
+/* Date offsets are stamped as LOCAL calendar days (yyyy-mm-dd), matching the
+   engine's dstr()/dayMap() basis — toISOString() is UTC and drifts a day ahead
+   of local time every evening, which dropped the newest session out of the grid. */
+const iso = (off) => { const d = new Date(); d.setDate(d.getDate() - off);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 
 function trained(weeks, opts = {}) {
   const { perWeek = 1, startKg = 80, step = 2, rpe = null, reps = 8 } = opts;
