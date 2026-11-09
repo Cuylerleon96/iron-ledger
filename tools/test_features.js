@@ -1119,28 +1119,31 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
   const png = fs.existsSync(sheetPath) ? fs.readFileSync(sheetPath) : Buffer.alloc(0);
   truthy("...it starts with the PNG signature",
     png.length > 24 && png.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])));
-  eq("...and is exactly 128x96 (4 columns x 3 rows of 32x32)",
-    png.length > 24 ? (png.readUInt32BE(16) + "x" + png.readUInt32BE(20)) : "missing", "128x96");
+  eq("...and is exactly 128x192 (4 columns x 6 rows of 32x32)",
+    png.length > 24 ? (png.readUInt32BE(16) + "x" + png.readUInt32BE(20)) : "missing", "128x192");
 
-  /* (3) three row classes, each on its own steps() keyframes */
-  ["idle", "lift", "celebrate"].forEach((row) => {
+  /* (3) six row classes, each on its own steps() keyframes */
+  const ROW_NAMES = ["idle", "walk", "pickup", "lift-a", "lift-b", "celebrate"];
+  ROW_NAMES.forEach((row) => {
     truthy(`a .hero.${row} row class exists`, new RegExp("\\.topbar \\.hero\\." + row + "\\b").test(css));
     truthy(`@keyframes hero-${row} exists`, new RegExp("@keyframes hero-" + row + "\\b").test(css));
     truthy(`.hero.${row} runs hero-${row} with steps(4)`,
       new RegExp("\\.topbar \\.hero\\." + row + "\\s*\\{[^}]*animation:\\s*hero-" + row + "\\s[^;]*steps\\(4\\)").test(css));
   });
-  truthy("the rows are idle / lift / celebrate in that order",
-    /\.hero\.idle\s*\{[^}]*hero-idle[\s\S]*?\.hero\.lift\s*\{[^}]*hero-lift[\s\S]*?\.hero\.celebrate\s*\{[^}]*hero-celebrate/.test(css));
+  truthy("the rows are idle / walk / pickup / lift-a / lift-b / celebrate in that order",
+    /\.hero\.idle\s*\{[^}]*hero-idle[\s\S]*?\.hero\.walk\s*\{[^}]*hero-walk[\s\S]*?\.hero\.pickup\s*\{[^}]*hero-pickup[\s\S]*?\.hero\.lift-a\s*\{[^}]*hero-lift-a[\s\S]*?\.hero\.lift-b\s*\{[^}]*hero-lift-b[\s\S]*?\.hero\.celebrate\s*\{[^}]*hero-celebrate/.test(css));
+  truthy("a static NEUTRAL .stand frame exists for the settle beat",
+    /\.topbar \.hero\.stand\s*\{[^}]*animation:\s*none/.test(css));
 
   /* (4) the geometry is an exact integer DEVICE size */
   truthy("the cell is 64 device px square: calc(64px / 2.625)",
     /width:\s*calc\(64px \/ 2\.625\)/.test(css) && /height:\s*calc\(64px \/ 2\.625\)/.test(css));
-  truthy("background-size is the whole 4x3 sheet at 2x (256x192 device px)",
-    /background-size:\s*calc\(256px \/ 2\.625\) calc\(192px \/ 2\.625\)/.test(css));
+  truthy("background-size is the whole 4x6 sheet at 2x (256x384 device px)",
+    /background-size:\s*calc\(256px \/ 2\.625\) calc\(384px \/ 2\.625\)/.test(css));
   truthy("the sprite is drawn pixelated",
-    /\.topbar \.hero\.idle, \.topbar \.hero\.lift, \.topbar \.hero\.celebrate \{[^}]*image-rendering:\s*pixelated/.test(css));
+    /\.topbar \.hero\.celebrate,[\s\S]{0,160}?\{[^}]*image-rendering:\s*pixelated/.test(css));
   truthy("the device arithmetic and the sheet geometry are in ONE comment",
-    /DPR = 2\.625/.test(block) && /4 columns x 3 rows/.test(block) && /32 x 32 native px/.test(block));
+    /DPR = 2\.625/.test(block) && /4 columns x 6 rows/.test(block) && /32 x 32 native px/.test(block));
 
   /* (5) pause + reduced motion */
   truthy("a .paused class holds the animation",
@@ -1150,17 +1153,41 @@ console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ==="
   eq("there is exactly ONE prefers-reduced-motion block",
     (css.match(/prefers-reduced-motion/g) || []).length, 1);
   const rm = (css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/) || [])[0] || "";
-  truthy("the reduced-motion block holds the hero to ONE static frame (animation: none)",
-    /\.topbar \.hero\.idle/.test(rm) && /\.topbar \.hero\.celebrate/.test(rm) && /animation:\s*none/.test(rm));
+  truthy("the reduced-motion block holds EVERY hero row to ONE static frame (animation: none)",
+    ROW_NAMES.every((r) => new RegExp("\\.topbar \\.hero\\." + r + "\\b").test(rm)) &&
+    /\.topbar \.hero\.stand/.test(rm) && /animation:\s*none/.test(rm));
+  truthy("the runtime itself honours prefers-reduced-motion (matchMedia reduce -> static)",
+    /prefers-reduced-motion:\s*reduce/.test(hero) && /matchMedia/.test(hero));
 
-  /* (6) event-driven, never a timer */
+  /* (6) event-driven, plus the DIRECTOR's rules */
   truthy("the slot is driven from the save path via Hero.play",
     /Hero\.play\(/.test(app) && /typeof Hero !== "undefined"/.test(app));
   truthy("...lift on a fresh session and celebrate on a milestone/target",
     /"celebrate"/.test(app) && /"lift"/.test(app) && /heroPlay\(/.test(app));
-  eq("the slot is never driven by a timer", /setInterval|setTimeout/.test(hero), false);
+  truthy("app.js switches the per-tab profile from setView via Hero.setTab",
+    /Hero\.setTab\(/.test(app) && /function setView/.test(app));
+  /* check the CODE, not the comments: strip comments, then look for a render loop */
+  const heroCode = hero.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  eq("the slot runs NO render loop (no requestAnimationFrame, no setInterval)",
+    /requestAnimationFrame|setInterval/.test(heroCode), false);
   eq("the slot binds no click/tap handler", /addEventListener\("(click|pointer|touch)/.test(hero), false);
   truthy("the runtime keeps the sheet path in ONE place", /const SHEET = "img\/hero-sheet\.png"/.test(hero));
+  /* the director's contract */
+  truthy("a per-tab behaviour PROFILE table covers all six tabs",
+    /const PROFILE = \{/.test(hero) &&
+    ["dash", "log", "history", "library", "nutrition", "profile"].every((t) => new RegExp("\\b" + t + ":").test(hero)));
+  truthy("the Dashboard profile is the randomised one, the rest idle",
+    /dash:\s*\{\s*kind:\s*"random"\s*\}/.test(hero) && /const IDLE = \{ kind: "idle" \}/.test(hero));
+  truthy("a SEEDED RNG is used and the seed/sequence are exposed",
+    /mulberry32/.test(hero) && /window\.HERO_SEED/.test(hero) && /get seed\(\)/.test(hero) && /get sequence\(\)/.test(hero));
+  truthy("the walk patrol is MEASURED at runtime with getBoundingClientRect",
+    /getBoundingClientRect\(\)/.test(hero) && /measureRun/.test(hero) && /\.brand/.test(hero) && /\.hud/.test(hero));
+  truthy("the walk mirrors direction with scaleX(-1)",
+    /scaleX\(-1\)/.test(hero));
+  truthy("transient rows chain on animationend (never interrupt a cycle)",
+    /addEventListener\("animationend"/.test(hero));
+  truthy("a translateX transition is derived from the walk cycle (no skate)",
+    /STRIDE_CSS/.test(hero) && /WALK_CYCLE_MS/.test(hero) && /transform " \+ dur \+ "ms linear/.test(hero));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

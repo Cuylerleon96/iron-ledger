@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """test_hero_sheet.py — the placeholder hero sprite sheet is real and complete.
 
-Guards the ONE asset the header harness (js/hero.js, commit d2cc956) renders:
-img/hero-sheet.png must exist, be EXACTLY 128x96 (4 columns x 3 rows of 32x32
-GBA cells), have a transparent background, and carry ink in all 12 cells. It
-also checks the rows are real CYCLES (the 4 frames of a row are not 4 copies),
-and that the FLOOR IS LEVEL: every frame's lowest inked pixel row is the cell's
-LAST row, which is the row the header's cream topbar border (the floor the
-creature stands on) is aligned to. See GROUND_ROW in tools/make_hero_slime.py.
+Guards the ONE asset the header harness (js/hero.js) renders:
+img/hero-sheet.png must exist, be EXACTLY 128x192 (4 columns x 6 rows of 32x32
+GBA cells), have a transparent background, and carry ink in all 24 cells. It
+also checks the rows are real CYCLES (the moving frames differ from neutral),
+that the FLOOR IS LEVEL (every frame's lowest inked pixel row is the cell's
+LAST row), and — the whole point of the 6-row sheet — that EVERY ROW'S FIRST AND
+LAST FRAME ARE PIXEL-IDENTICAL TO THE ONE SHARED NEUTRAL STANDING POSE, so any
+behaviour can follow any other with no pop. See tools/make_hero_slime.py.
 
     python3 tools/test_hero_sheet.py     # exits non-zero on any failure
 """
@@ -15,12 +16,13 @@ creature stands on) is aligned to. See GROUND_ROW in tools/make_hero_slime.py.
 import os
 import sys
 
-from typing import Tuple
-
 from PIL import Image
 
-CELL, COLS, ROWS = 32, 4, 3
-W, H = COLS * CELL, ROWS * CELL
+CELL, COLS, ROWS = 32, 4, 6
+W, H = COLS * CELL, ROWS * CELL            # 128 x 192
+
+# the row names, in sheet order — kept in step with js/hero.js and style.css
+ROW_NAMES = ["idle", "walk", "pickup", "lift-a", "lift-b", "celebrate"]
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHEET = os.path.join(os.path.dirname(HERE), "img", "hero-sheet.png")
@@ -40,7 +42,7 @@ def check(ok, label):
 
 
 def main():
-    print("=== hero sprite sheet: a 128x96 placeholder for the header harness ===")
+    print("=== hero sprite sheet: a 128x192 placeholder with a shared neutral seam ===")
     check(os.path.exists(SHEET), "img/hero-sheet.png exists")
     if not os.path.exists(SHEET):
         print("\n%d passed, %d failed" % (pass_n, fail_n))
@@ -50,31 +52,29 @@ def main():
     img.load()
     raw = list(img.tobytes())                  # flat RGBA bytes, W*H*4 long
 
-    def P(x, y) -> Tuple[int, int, int, int]:
+    def P(x, y):
         i = (y * W + x) * 4
         return (raw[i], raw[i + 1], raw[i + 2], raw[i + 3])
 
-    check(img.size == (W, H), "the sheet is EXACTLY 128x96 (got %dx%d)" % img.size)
+    def cell(r, c):
+        return tuple(P(c * CELL + x, r * CELL + y)
+                     for y in range(CELL) for x in range(CELL))
+
+    check(img.size == (W, H), "the sheet is EXACTLY 128x192 (6 rows of 32: got %s)" % str(img.size))
     check(img.mode == "RGBA", "the sheet is RGBA (has an alpha channel)")
 
-    # transparency: the four sheet corners must be fully transparent, so the
-    # sheet is not a filled rectangle (the harness relies on a transparent bg).
+    # transparency: the four sheet corners must be fully transparent.
     corners = [(0, 0), (W - 1, 0), (0, H - 1), (W - 1, H - 1)]
     check(all(P(*c)[3] == 0 for c in corners),
           "the sheet background is transparent (all four corners alpha=0)")
 
-    # all 12 cells must carry ink
-    for r in range(ROWS):
-        for c in range(COLS):
-            n = sum(1 for y in range(CELL) for x in range(CELL)
-                    if P(c * CELL + x, r * CELL + y)[3] > 0)
-            check(n > 0, "cell row %d col %d has non-transparent pixels (%d inked)" % (r, c, n))
+    # all 24 cells must carry ink
+    empty = [(r, c) for r in range(ROWS) for c in range(COLS)
+             if sum(1 for (rr, gg, bb, aa) in cell(r, c) if aa > 0) == 0]
+    check(not empty, "all 24 cells are non-empty (blank offenders %s)" % empty)
 
     # every frame kept INSIDE its own cell SIDEWAYS and at the TOP: no frame
-    # touches its cell's first/last column or its first row, so nothing can look
-    # clipped or bleed toward a neighbour. RE-EXPRESSED for the ground plane: the
-    # cell's LAST row is now the CONTACT row on purpose (the creature stands on
-    # it), so it must NOT be blank any more — see the floor checks below.
+    # touches its cell's first/last column or its first row (no bleed/clipping).
     edge_clear = all(
         P(c * CELL + x, r * CELL + y)[3] == 0
         for r in range(ROWS) for c in range(COLS)
@@ -86,35 +86,35 @@ def main():
     check(edge_clear, "no frame bleeds sideways or upward: the outer columns and "
                       "the top row of every cell are blank")
 
-    # --- THE FLOOR IS LEVEL: the last cell row is the ground contact -----------
-    # (the sprite base is drawn ON the cell's last row, and css/style.css bottom-
-    # aligns that row on the header's cream border, so the border IS the floor)
+    # --- THE FLOOR IS LEVEL -----------------------------------------------------
     def lowest_inked_row(c, r):
         rows = [y for y in range(CELL) for x in range(CELL)
                 if P(c * CELL + x, r * CELL + y)[3] > 0]
         return max(rows) if rows else -1    # -1 = empty cell (fails the checks)
 
-    for c in range(COLS):
-        low = lowest_inked_row(c, 0)
-        check(low == CELL - 1,
-              "idle frame %d is grounded on the last cell row (lowest inked row %s)" % (c, low))
-    idle_low = sorted({lowest_inked_row(c, 0) for c in range(COLS)})
-    check(idle_low == [CELL - 1],
-          "the floor is LEVEL across the idle row: one shared lowest row, the "
-          "cell's last (got %s)" % idle_low)
     off_floor = [(r, c) for r in range(ROWS) for c in range(COLS)
                  if lowest_inked_row(c, r) != CELL - 1]
     check(not off_floor,
-          "all 12 frames touch the last cell row (no frame floats above or sinks "
-          "below the floor; offenders %s)" % off_floor)
+          "all 24 frames touch the last cell row (the cell's LAST row is the floor; "
+          "offenders %s)" % off_floor)
 
-    # each row is a real 4-frame cycle, not four copies of one frame
+    # --- THE NEUTRAL SEAM (the whole point of the 6-row sheet) ------------------
+    neutral = cell(0, 0)                       # the ONE shared neutral standing pose
+    bad_first = [(ROW_NAMES[r], c) for r in range(ROWS) for c in (0,)
+                 if cell(r, c) != neutral]
+    bad_last = [(ROW_NAMES[r], c) for r in range(ROWS) for c in (COLS - 1,)
+                if cell(r, c) != neutral]
+    check(not bad_first,
+          "every row's FIRST frame is pixel-identical to the shared neutral (%s)" % bad_first)
+    check(not bad_last,
+          "every row's LAST frame is pixel-identical to the shared neutral (%s)" % bad_last)
+
+    # each row is a real cycle: the two moving frames differ from neutral AND
+    # from each other (cols 0 and 3 are the neutral seam by design).
     for r in range(ROWS):
-        frames = [tuple(P(c * CELL + x, r * CELL + y)
-                        for y in range(CELL) for x in range(CELL))
-                  for c in range(COLS)]
-        check(len(set(frames)) == COLS,
-              "row %d is a real 4-frame cycle (4 distinct frames)" % r)
+        movers = [cell(r, 1), cell(r, 2)]
+        check(all(m != neutral for m in movers) and movers[0] != movers[1],
+              "row %s has two distinct moving frames (both differ from neutral)" % ROW_NAMES[r])
 
     print("\n%d passed, %d failed" % (pass_n, fail_n))
     return 1 if fail_n else 0

@@ -126,15 +126,17 @@ b, strong { font-weight: 700; }
 
    SHEET GEOMETRY (re-cut the sheet in ONE place):
      cell   = 32 x 32 native px            (a GBA 32x32 character sprite)
-     sheet  = 4 columns x 3 rows           = 128 x 96 native px
-     rows   = 0 idle / 1 lift / 2 celebrate (one row per animation)
+     sheet  = 4 columns x 6 rows           = 128 x 192 native px
+     rows   = 0 idle / 1 walk / 2 pickup / 3 lift-a / 4 lift-b / 5 celebrate
      drawn at 2x, so one cell covers 64 x 64 DEVICE px.
 
    DEVICE-SIZE ARITHMETIC (an exact integer device size is the whole point):
      DPR = 2.625 (Pixel 6).  64 device px / 2.625 = 24.381 CSS px per cell.
      background-size = the whole sheet at 2x:
        4 cells * 64 = 256 device px -> calc(256px / 2.625) CSS px wide
-       3 rows  * 64 = 192 device px -> calc(192px / 2.625) CSS px tall.
+       6 rows  * 64 = 384 device px -> calc(384px / 2.625) CSS px tall.
+     ROW Y OFFSETS = -row * 64 device px / 2.625:
+       idle 0 | walk -64 | pickup -128 | lift-a -192 | lift-b -256 | celebrate -320
 
    FLOOR: the cell's LAST row is the sprite's ground-contact row (GROUND_ROW in
    tools/make_hero_slime.py), and the rule group below bottom-aligns the element
@@ -143,7 +145,9 @@ b, strong { font-weight: 700; }
    Scoped to .topbar: the app already uses .hero for the dashboard trainer
    card, which must not be touched. */
 .topbar .hero { display: none; }
-.topbar .hero.idle, .topbar .hero.lift, .topbar .hero.celebrate {
+.topbar .hero.idle, .topbar .hero.walk, .topbar .hero.pickup,
+.topbar .hero.lift-a, .topbar .hero.lift-b, .topbar .hero.celebrate,
+.topbar .hero.stand {
   display: block; flex: 0 0 auto;
   /* GROUND PLANE — the line under the creature is the FLOOR it stands on.
      The sheet's sprite base is its cell's LAST row (see GROUND_ROW in
@@ -165,19 +169,34 @@ b, strong { font-weight: 700; }
   width: calc(64px / 2.625);                     /* 64 device px = 2x a 32px cell */
   height: calc(64px / 2.625);
   background-repeat: no-repeat;
-  background-size: calc(256px / 2.625) calc(192px / 2.625);   /* the sheet at 2x */
+  background-size: calc(256px / 2.625) calc(384px / 2.625);   /* the 4x6 sheet at 2x */
   image-rendering: pixelated;
 }
+/* one row per animation: 4 columns advanced with steps(4) across the row, at the
+   row's Y offset. Transient rows run ONCE (steps(4) 1) and land back on the
+   neutral last frame, which is what makes chaining pop-free. */
 .topbar .hero.idle      { background-position: 0 0;                        animation: hero-idle      .8s steps(4) infinite; }
-.topbar .hero.lift      { background-position: 0 calc(-64px / 2.625);      animation: hero-lift      .6s steps(4) 1; }
-.topbar .hero.celebrate { background-position: 0 calc(-128px / 2.625);     animation: hero-celebrate .8s steps(4) 2; }
+.topbar .hero.walk      { background-position: 0 calc(-64px  / 2.625);      animation: hero-walk      .5s steps(4) infinite; }
+.topbar .hero.pickup    { background-position: 0 calc(-128px / 2.625);      animation: hero-pickup    .6s steps(4) 1; }
+.topbar .hero.lift-a    { background-position: 0 calc(-192px / 2.625);      animation: hero-lift-a    .6s steps(4) 1; }
+.topbar .hero.lift-b    { background-position: 0 calc(-256px / 2.625);      animation: hero-lift-b    .7s steps(4) 1; }
+.topbar .hero.celebrate { background-position: 0 calc(-320px / 2.625);      animation: hero-celebrate .8s steps(4) 1; }
 /* one row per animation: 4 columns advanced with steps(4) across the row */
 @keyframes hero-idle      { from { background-position: 0 0; }
                             to   { background-position: calc(-256px / 2.625) 0; } }
-@keyframes hero-lift      { from { background-position: 0 calc(-64px / 2.625); }
+@keyframes hero-walk      { from { background-position: 0 calc(-64px / 2.625); }
                             to   { background-position: calc(-256px / 2.625) calc(-64px / 2.625); } }
-@keyframes hero-celebrate { from { background-position: 0 calc(-128px / 2.625); }
+@keyframes hero-pickup    { from { background-position: 0 calc(-128px / 2.625); }
                             to   { background-position: calc(-256px / 2.625) calc(-128px / 2.625); } }
+@keyframes hero-lift-a    { from { background-position: 0 calc(-192px / 2.625); }
+                            to   { background-position: calc(-256px / 2.625) calc(-192px / 2.625); } }
+@keyframes hero-lift-b    { from { background-position: 0 calc(-256px / 2.625); }
+                            to   { background-position: calc(-256px / 2.625) calc(-256px / 2.625); } }
+@keyframes hero-celebrate { from { background-position: 0 calc(-320px / 2.625); }
+                            to   { background-position: calc(-256px / 2.625) calc(-320px / 2.625); } }
+/* SETTLE BEAT: hold the ONE shared NEUTRAL frame (row 0 col 0) statically. The
+   director inserts these between behaviours so nothing ever cuts mid-cycle. */
+.topbar .hero.stand { background-position: 0 0; animation: none; }
 .topbar .hero.paused { animation-play-state: paused; }
 
 /* ---------------- tabs ---------------- */
@@ -732,9 +751,11 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 @keyframes celeb-glow { from { filter: brightness(1); } to { filter: brightness(1.35); } }
 @media (prefers-reduced-motion: reduce) {
   .modal-box.celebrate, .celeb-star { animation: none; }
-  /* the hero slot holds ONE static frame — the first cell of whichever row is
-     active — instead of animating. */
-  .topbar .hero.idle, .topbar .hero.lift, .topbar .hero.celebrate { animation: none; }
+  /* the hero slot holds ONE static frame — the first cell (the shared neutral)
+     of whichever row is active — instead of animating. */
+  .topbar .hero.idle, .topbar .hero.walk, .topbar .hero.pickup,
+  .topbar .hero.lift-a, .topbar .hero.lift-b, .topbar .hero.celebrate,
+  .topbar .hero.stand { animation: none; }
 }
 .form-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .form-grid .grid-note { grid-column: 1 / -1; margin: 0; }

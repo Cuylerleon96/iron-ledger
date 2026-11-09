@@ -1,11 +1,11 @@
 {
-  "versionCode": 92,
-  "versionName": "1.2.14",
+  "versionCode": 93,
+  "versionName": "1.2.15",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "d8a54d708dd71d981f7af87ef82750884aa85d7c2e62f108e38fdd5c746ea8e0",
-  "sizeBytes": 3917835,
+  "sha256": "77f7c517e8d28c82a3ee66f6c0e8653c7bcd8f9c3a0b84f7e6c4ce042e15fc9c",
+  "sizeBytes": 3924183,
   "published": "2026-11-09",
   "notes": [
-    "The slime now stands on the header's line, so it has a floor under it."
+    "The little creature in the header now walks about and works out."
   ]
 }

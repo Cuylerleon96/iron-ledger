@@ -492,6 +492,10 @@
   function setView(v) {
     view = v;
     $$("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === v));
+    /* switch the header avatar's per-tab behaviour profile (js/hero.js). Guarded
+       so a build without the slot simply does nothing. */
+    try { if (typeof Hero !== "undefined" && Hero && typeof Hero.setTab === "function") Hero.setTab(v); }
+    catch (e) { /* decorative; never let it break navigation */ }
     render();
   }
 
