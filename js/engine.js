@@ -53,6 +53,73 @@ const Engine = (() => {
   /* ratio → score. Anchors map the five published tiers onto 0-100. */
   const TIER_SCORE = [30, 45, 62, 82, 96];
 
+  /* ---------- age coefficient for Strength (McCulloch) ----------
+     Force output declines with age, so scoring a masters lifter against the open
+     (all-ages) ratio tables under-rates them. McCulloch coefficients — the
+     USAPL-adopted masters "handicap" — say how much MORE a younger lifter must
+     lift than an older one for the same standing, i.e. they scale the load
+     REQUIRED to reach a tier. Published for age 40 and up, baseline 1.000 at 40;
+     the app applies 1.000 below 40 because there is no published under-40
+     decline, so none is invented.
+
+     LIMITS (stated on screen, not hidden):
+       - The published systems DISAGREE. WRPF's McCulloch variant differs
+         (45 = 1.060 vs 1.055, 50 = 1.150 vs 1.130, 60 = 1.380 vs 1.340) and
+         Malone–Meltzer is far steeper (45 = 1.195, 50 = 1.243, 60 = 1.509), so
+         choosing one is an ARRANGEMENT, not a consensus.
+       - The coefficients come from powerlifting COMPETITION lifts (squat/bench/
+         deadlift totals), not this app's mixed standard, so applying them here is
+         an EXTRAPOLATION.
+       - They adjust for AGE only — not training age, not sex.
+     Source: McCulloch coefficients, the APF / Glossbrenner masters table
+     (worldpowerliftingcongress.com Glossbrenner page), read 2026-11-08. */
+  const MCCULLOCH = {
+    40: 1.000, 41: 1.010, 42: 1.020, 43: 1.031, 44: 1.043, 45: 1.055, 46: 1.068,
+    47: 1.082, 48: 1.097, 49: 1.113, 50: 1.130, 51: 1.147, 52: 1.165, 53: 1.184,
+    54: 1.204, 55: 1.225, 56: 1.246, 57: 1.268, 58: 1.291, 59: 1.315, 60: 1.340,
+    61: 1.366, 62: 1.393, 63: 1.421, 64: 1.450, 65: 1.480, 66: 1.511, 67: 1.543,
+    68: 1.576, 69: 1.610, 70: 1.645, 71: 1.681, 72: 1.718, 73: 1.756, 74: 1.795,
+    75: 1.835, 76: 1.876, 77: 1.918, 78: 1.961, 80: 2.050,
+  };
+  const MCCULLOCH_AGES = Object.keys(MCCULLOCH).map(Number).sort((a, b) => a - b);
+  const MCCULLOCH_SOURCE = "McCulloch coefficients (USAPL masters handicap)";
+
+  /* The coefficient at an age. Below 40 it is exactly 1.000 — no published
+     under-40 decline exists, so none is applied, which also makes every under-40
+     rating byte-identical to before this coefficient existed. Within the table
+     the values are per-year; BETWEEN published ages (and across the table's one
+     gap, 78 → 80) it is LINEARLY INTERPOLATED, which reproduces every published
+     value exactly and is the smallest defensible move between them. Above the top
+     published age (80) it is HELD at 2.050 rather than extrapolated — inventing a
+     number past the table's end would breach the "do not invent" rule. */
+  function ageCoefficient(age) {
+    if (!(age > 0) || age < 40) return 1.000;
+    const last = MCCULLOCH_AGES[MCCULLOCH_AGES.length - 1];
+    if (age >= last) return MCCULLOCH[last];
+    for (let i = 0; i < MCCULLOCH_AGES.length - 1; i++) {
+      const a = MCCULLOCH_AGES[i], b = MCCULLOCH_AGES[i + 1];
+      if (age >= a && age <= b) {
+        const t = (age - a) / (b - a);
+        return MCCULLOCH[a] + t * (MCCULLOCH[b] - MCCULLOCH[a]);
+      }
+    }
+    return 1.000;
+  }
+
+  /* Age in years as of a date, from the profile's birth year. The profile passed
+     in is the one in effect at that date (profileAsOf for a historical window)
+     and the reference date is that window's end, so a past month is rated at the
+     age the user actually was THEN, not today's age. */
+  function ageAt(state, asOf) {
+    const p = (state && state.profile) || {};
+    const by = num(p.birthYear);
+    if (!(by >= 1000 && by <= 9999)) return null;
+    const ref = asOf ? new Date(asOf) : new Date();
+    if (!isFinite(ref.getTime())) return null;
+    const age = ref.getFullYear() - by;
+    return age > 0 ? age : null;
+  }
+
   /* The word under a score is a plain-English BAND, not a grade (the glossary
      says so). The bottom four used to read "Decent / Not great / Poor / No good",
      which a beginner reads as a mark against them; they are now a plain
@@ -733,7 +800,7 @@ const Engine = (() => {
     return out;
   }
 
-  function strengthScore(state, ws) {
+  function strengthScore(state, ws, asOf) {
     /* No bodyweight, no ratio. This used to fall back to a hardcoded 80 kg and
        then PRINT it — telling a user who had never entered a weight that his
        bodyweight was 80 kg, and scoring his bench against it. A fabricated
@@ -741,14 +808,22 @@ const Engine = (() => {
        "no weight" and the UI asks for one, exactly like the other attributes do
        when they have nothing to go on. */
     const bw = bodyweight(state);
-    if (!(bw > 0)) return { score: 0, basis: "no weight", bw: 0, n: 0, lifts: {} };
+    /* The age coefficient (required-load form): the open tier ratio is the load a
+       young lifter needs; at age A the same tier needs that load ÷ coefficient,
+       so the SAME actual lift earns a higher effective ratio as the lifter ages.
+       That is the effective ratio fed to liftScore below (ratio × coef). Applying
+       it the other way round (÷ coef) would under-rate older lifters — the exact
+       bug this fixes. Below 40 the coefficient is 1.000 and nothing moves. */
+    const age = ageAt(state, asOf);
+    const coef = ageCoefficient(age);
+    if (!(bw > 0)) return { score: 0, basis: "no weight", bw: 0, n: 0, lifts: {}, age, coef };
     const sex = state.profile.sex || "M";
     const lifts = bestLifts(state, ws);
     const keys = Object.keys(lifts);
     if (keys.length) {
-      const scores = keys.map((k) => liftScore(lifts[k] / bw, k, sex));
+      const scores = keys.map((k) => liftScore((lifts[k] / bw) * coef, k, sex));
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-      return { score: clamp(avg), basis: "standards", lifts, bw, n: keys.length };
+      return { score: clamp(avg), basis: "standards", lifts, bw, n: keys.length, age, coef };
     }
     // Fallback: no free-weight standard lift yet. Take the median of the top
     // three estimated 1RMs and discount it — machine stacks under-report true
@@ -770,20 +845,20 @@ const Engine = (() => {
       const disc = isMachine(state, en.id) ? 0.62 : 0.85;
       loads.push({ v: s.est1RM * disc, id: en.id, key: liftKey(info.n), name: info.n });
     }
-    if (!loads.length) return { score: 0, basis: "none", bw, n: 0 };
+    if (!loads.length) return { score: 0, basis: "none", bw, n: 0, age, coef };
     const rated = loads.filter((l) => l.key && STANDARDS[l.key]).sort((a, b) => b.v - a.v);
     if (rated.length) {
       const use = rated.slice(0, 3);
-      const scores = use.map((l) => liftScore(l.v / bw, l.key, sex));
+      const scores = use.map((l) => liftScore((l.v / bw) * coef, l.key, sex));
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
       // still capped: these are machine and submaximal loads, not tested maxes
-      return { score: clamp(Math.min(75, avg)), basis: "estimated", bw, n: 0,
+      return { score: clamp(Math.min(75, avg)), basis: "estimated", bw, n: 0, age, coef,
                from: use.map((l) => l.name).join(", ") };
     }
     loads.sort((a, b) => b.v - a.v);
     const med = loads[Math.min(1, loads.length - 1)];
-    const score = Math.min(55, interp(med.v / bw, [0.5, 1.0, 1.5, 2.0, 2.5], [8, 24, 40, 58, 72]));
-    return { score: clamp(score), basis: "estimated", bw, n: 0, from: med.name };
+    const score = Math.min(55, interp((med.v / bw) * coef, [0.5, 1.0, 1.5, 2.0, 2.5], [8, 24, 40, 58, 72]));
+    return { score: clamp(score), basis: "estimated", bw, n: 0, age, coef, from: med.name };
   }
 
   /* A run or a ride is gauged by TIME and DISTANCE, never by load: there is no
@@ -1168,6 +1243,9 @@ const Engine = (() => {
     const cur = windowWorkouts(state, days, offsetDays);
     const prev = windowWorkouts(state, days, days + offsetDays);
     const asOf = offsetDays > 0 ? dstr(Date.now() - offsetDays * DAY) : null;
+    /* The previous window ends `days + offsetDays` days back; Strength is rated
+       at the age in effect at each window's own end (see ageAt / profileAsOf). */
+    const asOfPrev = dstr(Date.now() - (days + offsetDays) * DAY);
     /* A HISTORICAL re-evaluation (offsetDays > 0) must read the profile that was
        in effect THEN — the height, sex, weekly target and goals at that date, not
        today's. Without this a past month silently borrowed today's values, so a
@@ -1180,7 +1258,7 @@ const Engine = (() => {
       ? Object.assign({}, state, { profile: profileAsOf(state, asOf) })
       : state;
     const now = {
-      STR: strengthScore(S, cur),
+      STR: strengthScore(S, cur, asOf),
       END: staminaScore(S, cur),
       POW: powerScore(S, cur),
       MOB: mobilityScore(S, cur),
@@ -1188,7 +1266,7 @@ const Engine = (() => {
       VIT: vitalityScore(S, asOf),
     };
     const was = {
-      STR: strengthScore(S, prev).score,
+      STR: strengthScore(S, prev, asOfPrev).score,
       END: staminaScore(S, prev).score,
       POW: powerScore(S, prev).score,
       MOB: mobilityScore(S, prev).score,
@@ -2363,6 +2441,7 @@ const Engine = (() => {
     bodylogCoverWeeks, bodylogXp,
     sessionPRs, milestoneEvents, MILESTONE, effortSetsSession, bigSession, deloadWeeks, BIG_SESSION_MIN, BIG_SESSION_GROUPS,
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
+    ageCoefficient, ageAt, MCCULLOCH, MCCULLOCH_SOURCE,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
     BW_FACTOR, BW_NAME, SUPPLIES_LOAD, hasBwFactor,

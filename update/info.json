@@ -1,11 +1,11 @@
 {
-  "versionCode": 73,
-  "versionName": "1.0.72",
+  "versionCode": 74,
+  "versionName": "1.0.73",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "8b2f347877acfdede908c6f013af425e1143920c047341b9ad69649f806bfc7b",
-  "sizeBytes": 3882959,
+  "sha256": "0b4e2e36d8c20dffaa59a1eb045d61e08e4760805060ef79b1c1b3125543379f",
+  "sizeBytes": 3885230,
   "published": "2026-11-08",
   "notes": [
-    "XP no longer breaks on a fresh log, and weigh-ins now reward steady check-ins across weeks instead of sheer volume."
+    "Strength now adjusts for age, so an older lifter is rated against the masters standard for their age instead of a 20-year-old's."
   ]
 }

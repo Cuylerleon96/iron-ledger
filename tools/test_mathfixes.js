@@ -1720,5 +1720,101 @@ console.log("\n=== 46. nutrition gamification + the Vitality opt-out (decision #
      nv(base({ intakelog: ifood })).v <= 100 && nv(base({ intakelog: ifood })).v >= 99);
 }
 
+console.log("\n=== 25. age-adjusted Strength (McCulloch coefficients) ===");
+{
+  const e = env();
+  const Y = new Date().getFullYear();
+  const BW = 80;
+  const bench = (load) => base({ profile: Object.assign({}, base().profile, { weightKg: BW }),
+    workouts: [{ id: "w1", date: iso(2), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: load, r: 5 }] }] }] });
+  const strFor = (age, load) => {
+    const st = bench(load); st.profile.birthYear = Y - age;
+    return e.E.strengthScore(st, e.E.windowWorkouts(st, 28, 0), null);
+  };
+
+  // (a) the coefficient: published anchors, the below-40 floor, the edges
+  eq("below 40 the coefficient is exactly 1.000", [e.E.ageCoefficient(0), e.E.ageCoefficient(20), e.E.ageCoefficient(30), e.E.ageCoefficient(39)], [1, 1, 1, 1]);
+  eq("the published McCulloch anchors (40/45/50/60/70)", [e.E.ageCoefficient(40), e.E.ageCoefficient(45), e.E.ageCoefficient(50), e.E.ageCoefficient(60), e.E.ageCoefficient(70)], [1.000, 1.055, 1.130, 1.340, 1.645]);
+  near("between published ages it interpolates (79 = midpoint of 78 and 80)", e.E.ageCoefficient(79), (1.961 + 2.050) / 2, 1e-9);
+  eq("above the top published age it is HELD, not extrapolated", [e.E.ageCoefficient(80), e.E.ageCoefficient(95)], [2.050, 2.050]);
+
+  // (b) CRITICAL: at age 30 nothing moves — equal to the exact pre-batch formula
+  const s30 = strFor(30, 100);
+  const lifts30 = e.E.bestLifts(bench(100), e.E.windowWorkouts(bench(100), 28, 0));
+  const ks = Object.keys(lifts30);
+  const before = e.E.clamp(ks.reduce((a, k) => a + e.E.liftScore(lifts30[k] / BW, k, "M"), 0) / ks.length);
+  console.log(`     before (open standard, no coefficient): STR ${before}`);
+  console.log(`     after  (age 30, coefficient 1.000)    : STR ${s30.score}   age=${s30.age} coef=${s30.coef}`);
+  eq("the age used is 30", s30.age, 30);
+  eq("the age-30 coefficient is 1.000", s30.coef, 1.000);
+  truthy("age 30 is BYTE-IDENTICAL to the pre-batch value", s30.score === before);
+  eq("...and the rounded score + tier are unchanged", [Math.round(s30.score), e.E.tierOf(Math.round(s30.score))],
+     [Math.round(before), e.E.tierOf(Math.round(before))]);
+
+  // (c) the same lift scores HIGHER at 45 (the coefficient lifts the effective ratio)
+  const s45 = strFor(45, 100);
+  console.log(`     same 100 kg bench: STR ${Math.round(s30.score)} @30 vs ${Math.round(s45.score)} @45`);
+  truthy("the same lift scores higher at 45 than at 30", s45.score > s30.score);
+  eq("...because the coefficient is 1.055", s45.coef, 1.055);
+
+  // (d) ...and needs a LOWER actual load for the same rating (required-load direction)
+  const req = (age, tier) => (e.E.STANDARDS.bench.m[tier] * BW) / e.E.ageCoefficient(age);
+  const openNovice = e.E.STANDARDS.bench.m[1] * BW;     // 60 kg at the open standard
+  console.log(`     load for a "Novice" bench at 80 kg BW: ${openNovice} open, ${req(45, 1).toFixed(2)} kg at 45`);
+  truthy("a 45-year-old needs a LOWER actual load for the same tier", req(45, 1) < req(30, 1));
+  truthy("...and the open-standard load IS the age-30 load", req(30, 1) === openNovice);
+  truthy("the open load earns a higher rating at 45 than at 30", strFor(45, openNovice).score > strFor(30, openNovice).score);
+
+  // (e) applied to Strength and NOT to Power
+  const clean = base({ profile: Object.assign({}, base().profile, { weightKg: BW }),
+    custom: [{ id: "pc1", n: "Power Clean", c: "Legs", g: ["Legs"], p: [], s: [], e: ["Barbell"], m: "weight_reps" }],
+    workouts: [{ id: "c1", date: iso(2), note: "", entries: [{ id: "pc1", name: "Power Clean", mode: "weight_reps", sets: [{ w: 100, r: 3 }] }] }] });
+  clean.profile.birthYear = Y - 30; const c30 = e.E.attributes(clean, 28, 0);
+  clean.profile.birthYear = Y - 55; const c55 = e.E.attributes(clean, 28, 0);
+  console.log(`     Power Clean 100x3: STR ${c30.STR.score}@30 -> ${c55.STR.score}@55 ; POW ${c30.POW.score}@30 -> ${c55.POW.score}@55`);
+  truthy("age moves Strength", c55.STR.score !== c30.STR.score);
+  eq("age does NOT move Power", c55.POW.score, c30.POW.score);
+
+  // (f) the age comes from the DATED profile history (profileAsOf), not today's age
+  const hist = base({ profile: Object.assign({}, base().profile, { weightKg: BW, birthYear: Y - 50 }),
+    profilelog: [{ date: iso(800), heightCm: 178, birthYear: Y - 50, sex: "M", weeklyTarget: 3 }],
+    workouts: [{ id: "h1", date: iso(730), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] }] });
+  const live = e.E.attributes(hist, 28, 0).STR.detail;
+  const past = e.E.attributes(hist, 28, 730).STR.detail;
+  console.log(`     age now ${live.age} (coef ${live.coef}) / two years ago ${past.age} (coef ${past.coef})`);
+  eq("the live read uses today's age", live.age, 50);
+  eq("the live read uses today's coefficient", live.coef, 1.130);
+  truthy("a past month is rated at the age in effect THEN, not today's", past.age < live.age);
+  eq("...and that past age's coefficient is the one applied", past.coef, e.E.ageCoefficient(past.age));
+  // a birth-year correction in the history must be honoured (profileAsOf feeds ageAt)
+  const corr = base({ profile: Object.assign({}, base().profile, { weightKg: BW, birthYear: Y - 30 }),
+    profilelog: [{ date: iso(800), heightCm: 178, birthYear: Y - 62, sex: "M", weeklyTarget: 3 }],
+    workouts: [{ id: "h2", date: iso(730), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] }] });
+  const corrLive = e.E.attributes(corr, 28, 0).STR.detail;
+  const corrPast = e.E.attributes(corr, 28, 730).STR.detail;
+  console.log(`     birth year corrected: live coef ${corrLive.coef} vs history coef ${corrPast.coef}`);
+  eq("the live read uses the current birth year (coef 1.000 at 30)", corrLive.coef, 1.000);
+  truthy("the historical month uses the birth year in effect THEN (coef > 1)", corrPast.coef > 1.000);
+}
+
+console.log("\n=== 26. the age-adjusted basis line names the coefficient, its source and its limits ===");
+{
+  const mk = (age) => appEnv({ profile: Object.assign({}, base().profile, { weightKg: 80, birthYear: new Date().getFullYear() - age }),
+    workouts: [{ id: "w1", date: iso(2), note: "", entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] }] });
+  const h50 = mk(50);
+  const line = h50.A.attrExplain("STR", h50.E.attributes(h50.S.state, 28).STR);
+  console.log("     basis line @50:", line);
+  truthy("the basis line names the coefficient value used", /coefficient of 1\.130/.test(line));
+  truthy("...and its source (McCulloch / USA Powerlifting)", /McCulloch/.test(line) && /USA Powerlifting/.test(line));
+  truthy("...and says the choice is an arrangement, not a consensus", /arrangement/.test(line) && /disagree/.test(line));
+  truthy("...and states the powerlifting-lift extrapolation and the age-only scope", /extrapolation/.test(line) && /age only/.test(line));
+
+  const h30 = mk(30);
+  const line30 = h30.A.attrExplain("STR", h30.E.attributes(h30.S.state, 28).STR);
+  console.log("     basis line @30:", line30);
+  eq("at 30 the basis line carries NO age clause (byte-identical to before)", /Age-adjusted/.test(line30), false);
+  truthy("...and still reads as the open-standard line", /published bodyweight standards/.test(line30));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

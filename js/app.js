@@ -700,9 +700,9 @@
     const x = d.detail;
     const live = (() => { switch (key) {
       case "STR": return x.basis === "standards"
-        ? `Estimated 1RM on ${x.n} core lift${x.n > 1 ? "s" : ""} vs published bodyweight standards (bodyweight ${fmtW(U.w(x.bw))} ${U.label()}).`
+        ? `Estimated 1RM on ${x.n} core lift${x.n > 1 ? "s" : ""} vs published bodyweight standards (bodyweight ${fmtW(U.w(x.bw))} ${U.label()}).` + ageNote(x)
         : x.basis === "estimated"
-          ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.`
+          ? `No free-weight core lift logged yet, so this is estimated from machine work (${esc(x.from || "—")}) and deliberately conservative. Log a barbell bench, squat or deadlift to make it real.` + ageNote(x)
           : "Add your bodyweight in Profile and this becomes a real score.";
       case "END": return `Cardio ${Math.round(x.cardioMinPerWk)} min/wk`
         + (x.distKmPerWk > 0 ? ` · ${Math.round(x.distKmPerWk * 10) / 10} km/wk (${x.distMod || "other"})` : "")
@@ -726,6 +726,15 @@
       default: return "";
     } })();
     return lead + live;
+  }
+
+  /* The age-adjustment clause for Strength, shown ONLY when a coefficient
+     actually applies (age 40+). Below 40 the coefficient is exactly 1.000 and
+     nothing is adjusted, so the line is left untouched — the under-40 output
+     (including a typical profile at 30) stays byte-identical to before this feature. */
+  function ageNote(x) {
+    if (!(x && x.coef > 1)) return "";
+    return ` Age-adjusted for ${x.age}: a McCulloch coefficient of ${x.coef.toFixed(3)} scales the load each tier needs, so an older lifter is compared against the standard for their age. Source: the McCulloch masters coefficients used by USA Powerlifting. This is one arrangement, not a settled figure — the published tables disagree (WRPF's McCulloch variant and Malone–Meltzer give different numbers), and the coefficients come from powerlifting competition lifts rather than this app's mixed standard, so applying them here is an extrapolation. They adjust for age only, not training age or sex.`;
   }
 
   /* ================= log ================= */
@@ -2299,6 +2308,6 @@
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
     isCustomEx, renameCustomEx, deleteCustomEx, customControlsHTML, importData, replaceImportWarning, shouldShowSeed,
     targetLabelFor, exDetailHTML, TARGET_NOTE, sexFieldHTML,
-    sexUnset, bfFloorPct, bfFloorNoteHTML,
+    sexUnset, bfFloorPct, bfFloorNoteHTML, attrExplain,
     Welcome: (typeof Welcome !== "undefined" ? Welcome : undefined) };
 })();
