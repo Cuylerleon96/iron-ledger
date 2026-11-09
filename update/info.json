@@ -1,11 +1,11 @@
 {
-  "versionCode": 66,
-  "versionName": "1.0.65",
+  "versionCode": 67,
+  "versionName": "1.0.66",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "55ffc2ddde28906ac795a13c748768915d7b023cfb52995a9e401b6776263285",
-  "sizeBytes": 3865623,
+  "sha256": "a522ea8d745351ff4c27e9843353be235c2dfdb55b512506ee65386569284b7c",
+  "sizeBytes": 3868292,
   "published": "2026-11-08",
   "notes": [
-    "Foods only merge when their protein, fat and carbs also match \u2014 the lamb and veal rows stay separate."
+    "Food search shows the same food once: identical names merge into one row, and where two similar rows remain they now say how much protein each has, so you can tell them apart."
   ]
 }

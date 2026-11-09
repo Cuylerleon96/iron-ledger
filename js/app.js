@@ -1660,9 +1660,17 @@
     const r = foodUI.results;
     if (r == null) { host.innerHTML = ""; return; }
     if (!r.length) { host.innerHTML = '<p class="muted small">No foods matched that search.</p>'; return; }
-    host.innerHTML = '<div class="food-results">' + r.map((f, i) =>
-      '<button class="food-row" data-idx="' + i + '"><span class="food-row-name">' + esc(f.name) + "</span>" +
-      '<span class="muted small">' + (f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal/100 g" : "") + "</span></button>").join("") + "</div>";
+    /* A row whose near-twin stayed SPLIT (lamb/veal — js/food.js sets `.split`)
+       shows its protein per 100 g as well, because on calories alone the two rows
+       are a coin-flip ("281" vs "282"). Without it the real difference (24.55 vs
+       16.56 g protein) is invisible. Fully-collapsed rows are unchanged. */
+    host.innerHTML = '<div class="food-results">' + r.map((f, i) => {
+      const kcal = f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal/100 g" : "";
+      const prot = f.split && f.per100 && typeof f.per100.protein === "number"
+        ? " · " + fmtW(f.per100.protein) + " g protein/100 g" : "";
+      return '<button class="food-row" data-idx="' + i + '"><span class="food-row-name">' + esc(f.name) + "</span>" +
+        '<span class="muted small">' + kcal + prot + "</span></button>";
+    }).join("") + "</div>";
   }
 
   function pickedGrams() {
@@ -1706,6 +1714,10 @@
             (a.per100 && typeof a.per100.kcal === "number" ? " (" + fmtW(a.per100.kcal) + " kcal/100 g)" : "") +
           "</button>").join(" ") + "</p>"
       : "";
+    /* One row in the list; if the collapsed source disagrees MATERIALLY, say so
+       here rather than hiding it. */
+    const note = Nutrition.alternateNote(f);
+    const noteHtml = note ? '<p class="food-note" id="food-note">' + esc(note) + "</p>" : "";
     host.innerHTML =
       '<div class="food-picked"><div class="card-head"><h3>' + esc(f.name) + '</h3><span class="muted">' +
         (f.per100 && typeof f.per100.kcal === "number" ? fmtW(f.per100.kcal) + " kcal / 100 g" : "") + "</span></div>" +
@@ -1713,7 +1725,7 @@
         portionInput +
         '<button class="btn primary" id="food-add">Add to today</button>' +
         '<button class="btn ghost tiny" id="food-x" title="Cancel">✕</button></div>' +
-      '<div id="food-preview"></div>' + altHtml + "</div>";
+      '<div id="food-preview"></div>' + noteHtml + altHtml + "</div>";
     $("#food-measure", host).addEventListener("change", (e) => { foodUI.measure = e.target.value; renderFoodPick(); });
     const gEl = $("#food-grams", host); if (gEl) gEl.addEventListener("input", () => { foodUI.grams = gEl.value; renderFoodPreview(); });
     const qEl = $("#food-qty", host); if (qEl) qEl.addEventListener("input", () => { foodUI.qty = qEl.value; renderFoodPreview(); });

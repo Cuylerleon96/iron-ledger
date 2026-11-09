@@ -414,8 +414,35 @@ const Nutrition = (() => {
       (gap ? " (" + Math.abs(gap) + " kcal apart)." : " (they agree).");
   }
 
+  /* ---------- the absorbed-alternate disclosure (js/food.js dedupe) ----------
+     When two rows with the SAME name collapse (rule (a) in js/food.js) the
+     absorbed one is kept on the survivor as `.alternates`. If its figures differ
+     MATERIALLY from the survivor's, the user must still be told — one plain line
+     on the picked-food card, naming the other source's numbers, instead of the
+     difference vanishing. `Food.materialDiffs` owns the tolerance (a shared macro
+     more than 2 g/100 g AND more than 10% of the larger value apart; energy more
+     than 20 kcal AND 10% apart). Returns the sentence(s), or null when the rows
+     agree closely enough that there is nothing to say. */
+  const FOOD_LABEL = { kcal: "energy", protein: "protein", fat: "fat", carb: "carbs", fibre: "fibre" };
+  const FOOD_UNIT = (k) => (k === "kcal" ? " kcal" : " g");
+
+  function alternateNote(food) {
+    if (!food || typeof Food === "undefined") return null;
+    const alts = Array.isArray(food.alternates) ? food.alternates : [];
+    if (!alts.length) return null;
+    const lines = [];
+    alts.forEach((alt) => {
+      const diffs = Food.materialDiffs(food, alt);
+      if (!diffs.length) return;
+      const other = diffs.map((d) => FOOD_LABEL[d.key] + " " + d.alt + FOOD_UNIT(d.key)).join(", ");
+      const mine = diffs.map((d) => FOOD_LABEL[d.key] + " " + d.kept + FOOD_UNIT(d.key)).join(", ");
+      lines.push("Another USDA source lists " + other + " per 100 g for this food; this row says " + mine + ".");
+    });
+    return lines.length ? lines.join(" ") : null;
+  }
+
   return { validBirthYear, ageFrom, goalFromProfile, trainingFor, view, MAX_AGE,
     NUTRIENTS, intakeEntry, portionGrams, intakeSummary, intakeHeadline,
-    MACRO_ROUNDING_NOTE, roundingNoteFor };
+    MACRO_ROUNDING_NOTE, roundingNoteFor, alternateNote, FOOD_LABEL };
 })();
 if (typeof module !== "undefined") module.exports = Nutrition;

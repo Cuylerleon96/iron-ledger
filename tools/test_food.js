@@ -345,7 +345,7 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
 
   /* dataset-wide: exactly the real duplicate rows collapse, and nothing else */
   const dedup = Food.dedupe(DB.foods);
-  eq('the rule merges exactly the 119 real duplicate rows (macro gate applied)', dedup.removed, 119);
+  eq('the rule merges exactly the 135 real duplicate rows (macro gate applied)', dedup.removed, 135);
   eq('...keeping every other row', dedup.list.length, DB.foods.length - dedup.removed);
   const groups = new Map();
   DB.foods.forEach((f) => { const k = Food.twinKey(f.name); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); });
@@ -357,8 +357,8 @@ console.log('\n--- (i) duplicate collapse (FNDDS vs SR Legacy) ---');
     for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++) if (Food.isTwin(v[i], v[j])) { twinPairs++; any = true; }
     if (!any) groupsHeldApart++;
   });
-  eq('exactly the 119 twin pairs are collapsible (energy AND macro vector)', twinPairs, 119);
-  eq('same-KEY groups with NO agreeing pair are held apart (energy or macro gates them)', groupsHeldApart, 38);
+  eq('exactly the 135 twin pairs are collapsible (energy, name rule, macro vector)', twinPairs, 135);
+  eq('same-KEY groups with NO agreeing pair are held apart (energy or macro gates them)', groupsHeldApart, 22);
   eq('the collapsed + kept rows account for every food', dedup.list.length + dedup.removed, DB.foods.length);
 
   /* the DATASET is never modified — a returned row is a copy, the record is not */
@@ -516,11 +516,13 @@ console.log('\n--- (k) plural twins (the -es plural + the implied raw state) ---
   ok('...and the dataset record itself is untouched',
     DB.foods.some((f) => f.code === radishS.code) && DB.foods.some((f) => f.code === radishF.code));
 
-  /* (6) the blast radius on the real dataset, under the TIGHTENED gate.
-     countPairs(twinKey,true) applies the FULL twin test (energy AND macro
-     vector); countPairs(nameKey,false) is the bare plural key with ENERGY-ONLY
-     agreement. Tightening the guard merges FEWER rows, not more: the macro gate
-     now holds the near-twins whose data genuinely differs apart. */
+  /* (6) the blast radius on the real dataset. countPairs(twinKey,true) applies the
+     FULL twin test (energy AND the name rule AND the macro vector);
+     countPairs(nameKey,false) is the bare plural key with ENERGY-ONLY agreement —
+     it does NOT drop the implied "raw" tail, so it cannot see the raw-state
+     duplicates the match key folds together. The match key therefore reaches the
+     135 mergeable pairs; the bare plural key sees 132. Both numbers are pinned so
+     a future change to either key is caught. */
   const countPairs = (keyFn, viaKey) => {
     const g = new Map();
     DB.foods.forEach((f) => { const k = keyFn(f.name); if (!g.has(k)) g.set(k, []); g.get(k).push(f); });
@@ -537,12 +539,12 @@ console.log('\n--- (k) plural twins (the -es plural + the implied raw state) ---
     });
     return n;
   };
-  eq('the match key under the tightened gate collapsible-pair count is 119',
-    countPairs(Food.twinKey, true), 119);
-  eq('...the bare key with energy-only agreement would touch 132 (13 MORE)',
+  eq('the match key under the full twin test collapsible-pair count is 135',
+    countPairs(Food.twinKey, true), 135);
+  eq('...the bare plural key (no raw-tail fold) with energy-only agreement sees 132',
     countPairs(Food.nameKey, false), 132);
-  eq('...so the tightened dataset-wide collapse is 119 rows, not 137',
-    Food.dedupe(DB.foods).removed, 119);
+  eq('...and the dataset-wide collapse is 135 rows',
+    Food.dedupe(DB.foods).removed, 135);
 
   /* (7) LOGGED HISTORY IS UNTOUCHED — the log snapshots its own macros */
   const ls = {};
@@ -684,6 +686,170 @@ console.log('\n--- (l) macro-vector gate (identity is more than calories) ---');
   eq('...and their own snapshotted protein (the wrong value is never shown)',
     KS.intakesOn(day).map((e) => e.macros.protein).sort((a, b) => a - b).join(','), '16.56,24.55');
   eq('the day total is the sum of the snapshots', KS.dayTotals(day).kcal, 563);
+}
+
+/* ---------- (m) THE NAME RULE, THE DISCLOSURE, AND THE DISTINGUISHABLE SPLIT ----
+   Three rules, measured on the shipped 13,225-food bundle:
+     (a) two rows with the SAME normalised name (case/punctuation is noise) ALWAYS
+         collapse, whatever their values — the user cannot tell them apart, so a
+         second row is pure noise;
+     (b) a near-twin whose NAME differs (a folded plural, or the implied "raw"
+         state) collapses ONLY when the macro vector agrees within 3 g / 15%; the
+         genuinely different products (lamb ground, veal ground — 7-8 g protein
+         apart) stay SPLIT;
+     (c) a material disagreement absorbed by (a) is DISCLOSED on the picked-food
+         card (Nutrition.alternateNote) rather than hidden, and a row that stays
+         split carries its protein per 100 g so the pick is not a coin-flip.
+   The blast radius: the collapse moves from 119 to 135 rows — the 16 former
+   duplicate pairs a user saw twice now show one row each, while lamb and veal
+   stay two, distinguishable rows. */
+console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable splits ---');
+{
+  /* the IDENTICAL-name key: loses case and punctuation, but NOT a plural */
+  eq('exactKey folds case ("Cheese, Parmesan, hard" == "Cheese, parmesan, hard")',
+    Food.exactKey('Cheese, Parmesan, hard'), Food.exactKey('Cheese, parmesan, hard'));
+  eq('exactKey folds punctuation/spacing', Food.exactKey('Cheese,parmesan,hard'), Food.exactKey('Cheese  parmesan  hard'));
+  ok('exactKey does NOT fold a plural ("Carrots" != "Carrot")',
+    Food.exactKey('Carrots') !== Food.exactKey('Carrot'), [Food.exactKey('Carrots'), Food.exactKey('Carrot')]);
+  eq('...though nameKey (the folded key) DOES fold it', Food.nameKey('Carrots'), Food.nameKey('Carrot'));
+
+  const spinS = DB.foods.find((f) => f.code === 168462);    // SR    "Spinach, raw" 23 kcal F0.39
+  const spinF = DB.foods.find((f) => f.code === 2709614);   // FNDDS "Spinach, raw" 27 kcal F0.62
+  const garlS = DB.foods.find((f) => f.code === 169230);    // SR    "Garlic, raw"
+  const garlF = DB.foods.find((f) => f.code === 2709786);   // FNDDS "Garlic, raw"
+  const parmS = DB.foods.find((f) => f.code === 170848);    // SR    protein 35.75
+  const parmF = DB.foods.find((f) => f.code === 2705730);   // FNDDS protein 29.87
+  const lambSr = DB.foods.find((f) => f.code === 174370);   // SR    "Lamb, ground, raw" P16.56
+  const lambFn = DB.foods.find((f) => f.code === 2705907);  // FNDDS "Lamb, ground"     P24.55
+  const vealSr = DB.foods.find((f) => f.code === 175290);   // SR    "Veal, ground, raw" P18.58
+  const vealFn = DB.foods.find((f) => f.code === 2705910);  // FNDDS "Veal, ground"     P25.62
+  const srBananaB = DB.foods.find((f) => f.code === 173944);
+  const fnddsBananaB = DB.foods.find((f) => f.code === 2709224);
+
+  /* (a) IDENTICAL names ALWAYS collapse — even when the values differ */
+  eq('the two "Spinach, raw" rows share a normalised name', Food.exactKey(spinS.name), Food.exactKey(spinF.name));
+  ok('...their figures DO differ (23 vs 27 kcal, fat 0.39 vs 0.62)',
+    spinS.per100.kcal !== spinF.per100.kcal && spinS.per100.fat !== spinF.per100.fat,
+    [spinS.per100.kcal, spinF.per100.kcal]);
+  ok('...yet they collapse (identical name = one row, whatever the values)', Food.isTwin(spinS, spinF),
+    [spinS.per100.kcal, spinF.per100.kcal]);
+  ok('the two "Garlic, raw" rows collapse too', Food.isTwin(garlS, garlF),
+    [garlS.per100.kcal, garlF.per100.kcal]);
+  ok('a case-only pair collapses even with a ~6 g protein gap (parmesan)',
+    Food.isTwin(parmS, parmF) && Math.abs(parmS.per100.protein - parmF.per100.protein) > 5,
+    [parmS.per100.protein, parmF.per100.protein]);
+
+  /* each is ONE row in the list, the twin kept as .alternates */
+  const spinRows = Food.search(DB, 'spinach, raw', 50).filter((f) => Food.twinKey(f.name) === Food.twinKey(spinS.name));
+  eq('searching the FULL name "spinach, raw" shows ONE row', spinRows.length, 1);
+  ok('...carrying the other "Spinach, raw" row as .alternates',
+    (spinRows[0].alternates || []).length === 1,
+    spinRows[0] && (spinRows[0].alternates || []).map((a) => a.code));
+  const garlRows = Food.search(DB, 'garlic, raw', 50).filter((f) => Food.twinKey(f.name) === Food.twinKey(garlS.name));
+  eq('searching "garlic, raw" shows ONE row', garlRows.length, 1);
+  eq('searching "spinach" shows the raw pair as ONE row',
+    Food.search(DB, 'spinach', 25).filter((f) => Food.twinKey(f.name) === 'spinach').length, 1);
+  eq('searching "garlic" shows the raw pair as ONE row',
+    Food.search(DB, 'garlic', 25).filter((f) => Food.twinKey(f.name) === 'garlic').length, 1);
+
+  /* (b) a NEAR-TWIN whose name DIFFERS with a material macro gap stays SPLIT */
+  ok('lamb "ground, raw" vs "ground" do NOT collapse (~8 g protein apart)',
+    !Food.isTwin(lambSr, lambFn), [lambSr.per100.protein, lambFn.per100.protein]);
+  ok('veal "ground, raw" vs "ground" do NOT collapse (~7 g apart)',
+    !Food.isTwin(vealSr, vealFn), [vealSr.per100.protein, vealFn.per100.protein]);
+  const lambRows = Food.search(DB, 'lamb, ground', 50).filter((f) => Food.twinKey(f.name) === 'lamb ground');
+  eq('searching "lamb, ground" shows TWO rows (still split)', lambRows.length, 2);
+  ok('both rows are marked .split so the UI can add the protein figure',
+    lambRows.every((f) => f.split === true), lambRows.map((f) => !!f.split));
+  ok('...and their protein figures DIFFER — the two rows are distinguishable',
+    lambRows.length === 2 && Math.abs(lambRows[0].per100.protein - lambRows[1].per100.protein) > 5,
+    lambRows.map((f) => f.per100.protein));
+  const vealRows = Food.search(DB, 'veal, ground', 50).filter((f) => Food.twinKey(f.name) === 'veal ground');
+  eq('searching "veal, ground" shows TWO rows', vealRows.length, 2);
+  ok('...also marked .split', vealRows.every((f) => f.split === true));
+  ok('a FULLY-collapsed row does NOT carry .split', !spinRows[0].split, spinRows[0].split);
+
+  /* the sixteen former duplicate pairs: ONE row each now, not two */
+  const SIXTEEN = ['Spinach, raw', 'Garlic, raw', 'Cheese, parmesan, hard', 'Cheese, Monterey',
+    'Cheese, Mexican blend', 'Cheese, Feta', 'Cheese, cottage, creamed, large or small curd',
+    'Bread, oat bran, toasted', 'Pancakes, whole wheat, dry mix, incomplete', 'Pancakes, plain, reduced fat',
+    'Strudel, apple', 'Candies, caramels', 'Rolls, pumpernickel', 'Bagels, multigrain',
+    'Bagels, whole grain white', 'Muffins, English, whole-wheat'];
+  let oneEach = 0;
+  SIXTEEN.forEach((nm) => {
+    const f = DB.foods.find((x) => x.name === nm);
+    if (!f) return;
+    if (Food.search(DB, nm, 50).filter((r) => Food.twinKey(r.name) === Food.twinKey(f.name)).length === 1) oneEach++;
+  });
+  eq('all 16 former duplicate pairs now show exactly ONE row each', oneEach, 16);
+
+  /* (c) INVARIANTS: nothing hidden, nothing unreachable, better row kept */
+  const keptSpin = spinRows[0];
+  ok('the absorbed twin is still reachable under its own name (row or alternate)',
+    Food.search(DB, spinF.name, 50).some((r) => r.code === spinF.code ||
+      (r.alternates || []).some((a) => a.code === spinF.code)),
+    Food.search(DB, spinF.name, 50).map((r) => r.code));
+  ok('all 16 names are still present in the untouched dataset',
+    SIXTEEN.every((nm) => DB.foods.some((f) => f.name === nm)));
+  const dmRow = Food.dedupe(DB.foods);
+  ok('a collapse keeps the better-measured row when no query names either',
+    (() => { const d = Food.dedupe([
+      { code: 91001, name: 'Yam', per100: { kcal: 100, protein: 5, fat: 2, carb: 3 }, measures: [] },
+      { code: 91002, name: 'Yams', per100: { kcal: 100, protein: 5, fat: 2, carb: 3 },
+        measures: [{ label: 'a', grams: 10 }, { label: 'b', grams: 20 }] }]);
+      return d.list.length === 1 && d.list[0].code === 91002; })(), dmRow.removed);
+
+  /* the card's disclosure: material gaps are stated, agreeing rows are silent */
+  const ls3 = {};
+  const c6 = { console, module: { exports: {} }, JSON, Math, Object, Array, Number, String,
+    Boolean, RegExp, Error, Promise, isFinite, parseFloat, parseInt, Map, Set, setTimeout, clearTimeout, Date,
+    localStorage: { getItem: (k) => (k in ls3 ? ls3[k] : null), setItem: (k, v) => { ls3[k] = String(v); }, removeItem: (k) => { delete ls3[k]; } } };
+  c6.globalThis = c6; vm.createContext(c6);
+  vm.runInContext(['js/food.js', 'js/nutrition.js', 'js/store.js']
+    .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n;\n')
+    + '\n;globalThis.__M={Food,Nutrition,Store};', c6, { filename: 'name-rule-bundle.js' });
+  const MN = c6.__M.Nutrition, MS = c6.__M.Store;
+  const cl3 = (o) => JSON.parse(JSON.stringify(o));
+
+  /* parmesan's absorbed source disagrees materially -> a line is returned */
+  const parmRow = Food.search(DB, 'cheese, parmesan, hard', 50).filter((f) => f.code === 170848 ||
+    (f.alternates || []).some((a) => a.code === 170848))[0];
+  const parmNote = MN.alternateNote(parmRow);
+  const parmOther = (parmRow.alternates || [])[0] || {};
+  ok('a material disagreement RENDERS a plain line naming the other source',
+    typeof parmNote === 'string' && /Another USDA source/.test(parmNote) && /protein/.test(parmNote),
+    parmNote);
+  ok('...naming BOTH figures (the other source\'s and this row\'s)',
+    parmNote.indexOf(String(parmOther.per100.protein)) >= 0 &&
+    parmNote.indexOf(String(parmRow.per100.protein)) >= 0, parmNote);
+  /* spinach's absorbed source differs only slightly -> nothing to say */
+  ok('NO line when the collapsed rows agree closely (spinach)',
+    MN.alternateNote(keptSpin) === null, MN.alternateNote(keptSpin));
+  /* the banana pair agrees within tolerance -> silent */
+  const banRow = Food.search(DB, 'banana', 50).find((f) => (f.alternates || []).some((a) => a.code === fnddsBananaB.code || a.code === srBananaB.code));
+  ok('NO line for the agreeing banana twin', MN.alternateNote(banRow) === null,
+    banRow && JSON.stringify(Food.materialDiffs(banRow, banRow.alternates[0])));
+  /* an explicitly agreeing fixture is silent; a differing one speaks */
+  ok('a synthetic alternate that AGREES yields no note',
+    MN.alternateNote({ name: 'X', per100: { kcal: 100, protein: 10 }, alternates: [{ name: 'X', per100: { kcal: 101, protein: 10.2 } }] }) === null);
+  ok('a synthetic alternate with a 5 g protein gap yields a note',
+    /protein 5 g/.test(String(MN.alternateNote({ name: 'X', per100: { kcal: 100, protein: 10 }, alternates: [{ name: 'X', per100: { kcal: 101, protein: 5 } }] }))));
+
+  /* (d) LOGGED HISTORY IS UNTOUCHED — a collapsed row is never lost from the log */
+  const d3 = new Date();
+  const day3 = d3.getFullYear() + '-' + String(d3.getMonth() + 1).padStart(2, '0') + '-' + String(d3.getDate()).padStart(2, '0');
+  MS.importJSON(JSON.stringify({ version: 1, createdAt: '2026-01-01T00:00:00.000Z',
+    profile: {}, workouts: [], bodylog: [], custom: [], achievements: {}, overrides: {}, targets: {}, settings: {} }), 'replace');
+  const spAlt = (keptSpin.alternates || [])[0];
+  MS.logIntake(MN.intakeEntry(cl3(keptSpin), 100));
+  MS.logIntake(MN.intakeEntry(cl3(spAlt), 100));
+  const logB3 = JSON.stringify(MS.intakesOn(day3));
+  Food.dedupe(DB.foods);
+  Food.search(DB, 'spinach', 25);
+  eq('the log is byte-identical after a re-dedupe + search', JSON.stringify(MS.intakesOn(day3)), logB3);
+  eq('both collapsed rows keep their OWN snapshotted kcal (23 and 27)',
+    MS.intakesOn(day3).map((e) => e.macros.kcal).sort((a, b) => a - b).join(','), '23,27');
+  eq('the day total is the sum of the snapshots (nothing lost to the collapse)', MS.dayTotals(day3).kcal, 50);
 }
 
 console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');

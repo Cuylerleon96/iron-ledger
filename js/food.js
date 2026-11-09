@@ -39,15 +39,23 @@ const Food = (() => {
              that close ("Kale, raw" 35 vs 43 kcal = 23% — deliberately NOT
              merged). Without (2) a pure name collision could hide a real food;
              AND
-         (3) their per-100 g MACRO VECTOR agrees — protein, fat, carb and (when
-             both sides state it) fibre — see the gate below. Without (3) two
-             DIFFERENT products whose energy merely coincides are folded into one
-             row and the loser's macros are silently hidden. THE TRADE-OFF:
-             (3) is deliberately strict, so near-twins whose data GENUINELY
-             differs stay as SEPARATE rows and a search can show two
-             similar-looking entries again. That is the correct outcome — two
-             honest rows, each with its own macros, beat one row hiding the
-             other. Do NOT loosen (3) to make a list look tidier.
+         (3) then the NAME decides how strict the macro test must be, because
+             the two rules a user cares about are "rows I cannot tell apart must
+             not both appear" and "a material difference must never be hidden":
+             (a) IDENTICAL names ("Spinach, raw" vs "Spinach, raw" — differing
+                 CASE or PUNCTUATION counts as identical, and a folded plural is
+                 NOT identical: "Carrots" != "Carrot") are the same food the user
+                 cannot tell apart, so they ALWAYS collapse, whatever their
+                 values. If the absorbed row's numbers differ MATERIALLY, the
+                 disagreement is DISCLOSED on the picked-food card (see
+                 materialDiffs below) instead of hidden.
+             (b) NEAR-TWINS whose names differ (a folded plural, or the implied
+                 "raw" state) collapse ONLY when their per-100 g MACRO VECTOR
+                 agrees within tolerance (protein, fat, carb, plus fibre when
+                 both sides state it — see the gate below). When it does not they
+                 stay as SEPARATE rows, and each such row then carries a
+                 distinguishing figure (protein per 100 g) so the choice is
+                 informed rather than a coin-flip on a 1 kcal difference.
 
      THE PLURAL CASE, and the one qualifier that comes with it. The trailing
      plural is normalised word by word (-s, -ies, -es after ch/sh/ss/x/z, -oes);
@@ -87,17 +95,39 @@ const Food = (() => {
      NOT identity: measured on the shipped kcal-only rule, "Lamb, ground, raw"
      (282 kcal, P 16.56, F 23.41) and "Lamb, ground" (281 kcal, P 24.55, F 19.49)
      merged — different products, ~8 g protein/100 g apart, and collapsing them
-     hid the other value. So a twin must also agree on protein, fat and carb
-     (fibre too when both sides state it). Tolerance per nutrient: <= 1 g OR
-     <= 15% of the smaller value — the same relative width as the energy gate,
-     and 1 g/100 g sits inside the spread between the two USDA databases for the
-     SAME food (banana: protein 0.74 vs 1.09 = 0.35 g; fibre 1.7 vs 2.6 = 0.9 g
-     — both still merge), while a different product is left apart (lamb: 8 g).
+     hid the other value. So a NAME-DIFFERING near-twin must also agree on
+     protein, fat and carb (fibre too when both sides state it).
+
+     THE WIDTH, measured on the shipped bundle rather than guessed. The 18 pairs
+     the old 1 g gate held apart split cleanly in two: ELEVEN have the SAME
+     normalised name (spinach, garlic, monterey, parmesan, mexican blend, feta,
+     cottage cheese, oat-bran bread, two pancake entries, strudel) — indisputably
+     one food, so they collapse under rule (a), tolerance irrelevant; SEVEN have
+     a name that differs by a plural or the implied raw state. Of those seven,
+     five agree to within 2.4 g on every shared nutrient (caramels' fat 2.4 g,
+     pumpernickel's protein 2.1 g, bagels' and muffins' fibre 2.1 g) — plainly the
+     same food sampled by two databases — while lamb (8.0 g protein apart) and
+     veal (7.0 g) are genuinely DIFFERENT products. A 3 g/100 g absolute term
+     therefore sits above the whole same-food spread and below the
+     different-product gap. RELATIVE width stays 15%, the same as the energy gate.
      ABSENT IS NOT ZERO: a nutrient present on ONE side only is a disagreement,
      not a zero, and blocks the merge; only a nutrient absent from BOTH is
      skipped. */
-  const MACRO_TOL_REL = 0.15, MACRO_TOL_ABS = 1;
+  const MACRO_TOL_REL = 0.15, MACRO_TOL_ABS = 3;
   const MACRO_KEYS = ["protein", "fat", "carb", "fibre"];
+
+  /* MATERIAL DIFFERENCE, for the disclosure on the picked-food card. When rule
+     (a) collapses two IDENTICAL names whatever their values, a large gap must
+     not vanish silently — the card says so. A gap counts as material when a
+     shared macro differs by MORE THAN 2 g/100 g AND by more than 10% of the
+     larger value, or energy differs by MORE THAN 20 kcal AND more than 10%.
+     Justification: on the indisputable identical-name twins the two databases
+     agree to within ~1.2 g on the small nutrients (spinach's carb 3.63 vs 2.41),
+     so 2 g is clear of sampling noise, while the real disagreements are far
+     larger (parmesan protein 35.75 vs 29.87 = 5.9 g; reduced-fat pancakes fat
+     1.9 vs 9.74 = 7.8 g). The 10% term stops a big absolute on a big base
+     (mexican blend's fat 32.14 vs 29.34 = 8.7%) being announced. */
+  const MATERIAL_TOL_ABS = 2, MATERIAL_TOL_REL = 0.10, MATERIAL_KCAL_ABS = 20;
 
   /* lower-case + strip punctuation + fold English plurals word by word.
      "Bananas, raw" and "Banana, raw" collapse to one key; "Radishes, raw" and
@@ -110,6 +140,13 @@ const Food = (() => {
             : w;
   const nameKey = (s) =>
     norm(s).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).map(singular).join(" ");
+
+  /* the IDENTICAL-name key: lower-cased and punctuation-stripped like nameKey
+     but WITHOUT the plural fold, so "Spinach, raw" == "Spinach, raw" (and
+     "Cheese, Parmesan, hard" == "Cheese, parmesan, hard": case is noise) while
+     "Carrots" != "Carrot" — a plural is a visible difference, so a plural twin
+     falls to the FOLDED key and its values must agree (rule (b)). */
+  const exactKey = (s) => norm(s).replace(/[^a-z0-9]+/g, " ").trim();
 
   /* the MATCH key: nameKey with ONE optional trailing state word removed. The
      list is closed at "raw" on purpose (see the rule above): FNDDS omits the
@@ -142,16 +179,37 @@ const Food = (() => {
       .filter((m) => m && m.label && isFinite(m.grams) && m.grams > 0).length;
   const nutrientCount = (f) => (f && f.per100) ? Object.keys(f.per100).length : 0;
 
-  /* the twin test: MATCH-KEY identity AND an agreeing energy figure AND an
-     agreeing macro vector. Two rows with no usable energy are NEVER merged
-     (nothing is guessed), and neither are rows that disagree on a macro. */
+  /* the twin test: MATCH-KEY identity AND an agreeing energy figure AND — for a
+     name that DIFFERS at all — an agreeing macro vector. Two rows with no usable
+     energy are NEVER merged (nothing is guessed). Two rows with the SAME
+     normalised name (rule (a)) collapse whatever their values, because the user
+     cannot tell them apart; a material gap between them is surfaced by
+     materialDiffs() on the card rather than swallowed. */
   const isTwin = (a, b) => {
     if (!a || !b || a === b) return false;
     if (twinKey(a.name) !== twinKey(b.name)) return false;
     const ka = kcalPer100(a), kb = kcalPer100(b);
     if (ka == null || kb == null) return false;
     if (Math.abs(ka - kb) > Math.max(KCAL_TOL_ABS, KCAL_TOL_REL * Math.min(ka, kb))) return false;
-    return macrosAgree(a, b);
+    if (exactKey(a.name) === exactKey(b.name)) return true;      // (a) identical name: always one row
+    return macrosAgree(a, b);                                    // (b) name differs: values must agree
+  };
+
+  /* Which shared nutrients differ MATERIALLY between a kept row and an absorbed
+     alternate — the disagreement the card must state in plain words. Returns one
+     entry per nutrient (and/or kcal) that crosses the materiality threshold
+     above; [] when the two rows agree closely enough to say nothing. Absent on
+     one side is not a difference to announce here (rule (b) already keeps such a
+     pair apart); it is skipped. */
+  const materialDiffs = (kept, alt) => {
+    const out = [];
+    const push = (key, a, b, absTol) => {
+      if (a == null || b == null) return;
+      if (Math.abs(a - b) > Math.max(absTol, MATERIAL_TOL_REL * Math.max(a, b))) out.push({ key, kept: a, alt: b });
+    };
+    MACRO_KEYS.forEach((k) => push(k, nutrientPer100(kept, k), nutrientPer100(alt, k), MATERIAL_TOL_ABS));
+    push("kcal", kcalPer100(kept), kcalPer100(alt), MATERIAL_KCAL_ABS);
+    return out;
   };
 
   /* which of two twins to KEEP (deterministic). */
@@ -170,8 +228,13 @@ const Food = (() => {
      number of rows dropped. `exactKey`, when supplied, is the normalised FULL name
      of the QUERY (nameKey, not twinKey): the row whose own name equals it is the
      one KEPT — so a full-name search shows the row it named instead of hiding the
-     twin, and it is never dropped. */
-  const dedupe = (list, exactKey) => {
+     twin, and it is never dropped.
+
+     A row that belongs to a key group the collapse could NOT fully merge — i.e.
+     a genuine near-twin that stayed split (lamb/veal) — comes back carrying
+     `.split = true`, so the UI can add the distinguishing protein figure to that
+     row. Rows in fully-collapsed groups do NOT carry it. */
+  const dedupe = (list, exactKeyArg) => {
     const rows = Array.isArray(list) ? list : [];
     const groups = new Map();
     for (let i = 0; i < rows.length; i++) {
@@ -181,6 +244,7 @@ const Food = (() => {
     }
     const drop = new Set();          // indices hidden
     const alts = new Map();          // kept index -> absorbed rows
+    const split = new Set();         // indices in a group that stayed split
     groups.forEach((idxs) => {
       if (idxs.length < 2) return;
       /* cluster inside the key group: only energy-agreeing rows are twins. */
@@ -192,13 +256,16 @@ const Food = (() => {
         }
         if (found) found.members.push(i); else clusters.push({ rep: i, members: [i] });
       });
+      /* more than one cluster = rows in this group did NOT all merge: the choice
+         between them is real, so each surviving row must be tellable apart. */
+      if (clusters.length > 1) clusters.forEach((c) => c.members.forEach((i) => split.add(i)));
       clusters.forEach((c) => {
         if (c.members.length < 2) return;
         /* the named row wins the row; otherwise the most useful one does. */
         let rep = null;
-        if (exactKey != null) {
+        if (exactKeyArg != null) {
           for (let j = 0; j < c.members.length; j++) {
-            if (nameKey(rows[c.members[j]].name) === exactKey) { rep = c.members[j]; break; }
+            if (nameKey(rows[c.members[j]].name) === exactKeyArg) { rep = c.members[j]; break; }
           }
         }
         if (rep == null) {
@@ -210,7 +277,6 @@ const Food = (() => {
         const absorbed = [];
         c.members.forEach((i) => {
           if (i === rep) return;
-          if (exactKey != null && nameKey(rows[i].name) === exactKey) return;   // full-name query keeps it
           drop.add(i); absorbed.push(rows[i]);
         });
         if (absorbed.length) alts.set(rep, (alts.get(rep) || []).concat(absorbed));
@@ -219,7 +285,12 @@ const Food = (() => {
     const out = [];
     for (let i = 0; i < rows.length; i++) {
       if (drop.has(i)) continue;
-      out.push(alts.has(i) ? Object.assign({}, rows[i], { alternates: alts.get(i) }) : rows[i]);
+      const extra = alts.get(i);
+      if (extra || split.has(i)) {
+        out.push(Object.assign({}, rows[i], split.has(i) ? { split: true } : {}, extra ? { alternates: extra } : {}));
+      } else {
+        out.push(rows[i]);
+      }
     }
     return { list: out, removed: drop.size };
   };
@@ -398,8 +469,9 @@ const Food = (() => {
     /* internals exposed for callers/tests */
     foodsOf, norm, round2,
     /* duplicate collapse (FNDDS vs SR Legacy) */
-    dedupe, nameKey, twinKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS, OPTIONAL_TAIL,
+    dedupe, nameKey, exactKey, twinKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS, OPTIONAL_TAIL,
     nutrientPer100, macrosAgree, MACRO_KEYS, MACRO_TOL_REL, MACRO_TOL_ABS,
+    materialDiffs, MATERIAL_TOL_ABS, MATERIAL_TOL_REL, MATERIAL_KCAL_ABS,
   };
 })();
 if (typeof module !== "undefined") module.exports = Food;

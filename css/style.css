@@ -811,4 +811,6 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 }
 .food-picked .card-head { margin-bottom: .45rem; }
 .food-preview-line { font-size: .7rem; color: var(--gold-l); text-shadow: var(--outline-sm); margin: .2rem 0 .1rem; }
+/* the absorbed-alternate disagreement: one plain line, not a warning colour */
+.food-note { font-size: .68rem; line-height: 1.35; color: var(--cream); text-shadow: var(--outline-sm); margin: .25rem 0 .1rem; }
 .food-list { margin: .3rem 0; }
