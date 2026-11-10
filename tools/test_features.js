@@ -349,6 +349,100 @@ console.log("=== muscle freshness ===");
   eq("a fresh install invents nothing", empty.E.freshness(empty.S.state).Chest.fresh, null);
 }
 
+console.log("=== weekly volume series, per muscle group (the dashboard's chart) ===");
+{
+  /* The chart draws one LINE per group across the user's weeks. The series must
+     still start at the FIRST logged week — never padding the front with
+     pre-history — and stay CONTIGUOUS; and now every week must carry a value for
+     EVERY group, a real ZERO when that group was not trained that week. A sparse
+     series would silently reintroduce the flat-line defect this chart exists to
+     fix, so the per-group shape is pinned here. */
+  const recent = env({});
+  recent.S.upsertWorkout({ id: "a", date: iso(3), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] });
+  recent.S.upsertWorkout({ id: "b", date: iso(0), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] });
+  const rs = recent.E.volumeSeriesByGroup(recent.S.state, 12);
+  eq("the series starts at the first logged week, not 12 slots of pre-history", rs.length, 1);
+  eq("...that one slot is the current week (weeksAgo 0)", rs[0].weeksAgo, 0);
+  truthy("...it carries the session", rs[0].sessions > 0);
+  truthy("...and its own start date, for the week label", /^\d{4}-\d{2}-\d{2}$/.test(rs[0].from));
+  eq("...EVERY group appears in the week, even with no work for it",
+     Object.keys(rs[0].groups).sort(), recent.E.GROUP_ORDER.slice().sort());
+  eq("...a group with no work reads ZERO, never a missing point",
+     recent.E.GROUP_ORDER.filter((g) => !["Chest", "Shoulders", "Arms"].includes(g)).map((g) => rs[0].groups[g].sets),
+     [0, 0, 0, 0]);
+  eq("...and attribution matches the balance card (primary full, secondary half)",
+     [rs[0].groups.Chest.sets, rs[0].groups.Shoulders.sets, rs[0].groups.Arms.sets], [2, 1, 1]);
+
+  const gap = env({});
+  [0, 2, 4].forEach((k) => gap.S.upsertWorkout({ id: "g" + k, date: iso(k * 7), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] }));
+  const gs = gap.E.volumeSeriesByGroup(gap.S.state, 12);
+  eq("every week from the first to the latest is present, in order", gs.map((r) => r.weeksAgo), [4, 3, 2, 1, 0]);
+  eq("...the missed weeks are present but empty (contiguous, never sparse)", gs.filter((r) => r.sessions === 0).map((r) => r.weeksAgo), [3, 1]);
+  const wk = gs.map((r) => r.weeksAgo);
+  eq("...no week appears twice", new Set(wk).size, wk.length);
+  truthy("...consecutive weeks differ by exactly one", wk.every((v, i) => i === 0 || wk[i - 1] - v === 1));
+  const missed = gs.filter((r) => r.sessions === 0);
+  truthy("...a missed week puts EVERY group line on the floor (zero, not skipped)",
+     missed.every((r) => gap.E.GROUP_ORDER.every((g) => r.groups[g].sets === 0 && r.groups[g].tonnage === 0 && r.groups[g].reps === 0)));
+  truthy("...one point per group per week, every week",
+     gs.every((r) => Object.keys(r.groups).length === gap.E.GROUP_ORDER.length
+       && gap.E.GROUP_ORDER.every((g) => typeof r.groups[g].sets === "number" && typeof r.groups[g].tonnage === "number")));
+
+  const old = env({});
+  old.S.upsertWorkout({ id: "o", date: iso(200), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] });
+  eq("a first session older than 12 weeks still shows the full 12-week span", old.E.volumeSeriesByGroup(old.S.state, 12).length, 12);
+  eq("an empty account draws no weeks rather than a row of misses", env({}).E.volumeSeriesByGroup(env({}).S.state, 12).length, 0);
+
+  /* The card really draws the trend through Chart.multi (which the rest of the
+     app already uses), one series per group — and the removed weekly-bars helper
+     is gone rather than left as dead code. */
+  const chartSrc = fs.readFileSync(path.join(B, "js", "chart.js"), "utf8");
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  eq("the dead weekly-bars helper is gone from chart.js", /weekbars/.test(chartSrc), false);
+  eq("...and nothing calls it", /Chart\.weekbars/.test(appSrc), false);
+  truthy("the card feeds Chart.multi one series per muscle group",
+    /const series = Engine\.GROUP_ORDER\.map/.test(appSrc) && /Chart\.multi\(ch, \{/.test(appSrc));
+}
+
+console.log("=== recovery suggestion (where to start) ===");
+{
+  /* Read off the SAME freshness numbers the chips show, worded as RECENCY (never
+     recovery), naming only groups with logged history, and honest when there is
+     nothing true to say. */
+  const e = env({});
+  const fresh = {
+    Chest: { fresh: null, days: null, last: null },
+    Back: { fresh: null, days: null, last: null },
+    Shoulders: { days: 2, fresh: 67, last: iso(2) },
+    Arms: { days: 2, fresh: 67, last: iso(2) },
+    Legs: { days: 4, fresh: 100, last: iso(4) },
+    Calves: { fresh: null, days: null, last: null },
+    Core: { days: 0, fresh: 0, last: iso(0) },
+  };
+  const h = e.E.recoveryHint(e.S.state, fresh);
+  eq("the most-rested groups lead, most-rested first", h.groups, ["Legs", "Shoulders", "Arms"]);
+  eq("the copy names exactly those groups", h.text, "Legs, Shoulders and Arms have rested longest — a good place to start.");
+  truthy("it is worded as recency, never as recovery", /rested longest/.test(h.text) && !/recover/i.test(h.text));
+  eq("a group with NO logged history is never suggested", /Chest|Back|Calves/.test(h.text), false);
+  eq("a group trained today is not suggested", /Core/.test(h.text), false);
+  eq("every suggested group's days match the chip number beside it", h.days, [4, 2, 2]);
+
+  const one = e.E.recoveryHint(e.S.state, {
+    Chest: { days: 5, fresh: 100, last: iso(5) }, Back: { fresh: null, days: null },
+    Shoulders: { days: 1, fresh: 33, last: iso(1) }, Arms: { fresh: null, days: null },
+    Legs: { fresh: null, days: null }, Calves: { fresh: null, days: null }, Core: { fresh: null, days: null },
+  });
+  eq("one rested group reads in the singular", one.text, "Chest has rested longest — a good place to start.");
+
+  const empty = e.E.recoveryHint(e.S.state);
+  truthy("a fresh install says so rather than inventing a suggestion",
+    /Log a few sessions/.test(empty.text) && empty.groups.length === 0);
+  const allToday = {};
+  e.E.GROUP_ORDER.forEach((g) => { allToday[g] = { days: 0, fresh: 0, last: iso(0) }; });
+  truthy("trained-today everywhere says so rather than pointing at nothing",
+    /trained recently/.test(e.E.recoveryHint(e.S.state, allToday).text));
+}
+
 console.log("=== the 'Load my 7 Nov session' seed button is reachable ===");
 {
   const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");

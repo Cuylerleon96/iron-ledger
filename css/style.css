@@ -392,6 +392,16 @@ main > * { min-width: 0; }
 /* ---------------- charts ---------------- */
 .chart-host { width: 100%; margin-top: .5rem; }
 .linechart { width: 100%; height: auto; display: block; }
+/* the per-muscle-group weekly trend's x axis: one label per week (its own start
+   date), so every week is identifiable. A week with NOTHING logged gets a muted
+   label and a neutral wash behind its column — ordinary, so no red, no warning. */
+.wk-xlab { font-family: var(--px); font-size: 15px; fill: #cfe8e0; paint-order: stroke; stroke: #06201d; stroke-width: 3px; }
+.wk-xlab.muted { fill: #8ea6bb; }
+/* the legend keying the seven group lines: a compact list that wraps to as many
+   rows as the 412 px card needs. */
+.vol-legend { display: flex; flex-wrap: wrap; gap: .12rem .55rem; margin: .45rem 0 .15rem; }
+.vol-legend .lg { display: inline-flex; align-items: center; gap: .28rem; font-size: .58rem; color: var(--cream); text-shadow: var(--outline-sm); }
+.vol-legend .lg-line { width: 12px; height: 3px; border-radius: 2px; box-shadow: 0 0 0 1px var(--ink); }
 .lc-ylab { font-family: var(--px); font-size: 10px; fill: #cfe8e0; }
 .empty-chart { color: var(--cream-dim); font-size: .7rem; padding: 1rem; text-align: center; }
 
@@ -615,6 +625,12 @@ input[type="date"]:not(.inp) { background: var(--cream); color: var(--ink); bord
 .deload { font-size: .64rem; line-height: 1.5; margin: .45rem 0 .15rem; }
 .deload.warn { color: #ffd166; }
 .deload.ok   { color: #b8e0c0; }
+
+/* The actionable read on the freshness chips: which groups have rested longest,
+   so the natural place to start. Built from the same numbers the chips show, and
+   neutral by design — a long break is ordinary, so it never wears a warning
+   colour or a nagging tone. */
+.recover-hint { font-size: .66rem; line-height: 1.5; margin: .1rem 0 .3rem; color: #cfe8e0; }
 
 .target-line { font-size: .64rem; margin: .3rem 0 .15rem; line-height: 1.5; }
 /* the one-line scoring note, set right where the target is set */

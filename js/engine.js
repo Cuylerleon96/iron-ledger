@@ -1312,6 +1312,51 @@ const Engine = (() => {
     return out;
   }
 
+  /* The weekly windows AS THE DASHBOARD DRAWS THEM: the same volumeWeeks windows,
+     TRIMMED to the user's own history and SPLIT BY MUSCLE GROUP. The oldest slot
+     kept is the window that can hold their EARLIEST session, so the weeks before
+     they started are never drawn — those are pre-history, not misses, and eleven
+     of them made a one-week-old account look broken. Every slot AFTER that point
+     is kept, empty or not: the series is CONTIGUOUS (weeksAgo steps by exactly 1)
+     and each week appears exactly once. That is what lets the chart put EVERY
+     line on the floor for a week nobody logged instead of silently closing the
+     gap. An account with no sessions returns [].
+
+     Group attribution follows muscleGroups EXACTLY (the primary group takes full
+     credit, any secondary group half), so a group's weekly number here is the
+     same number the balance card shows. A group with no work that week is a real
+     ZERO, never a missing point — a sparse series would quietly reintroduce the
+     flat-line defect. */
+  function volumeSeriesByGroup(state, maxWeeks = 12) {
+    const dates = (state.workouts || []).map((w) => w.date).filter(Boolean).sort();
+    if (!dates.length) return [];
+    /* Which 7-day window holds the earliest session. windowWorkouts tiles the
+       timeline half-open from local noon, so that index is the number of whole
+       weeks back to the day; clamped to the last slot we can draw. */
+    const days = daysBetween(dates[0], dstr(Date.now()));
+    const first = Math.max(0, Math.min(maxWeeks - 1, Math.ceil((days - 6) / 7)));
+    const out = [];
+    for (let i = first; i >= 0; i--) {
+      const ws = windowWorkouts(state, 7, i * 7);
+      const groups = {};
+      for (const g of GROUP_ORDER) groups[g] = { sets: 0, tonnage: 0, reps: 0 };
+      for (const w of ws) for (const en of w.entries || []) {
+        const st = entryStats(en);
+        if (!st.sets) continue;
+        const gs = entryGroups(state, en).filter((g) => GROUP_ORDER.includes(g));
+        gs.forEach((g, gi) => {
+          const share = gi === 0 ? 1 : 0.5;
+          groups[g].sets += st.sets * share;
+          groups[g].tonnage += st.tonnage * share;
+          groups[g].reps += st.reps * share;
+        });
+      }
+      out.push({ weeksAgo: i, sessions: ws.length, groups,
+                 from: dstr(Date.now() - (i * 7 + 6) * DAY) });
+    }
+    return out;
+  }
+
   /* Autoregulation read. Only two things count as evidence, both from logged
      data, and both are stated as the shape of accumulating fatigue rather than a
      verdict: effort climbing while output stalls, or sustained volume at the top
@@ -1573,6 +1618,38 @@ const Engine = (() => {
       };
     }
     return out;
+  }
+
+  /* Where to start next, read off the SAME recency the chips show: days since
+     each group was last trained, against the 72-hour window. It is RECENCY, not
+     a claim about physiological recovery — the words say "rested", never
+     "recovered". Two rules keep it honest:
+       - only groups with LOGGED history are named. A group never trained is not
+         "rested", it is unknown, and suggesting it would invent data;
+       - the named groups are a genuine TOP SET: every group left out has fewer
+         days than every group named (the set is extended through any tie at the
+         cutoff), so "rested longest" is literally true beside the chip numbers.
+     A group counts as rested once its last session is at least `minDays` back —
+     the point past which the card's own chip stops calling it "worked". With
+     nothing honest to say it says so rather than guessing. */
+  function recoveryHint(state, fresh, opts = {}) {
+    const minDays = opts.minDays != null ? opts.minDays : 2;
+    const f = fresh || freshness(state);
+    const withData = GROUP_ORDER.filter((g) => f[g] && f[g].days != null);
+    const ranked = withData.slice().sort((a, b) => f[b].days - f[a].days || GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b));
+    const rested = ranked.filter((g) => f[g].days >= minDays);
+    if (!rested.length) {
+      return { groups: [], days: [],
+        text: withData.length
+          ? "Every group with history has been trained recently — nothing has had a long break yet."
+          : "Log a few sessions and this will show which groups have had the longest break." };
+    }
+    const cutoff = rested[Math.min(3, rested.length) - 1];
+    const named = rested.filter((g) => f[g].days >= f[cutoff].days);
+    const list = named.length === 1 ? named[0]
+      : named.slice(0, -1).join(", ") + " and " + named[named.length - 1];
+    return { groups: named, days: named.map((g) => Math.round(f[g].days)),
+      text: `${list} ${named.length === 1 ? "has" : "have"} rested longest — a good place to start.` };
   }
 
   /* ---------- muscle-group balance (radar 2 + weak points) ---------- */
@@ -2768,8 +2845,8 @@ const Engine = (() => {
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
     nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
     BW_FACTOR, BW_NAME, SUPPLIES_LOAD, hasBwFactor,
-    attributeHistory, volumeWeeks, deloadCheck, targetProgress,
-    exportNoteShorthand, exportNotesShorthand, filterSessions, dayMap, freshness, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
+    attributeHistory, volumeWeeks, volumeSeriesByGroup, deloadCheck, targetProgress,
+    exportNoteShorthand, exportNotesShorthand, filterSessions, dayMap, freshness, recoveryHint, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,
     MEASURES, bodyMeasureSeries, bodyMeasureLatest,
   };
 })();

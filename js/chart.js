@@ -151,26 +151,65 @@ const Chart = (() => {
   /* Several series on SHARED fixed axes. The attribute history must be read
      against one 0-100 scale: auto-fitting each line separately would make a flat
      stat look like a dramatic climb, which is exactly the lie a progress chart
-     must not tell. */
+     must not tell.
+
+     The same helper draws the dashboard's per-muscle-group weekly trend, which
+     is why it can be given an explicit set of X TICKS (`xTicks`): a week is a
+     SLOT, not a point, so the axis has to be built from the weeks themselves —
+     including the weeks nobody logged, which must still draw a labelled column
+     (with every line on the floor) rather than quietly closing the gap. A tick
+     flagged `missed` gets a calm neutral wash behind its column and a muted
+     label, so an empty week is COUNTABLE without wearing a warning colour. */
+  const niceCeil = (v) => {
+    const step = Math.pow(10, Math.floor(Math.log10(Math.max(1, v))));
+    return Math.ceil(v / step) * step;
+  };
   function multi(host, opts) {
-    const { series = [], height = 190, fixedMax = 100, unit = "" } = opts;
+    const { series = [], height = 190, fixedMax = 100, unit = "",
+            xTicks = null, minPoints = 2, niceTop = false, padBottom = 24, label = "" } = opts;
     host.innerHTML = "";
-    const usable = series.filter((s) => (s.points || []).length >= 2);
+    const usable = series.filter((s) => (s.points || []).length >= minPoints);
     if (!usable.length) {
       host.innerHTML = `<div class="empty-chart">Not enough history yet — this fills in as you log.</div>`;
       return;
     }
-    const W = 640, H = height, P = { l: 40, r: 12, t: 12, b: 24 };
+    const W = 640, H = height, P = { l: 40, r: 12, t: 12, b: padBottom };
+    const base = H - P.b, plotL = P.l, plotR = W - P.r;
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "linechart", preserveAspectRatio: "none" });
-    const allX = usable.reduce((a, s) => a.concat(s.points.map((p) => new Date(p.x).getTime())), []);
-    const x0 = Math.min(...allX), x1 = Math.max(...allX) || x0 + 1;
-    const hi = Math.max(1, fixedMax || Math.max(...usable.reduce((a, s) => a.concat(s.points.map((p) => p.y)), [1])));
-    const sx = (v) => P.l + ((v - x0) / (x1 - x0 || 1)) * (W - P.l - P.r);
-    const sy = (v) => H - P.b - (Math.max(0, Math.min(hi, v)) / hi) * (H - P.t - P.b);
+    // X domain: the caller's ticks when named (so EVERY week gets its column),
+    // otherwise the points themselves, as before.
+    let x0, x1;
+    if (xTicks && xTicks.length) {
+      const tx = xTicks.map((t) => new Date(t.x).getTime());
+      x0 = Math.min(...tx); x1 = Math.max(...tx);
+      if (x1 === x0) { const half = 3.5 * 86400000; x0 -= half; x1 += half; }  // one week: centre it
+    } else {
+      const allX = usable.reduce((a, s) => a.concat(s.points.map((p) => new Date(p.x).getTime())), []);
+      x0 = Math.min(...allX); x1 = Math.max(...allX) || x0 + 1;
+    }
+    let hi = fixedMax || Math.max(...usable.reduce((a, s) => a.concat(s.points.map((p) => p.y)), [1]));
+    if (niceTop && !fixedMax) hi = niceCeil(hi);
+    hi = Math.max(1, hi);
+    const sx = (v) => plotL + ((v - x0) / (x1 - x0 || 1)) * (plotR - plotL);
+    const sy = (v) => base - (Math.max(0, Math.min(hi, v)) / hi) * (base - P.t);
+
+    // week columns sit BEHIND everything; an empty week is ordinary, so it is a
+    // neutral wash with no red and no warning tone.
+    if (xTicks && xTicks.length) {
+      const gap = xTicks.length > 1 ? Math.abs(sx(new Date(xTicks[1].x).getTime()) - sx(new Date(xTicks[0].x).getTime())) : (plotR - plotL);
+      const half = gap / 2;
+      xTicks.forEach((t) => {
+        if (!t.missed) return;
+        const cx = sx(new Date(t.x).getTime());
+        const bx = Math.max(plotL, cx - half), bw = Math.min(plotR, cx + half) - bx;
+        svg.append(el("rect", { x: bx, y: P.t, width: Math.max(0, bw), height: base - P.t,
+          fill: "#ffffff", "fill-opacity": ".07", class: "wk-band" }));
+      });
+    }
 
     for (let i = 0; i <= 4; i++) {
       const v = (hi * i) / 4, y = sy(v);
-      svg.append(el("line", { x1: P.l, y1: y, x2: W - P.r, y2: y, stroke: "#ffffff", "stroke-opacity": ".22", "stroke-width": 1, "stroke-dasharray": "4 5" }));
+      svg.append(el("line", { x1: plotL, y1: y, x2: plotR, y2: y, stroke: "#ffffff", "stroke-opacity": ".22", "stroke-width": 1, "stroke-dasharray": "4 5" }));
       const t = el("text", { x: P.l - 6, y: y + 3.5, "text-anchor": "end", class: "lc-ylab" });
       t.textContent = Math.round(v); svg.append(t);
     }
@@ -183,6 +222,17 @@ const Chart = (() => {
         c.append(t); svg.append(c);
       });
     }
+    // x labels LAST so they sit above the plot; the outermost ones anchor inward
+    // rather than overflowing the card.
+    if (xTicks && xTicks.length) {
+      xTicks.forEach((t) => {
+        const cx = sx(new Date(t.x).getTime());
+        const anchor = cx <= plotL + 12 ? "start" : cx >= plotR - 12 ? "end" : "middle";
+        const tx = el("text", { x: cx, y: base + 16, "text-anchor": anchor, class: "wk-xlab" + (t.missed ? " muted" : "") });
+        tx.textContent = t.label; svg.append(tx);
+      });
+    }
+    if (label) svg.setAttribute("aria-label", label);
     host.append(svg);
   }
 

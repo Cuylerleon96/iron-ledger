@@ -798,7 +798,7 @@
      The deload line only speaks when the logged effort actually says something —
      an app that shouts "deload" every other week teaches you to ignore it. */
   function dashVolume(host) {
-    const weeks = Engine.volumeWeeks(S, 12);
+    const weeks = Engine.volumeSeriesByGroup(S, 12);
     const del = Engine.deloadCheck(S);
     const fresh = Engine.freshness(S);
     const card = el("section", { class: "card" });
@@ -811,6 +811,19 @@
       </div>`;
     const ch = el("div", { class: "chart-host" });
     card.append(ch);
+    /* Seven groups, seven lines: a colour each, taken from the palette the app
+       already uses everywhere else rather than an invented set that would clash
+       with the screen. The legend is a real list, so it wraps to as many rows as
+       412 px needs and stays readable (and tappable-free — it is a key, not a
+       control). */
+    const GROUP_COLOR = {
+      Chest: "#f8d030", Back: "#58c8f8", Shoulders: "#a8e878", Arms: "#f8a038",
+      Legs: "#c792ea", Calves: "#8ad8c0", Core: "#ff9080",
+    };
+    const legend = el("div", { class: "vol-legend", role: "list", "aria-label": "Muscle groups" });
+    Engine.GROUP_ORDER.forEach((g) => legend.append(el("span", { class: "lg", role: "listitem" },
+      `<i class="lg-line" style="background:${GROUP_COLOR[g]}"></i>${esc(g)}`)));
+    card.append(legend);
     card.append(el("p", { class: "deload " + (del.suggest ? "warn" : "ok") },
       (del.suggest ? `<b>Consider a lighter week.</b> ${esc(del.why)} ${esc(del.fix || "")}` : esc(del.why))
       + ` ${term("deload", "what is a deload?")}`));
@@ -825,26 +838,48 @@
         `${esc(g)} <b>${txt}</b>`));
     });
     card.append(fr);
+    /* The actionable half of the recency read: which groups have gone longest
+       since they were trained, so they are the natural place to start. Built
+       from the SAME freshness numbers the chips show, so the words and the
+       numbers cannot disagree; never a group with no logged history, and never
+       worded as a recovery verdict. */
+    card.append(el("p", { class: "recover-hint" }, esc(Engine.recoveryHint(S, fresh).text)));
     card.append(el("p", { class: "muted small" }, term("freshness", "Days since each group was last trained") + " — recency, not a measurement of recovery."));
     host.append(card);
 
-    /* Volume, tonnage and reps are ALL already computed per week by
-       Engine.volumeWeeks — this only chooses which of those columns to plot.
-       There is no second tonnage calculation here; it is the same load × reps
-       the engine (and the PR/strength paths) already use. Tonnage is stored in
-       kg, so it is shown through U.w() like every other weight. */
+    /* Volume, tonnage and reps are ALL already computed per week and per group by
+       Engine.volumeSeriesByGroup — this only chooses which of those columns to
+       plot. There is no second tonnage calculation here; it is the same load ×
+       reps the engine (and the PR/strength paths) already use. Tonnage is stored
+       in kg, so it is shown through U.w() like every other weight. */
     const METRICS = {
-      sets:    { term: "volume",  color: "#f8d030", label: () => " sets",        cap: () => "sets per week, last 12 weeks" },
-      tonnage: { term: "tonnage", color: "#58c8f8", label: () => " " + U.label(), cap: () => `tonnage per week (${U.label()}), last 12 weeks` },
-      reps:    { term: "reps",    color: "#a8e878", label: () => " reps",        cap: () => "reps per week, last 12 weeks" },
+      sets:    { term: "volume",  label: () => " sets",        cap: () => "sets per week" },
+      tonnage: { term: "tonnage", label: () => " " + U.label(), cap: () => `tonnage per week (${U.label()})` },
+      reps:    { term: "reps",    label: () => " reps",        cap: () => "reps per week" },
     };
+    // the slot's own start date, compact enough for 12 slots at 412 px
+    const wlabel = (iso) => { const p = String(iso).split("-"); return (+p[1]) + "/" + (+p[2]); };
     const draw = (met) => {
       const m = METRICS[met];
-      const cap = $("#vol-cap", card); if (cap) cap.innerHTML = term(m.term, m.cap());
-      Chart.line(ch, {
-        fillArea: true, color: m.color, unit: m.label(),
-        points: weeks.map((w) => ({ x: Engine.dstr(Date.now() - w.weeksAgo * 7 * 86400000),
-                                    y: met === "tonnage" ? U.w(w.tonnage) : w[met] })),
+      const cap = $("#vol-cap", card);
+      if (cap) cap.innerHTML = term(m.term, m.cap())
+        + (weeks.length ? ` · ${weeks.length === 1 ? "your first week" : `last ${weeks.length} weeks`}` : "");
+      /* One tick per week — including the weeks nobody logged. A missed week is
+         flagged so the chart can mark its column and mute its label instead of
+         quietly closing the gap. */
+      const ticks = weeks.map((w) => ({ x: w.from, label: wlabel(w.from), missed: w.sessions === 0 }));
+      /* One LINE per muscle group, every group carrying a point for EVERY week —
+         a zero when that group was not trained that week, never a skipped point. */
+      const series = Engine.GROUP_ORDER.map((g) => ({
+        label: g, color: GROUP_COLOR[g],
+        points: weeks.map((w) => ({ x: w.from,
+          y: met === "tonnage" ? U.w(w.groups[g].tonnage) : w.groups[g][met] })),
+      }));
+      Chart.multi(ch, {
+        series, xTicks: ticks, minPoints: 1,
+        fixedMax: 0, niceTop: true, padBottom: 30, height: 300,
+        unit: m.label(),
+        label: `${m.cap()} — one line per muscle group across ${weeks.length} week${weeks.length === 1 ? "" : "s"}`,
       });
     };
     const seg = $("#vol-seg", card);
