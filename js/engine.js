@@ -2116,7 +2116,7 @@ const Engine = (() => {
   const FIXES = {
     STR: "Anchor one heavy compound per session in the 3–6 rep range and add load weekly.",
     END: "Add 20–30 min of easy cardio twice a week and finish a lift with one high-rep back-off set.",
-    POW: "Add jumps, throws or a power clean at the start of a session. 3-8 sets of 3-5 reps.",
+    POW: "Add jumps, throws or a power clean at the start of a session. 3-5 sets of 3-5 reps.",
     MOB: "Book 10 minutes of stretching or mobility after each session.",
     CON: "Set a fixed weekly target and schedule the sessions — consistency is the multiplier.",
     VIT: "Log bodyweight weekly and hold a small, steady deficit or surplus toward your goal.",

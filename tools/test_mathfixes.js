@@ -3091,13 +3091,20 @@ console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
   eq("a 5-rep set at a real load COUNTS (the threshold is inclusive at 5)", heavySetsFor(5), 1);
   eq("a 6-rep set does NOT count (5 is the top of the range)", heavySetsFor(6), 0);
   eq("a loadless 5-rep set does NOT count (a real load is required)", heavySetsFor(0), 0);
-  /* The advice string must name a rep target INSIDE the rule that scores it:
-     parse the rep range out of the copy and assert its TOP is within <= 5. */
+  /* The advice string states TWO ranges — a SET count and a REP range — and BOTH
+     must be pinned. The rep TOP must sit inside the rule that scores it (<= 5);
+     the SET count must be the app's own 3-5. The SET pin is not decoration: the
+     v1.3.16 set-count misread rode through this very assertion, because the old
+     test only parsed the rep half of the sentence — the rep top was still 5, so
+     an invented SET count passed unnoticed. Both halves are now read. */
   const powAdvice = e.E.FIXES.POW;
   const repRange = powAdvice.match(/(\d+)\s*-\s*(\d+)\s*reps/);
+  const setRange = powAdvice.match(/(\d+)\s*-\s*(\d+)\s*sets/);
   truthy("the Power advice names a rep range", !!repRange);
   eq("...whose TOP sits inside the heavy-set rule (<= 5)", Number(repRange[2]) <= 5, true);
   eq("...whose range is well-formed (bottom <= top)", Number(repRange[1]) >= 1 && Number(repRange[1]) <= Number(repRange[2]), true);
+  truthy("the Power advice names a set count", !!setRange);
+  eq("...whose SET count is the app's own 3-5, not an invented number", [Number(setRange[1]), Number(setRange[2])], [3, 5]);
 
   /* (f) MUSCLE MAPPING — a group a movement plainly trains, which was absent. */
   truthy("Thruster trains the Legs (the group was missing)", lib(650).g.includes("Legs"));
