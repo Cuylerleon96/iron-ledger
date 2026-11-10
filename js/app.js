@@ -19,28 +19,24 @@
   const fmtRest = (sec) => { const s = Math.round(sec); return s < 60 ? s + "s" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
   /* mm:ss for the timed-set hold timer — a plank reads "1:05", not "65". */
   const fmtClock = (sec) => { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
-  /* A SHORT, SOFT two-note blip when a hold reaches its length. Web Audio needs
-     NO manifest permission (unlike vibration, which would need
-     android.permission.VIBRATE — deliberately skipped for that reason).
-     Deliberately gentle: two brief sine notes with a rounded attack/decay and a
-     LOW peak gain, played ONCE — no alarm, no buzz, never repeating. Guarded so
-     the test stubs, and any browser without audio, simply stay silent and never
-     break logging. */
-  function holdChime() {
+  /* A SHORT, SOFT two-note blip via Web Audio. Web Audio needs NO manifest
+     permission (unlike vibration, which would need android.permission.VIBRATE —
+     deliberately skipped for that reason). Deliberately gentle: two brief sine
+     notes with a rounded attack/decay and a LOW peak gain, played ONCE — no
+     alarm, no buzz, never repeating. Guarded so the test stubs, and any browser
+     without audio, simply stay silent and never break logging. */
+  function softChime(notes, peak) {
     try {
       const Ctx = (typeof window !== "undefined" && window) ? (window.AudioContext || window.webkitAudioContext) : null;
       if (!Ctx) return;
       const ctx = new Ctx();
       const t0 = ctx.currentTime;
-      /* a calm rise — G5 then C6, ~0.11 s each, 0.12 s apart — one gentle "done" */
-      const NOTES = [[784.0, 0], [1046.5, 0.12]];
-      const PEAK = 0.035;                               // quiet: well under the old flat 0.05
-      NOTES.forEach(([freq, at]) => {
+      notes.forEach(([freq, at]) => {
         const osc = ctx.createOscillator(), gain = ctx.createGain();
         osc.type = "sine"; osc.frequency.value = freq;
         const s = t0 + at, e = s + 0.11;
         gain.gain.setValueAtTime(0.0001, s);
-        gain.gain.exponentialRampToValueAtTime(PEAK, s + 0.02);   // soft attack, no click
+        gain.gain.exponentialRampToValueAtTime(peak, s + 0.02);   // soft attack, no click
         gain.gain.exponentialRampToValueAtTime(0.0001, e);        // smooth decay
         osc.connect(gain); gain.connect(ctx.destination);
         osc.start(s); osc.stop(e + 0.02);
@@ -49,6 +45,14 @@
       setTimeout(() => { try { ctx.close(); } catch (e) { /* done */ } }, 600);
     } catch (e) { /* the chime is optional — never let it interfere with logging */ }
   }
+  /* A calm rise — G5 then C6, ~0.11 s each, 0.12 s apart — the "hold reached its
+     length" cue. The peak is quiet: well under the old flat 0.05. */
+  function holdChime() { softChime([[784.0, 0], [1046.5, 0.12]], 0.035); }
+  /* The badge-get's audible counterpart (it had a visual celebration but NO
+     sound). Lower and warmer than the hold cue — E5 then A5, 0.13 s apart — and
+     played ONCE per unlock event; still a soft blip, never a harsh beep and
+     never repeating. Same optional, permission-free Web Audio path. */
+  function badgeChime() { softChime([[659.25, 0], [880.0, 0.13]], 0.03); }
   /* The LAST length the user actually set for a timed exercise — remembered in
      local (UI) storage only, so a length carries over between sessions without
      ever rewriting the exercise's saved TARGET (state.targets is a different
@@ -1548,6 +1552,11 @@
     try {
       if (!events || !events.length) return;
       const lead = events.slice().sort((a, b) => (CELEB_RANK[b.kind] || 0) - (CELEB_RANK[a.kind] || 0))[0];
+      /* The badge-get is the ONE celebration with no sound by design until now;
+         play the soft badge cue ONCE when the batch unlocks a badge (however many
+         badges there are). A level/rank/PR-only celebration stays silent — this
+         is the badge's cue, not a general milestone jingle. */
+      if (events.some((e) => e.kind === "badge")) badgeChime();
       const blocks = [];
       for (const e of events) {
         if (e.kind === "rank") blocks.push(`<p class="celeb-line"><b>${esc(e.from || "—")} → ${esc(e.to)}</b> <span class="muted">at level ${e.level}</span></p>`);
@@ -1644,7 +1653,7 @@
       res.forEach((x) => {
         const row = el("button", { class: "pick-row" },
           `<span class="pick-name">${esc(x.n)}</span>
-           <span class="pick-meta muted">${esc(x.c)}${(x.e || []).length ? " · " + esc(x.e[0]) : " · bodyweight"} · ${x.m.replace("_", "×")}</span>`);
+           <span class="pick-meta muted">${esc(x.c)}${(x.e || []).length ? " · " + esc(x.e[0]) : " · equipment not listed"} · ${x.m.replace("_", "×")}</span>`);
         row.addEventListener("click", () => { closeModal(); onPick(x); });
         list.append(row);
       });
@@ -1904,7 +1913,7 @@
       res.forEach((x) => {
         const row = el("div", { class: "lib-row" },
           `<span class="lib-name">${esc(x.n)}</span>
-           <span class="lib-meta muted">${esc(x.c)} · ${(x.e || [])[0] ? esc(x.e[0]) : "bodyweight"} · ${x.m.replace("_", "×")}</span>`);
+           <span class="lib-meta muted">${esc(x.c)} · ${(x.e || [])[0] ? esc(x.e[0]) : "equipment not listed"} · ${x.m.replace("_", "×")}</span>`);
         row.addEventListener("click", () => exDetail(x.id));
         list.append(row);
       });
@@ -1972,7 +1981,7 @@
     const cmp = Engine.compareLast(S, id);
     return `
       <h3>${esc(info.n)}</h3>
-      <p class="muted small">${esc(info.c)}${(info.e || []).length ? " · " + esc(info.e.join(", ")) : " · bodyweight"}
+      <p class="muted small">${esc(info.c)}${(info.e || []).length ? " · " + esc(info.e.join(", ")) : " · equipment not listed"}
         ${(info.p || []).length ? " · " + esc(info.p.join(", ")) : ""}</p>
       ${cueBlock(info)}
       <div class="chips">

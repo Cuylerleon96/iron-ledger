@@ -1,13 +1,14 @@
 {
-  "versionCode": 107,
-  "versionName": "1.3.12",
+  "versionCode": 108,
+  "versionName": "1.3.13",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "fe3fcba50ae9851f1a7043289834b71f57ec2776f982f0cb28ec7af7afe915df",
-  "sizeBytes": 3953845,
+  "sha256": "7b48024f2d54a6581b6a7129bb8910671119d5e0269e5d29902e5b32fdaf4da2",
+  "sizeBytes": 3954425,
   "published": "2026-11-10",
   "notes": [
-    "Badges now earn XP: a major badge pays 100 and a minor badge pays 50, added to your total alongside the work that unlocked it",
-    "Every badge you had already unlocked is paid in full as soon as you update - the total counts unlocked badges whenever you earned them, so nothing is left out, and nothing ever takes XP away",
-    "The XP breakdown shows your badge XP as its own line, and the Progress and badges card tells you once what your existing badges are worth"
+    "The exercise library's equipment is filled in from the reviewed research table: 161 movements that recorded none now carry theirs, including gymnastic rings, trap bar, weighted sled, jump rope, heavy bag, wrist roller, parallettes, hangboard, rice bucket and battle ropes",
+    "Some movements that had the wrong gear now carry the right one: a plate-loaded lat pulldown was filed as a cable, ball slams as a Swiss ball, and two incline presses and Weighted Step-ups were wrong",
+    "An exercise whose equipment is simply not recorded no longer reads \"bodyweight\" \u2014 it says \"equipment not listed\", rather than stating a fact the data does not hold",
+    "Unlocking a badge now plays a soft two-note chime, once, alongside the celebration that was already there"
   ]
 }

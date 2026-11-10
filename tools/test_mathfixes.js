@@ -3148,4 +3148,100 @@ console.log("\n=== 59. badges pay XP into the TOTAL — back-paid in full, and n
      /const BADGE_NOTE_REV = \d+;/.test(appSrc) && !/badgeXpNote !== APP_?VERSION/.test(appSrc));
 }
 
+console.log("\n=== 60. a badge unlock gets its own SOFT chime — and the library stops claiming 'bodyweight' for unknown gear (v1.3.13) ===");
+{
+  /* The badge-get celebration had a VISUAL but no sound: holdChime was wired
+     only to the timed-hold timer. The badge cue lives on the SAME optional,
+     permission-free Web Audio path as the hold cue and is asserted
+     BEHAVIOURALLY (a recording AudioContext), so a future change that drops it
+     or makes it repeat fails here. */
+  const store = {};
+  const CUE = { oscs: [], opened: 0, closed: 0 };
+  const mkParam = (rec, key) => ({
+    set value(v) { rec[key] = v; }, get value() { return rec[key]; },
+    setValueAtTime(v, t) { (rec.env = rec.env || []).push(["set", v, t]); },
+    exponentialRampToValueAtTime(v, t) { (rec.env = rec.env || []).push(["exp", v, t]); },
+    linearRampToValueAtTime(v, t) { (rec.env = rec.env || []).push(["lin", v, t]); },
+  });
+  function FakeAudioContext() {
+    CUE.opened++; this.currentTime = 0; this.destination = {};
+    this.createOscillator = () => {
+      const rec = { type: "sine", freq: 0, start: null, stop: null }; CUE.oscs.push(rec);
+      return { set type(v) { rec.type = v; }, get type() { return rec.type; },
+        frequency: mkParam(rec, "freq"), connect() {}, start(t) { rec.start = t; }, stop(t) { rec.stop = t; } };
+    };
+    this.createGain = () => { const rec = { gain: 0, env: [] }; return { gain: mkParam(rec, "gain"), connect() {} }; };
+    this.close = () => { CUE.closed++; };
+  }
+  const mkNode = (tag) => ({
+    tagName: tag || "div", _html: "", className: "", children: [], dataset: {}, style: {}, value: "", textContent: "", _attrs: {},
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    set innerHTML(v) { this._html = String(v); }, get innerHTML() { return this._html; },
+    addEventListener() {}, removeEventListener() {}, setAttribute() {}, getAttribute() { return undefined; },
+    append(c) { this.children.push(c); }, prepend() {}, remove() {}, click() {}, focus() {},
+    contains: () => false, querySelector: () => mkNode("q"), querySelectorAll: () => [],
+  });
+  const docs = new Map();
+  const get = (sel) => { if (!docs.has(sel)) docs.set(sel, mkNode("doc:" + sel)); return docs.get(sel); };
+  const s = {
+    console: { log() {}, warn() {}, error() {}, info() {} }, Date, Math, JSON, Object, Array,
+    Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+    AudioContext: FakeAudioContext, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+    document: { addEventListener() {}, removeEventListener() {}, querySelector: get, querySelectorAll: () => [], getElementById: get,
+      createElement: (t) => mkNode(t), createElementNS: () => mkNode("ns"), body: mkNode("body"), visibilityState: "visible", activeElement: null },
+    navigator: { clipboard: { writeText: async () => {} } },
+    localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+    Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+  };
+  s.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+  s.window = s; s.globalThis = s; vm.createContext(s);
+  const src = ["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/app.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n");
+  vm.runInContext(src + "\n;globalThis.__X={App,Engine,EXERCISE_LIB};", s, { filename: "chime.js" });
+  const App = s.__X.App;
+
+  // (a) a badge celebration chimes — ONCE, softly, two notes
+  App.celebrate([{ kind: "badge", badges: [{ id: "first", name: "First Blood", desc: "Log your first session" }] }]);
+  eq("a badge unlock plays the chime exactly ONCE (one audio context)", CUE.opened, 1);
+  eq("...with two notes", CUE.oscs.length, 2);
+  truthy("...both gentle sines", CUE.oscs.every((o) => o.type === "sine"));
+  truthy("...each SHORT (<= 0.2 s — a blip, not a beep)", CUE.oscs.every((o) => o.stop - o.start > 0 && o.stop - o.start <= 0.2));
+  truthy("...two different pitches", CUE.oscs[0].freq !== CUE.oscs[1].freq);
+  const oscPeaks = CUE.oscs.length;
+
+  // several badges at once still chime ONCE (never repeating)
+  App.celebrate([{ kind: "badge", badges: [{ id: "a", name: "A", desc: "" }, { id: "b", name: "B", desc: "" }] }]);
+  eq("several badges at once still chime exactly once", CUE.oscs.length - oscPeaks, 2);
+
+  // (b) a level / rank / PR celebration carries NO badge and stays SILENT
+  App.celebrate([{ kind: "level", level: 5, title: "Lifter" }]);
+  eq("a level-up (no badge) does NOT chime", CUE.oscs.length, oscPeaks + 2);
+  App.celebrate([{ kind: "pr", items: [{ id: 73, name: "Bench Press", hit: ["e1RM"] }] }]);
+  eq("a PR (no badge) does NOT chime", CUE.oscs.length, oscPeaks + 2);
+  App.celebrate([]);
+  eq("an empty event list is a no-op (no chime)", CUE.oscs.length, oscPeaks + 2);
+
+  // (c) the badge cue is the SOFT badge chime, distinct from the hold cue, and it
+  //     is not the hold timer's function
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("celebrate plays badgeChime on a badge event", /if \(events\.some\(\(e\) => e\.kind === "badge"\)\) badgeChime\(\)/.test(appSrc));
+  truthy("badgeChime is a two-note soft chime via the shared path", /function badgeChime\(\) \{ softChime\(\[\[659\.25, 0\], \[880\.0, 0\.13\]\], 0\.03\); \}/.test(appSrc));
+  truthy("the hold cue is unchanged (still G5 -> C6)", /function holdChime\(\) \{ softChime\(\[\[784\.0, 0\], \[1046\.5, 0\.12\]\], 0\.035\); \}/.test(appSrc));
+
+  // (d) DISPLAY TRUTH — the fallback no longer asserts "bodyweight" for a row
+  //     whose equipment is merely unknown; it states the honest "equipment not
+  //     listed" instead (all three render sites).
+  eq("no render claims 'bodyweight' as an equipment FALLBACK", /: "bodyweight"/.test(appSrc), false);
+  truthy("the fallback is the neutral 'equipment not listed'", /equipment not listed/.test(appSrc));
+  truthy("...on the exercise LIBRARY row", /\(x\.e \|\| \[\]\)\[0\] \? esc\(x\.e\[0\]\) : "equipment not listed"/.test(appSrc));
+  truthy("...on the exercise PICKER row", /" · equipment not listed"/.test(appSrc));
+  truthy("...and on the exercise detail sheet", /: " · equipment not listed"/.test(appSrc));
+  // behavioural: the one genuinely-unset row (1381) renders the neutral term,
+  // and a filled row renders its equipment.
+  const detailUnset = App.exDetailHTML(1381);
+  truthy("the unset movement's sheet says 'equipment not listed'", /equipment not listed/.test(detailUnset) && !/bodyweight/.test(detailUnset));
+  const detailSet = App.exDetailHTML(501);
+  truthy("a filled movement's sheet names its real equipment", /Gymnastic rings/.test(detailSet) && !/equipment not listed/.test(detailSet));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);

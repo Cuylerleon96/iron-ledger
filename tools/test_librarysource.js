@@ -137,5 +137,56 @@ console.log("=== the source map is PINNED — a future edit cannot silently shri
   eq("kept count", counts["kept"], 865);
 }
 
+console.log("\n=== the EQUIPMENT residue is filled (v1.3.13) ===");
+{
+  /* data/library.json carried 162 rows with an EMPTY equipment array. A research
+     pass resolved 161 of them (an independent second pass confirmed the residue);
+     the one row that is not a movement (1381 "Upper Back") is deliberately left
+     empty. These pin the applied values, the handful of rows this pass CHANGED
+     that v1.3.11 had already filled, and the acceptance bar: no row whose name
+     names equipment is left empty. */
+
+  // (a) SPOT-ASSERT rows filled by this pass (values outside the old vocabulary
+  //     are correct — `e` is a free-text list).
+  const filled = {
+    501: ["Gymnastic rings"], 1803: ["Trap bar (hex bar)"], 1523: ["Weighted sled"],
+    595: ["Jump rope"], 2542: ["Heavy bag (boxing)"], 2740: ["Wrist roller (bar+rope+weight)"],
+    820: ["Hangboard (climbing fingerboard)"], 1216: ["Hangboard (climbing fingerboard)"],
+    2745: ["Rice bucket"], 1524: ["Battle ropes"], 2747: ["Climbing rope"],
+    279: ["Hand gripper (spring-loaded)"], 1113: ["Parallettes"], 1914: ["Parallel bars (dip bars)"],
+    1952: ["Massage ball (lacrosse ball)"], 1833: ["Floor gliders"], 2481: ["Kickboard (swim)"],
+    1280: ["Cable machine"], 441: ["Barbell"], 630: ["Barbell"],
+  };
+  for (const [id, want] of Object.entries(filled))
+    eq(`${id} ${byId.get(Number(id)).n} equipment`, byId.get(Number(id)).e, want);
+
+  // (b) the 6 rows where the two independent passes DISAGREED — each decided by
+  //     the library row's OWN description (v1.3.11's tie-break). Four were
+  //     CORRECTED to the table's value; two KEPT the shipped value.
+  eq("2623 Plate-Loaded Lat Pulldown -> Machine (desc: plate-loaded lever machine, not a cable)", byId.get(2623).e, ["Machine"]);
+  eq("1525 Ball Slams -> Medicine ball (desc: slam the MEDICINE ball; a Swiss ball is not slammed)", byId.get(1525).e, ["Medicine ball"]);
+  eq("539 Incline Bench Press - MP -> Machine (wger DE desc: Multipresse)", byId.get(539).e, ["Machine"]);
+  eq("1773 Legend Incline Bench Press -> Machine (desc: LeverEdge MACHINE)", byId.get(1773).e, ["Machine"]);
+  eq("478 Push Press KEEPS Dumbbell (desc names dumbbells; the table's Barbell is wrong)", byId.get(478).e, ["Dumbbell"]);
+  eq("510 Rowing, Lying on Bench KEEPS Bench (empty desc; the table's citation is a standing row)", byId.get(510).e, ["Bench"]);
+
+  // (c) the one LOW-confidence correction: 722's own description names a barbell.
+  eq("722 Weighted Step-ups -> Barbell (desc: 'barbell and 45's on each side')", byId.get(722).e, ["Barbell"]);
+
+  // (d) the UNRESOLVED row is left empty — no value invented, and never the
+  //     literal "UNSETTLED".
+  eq("1381 Upper Back stays EMPTY (it is not a movement)", byId.get(1381).e, []);
+  eq("no row carries the literal string UNSETTLED", LIB.filter((x) => (x.e || []).some((v) => /UNSETTLED/i.test(v))).length, 0);
+
+  // (e) ACCEPTANCE BAR: no row whose NAME names equipment is left empty. Exactly
+  //     ONE library row still has an empty `e`, and it is 1381.
+  const emptyRows = LIB.filter((x) => x.e.length === 0);
+  eq("exactly one library row still has an empty equipment array", emptyRows.length, 1);
+  eq("...and it is the non-movement 1381 Upper Back", emptyRows.map((x) => x.id), [1381]);
+  const EQ_NAME = /barbell|dumbbell|kettlebell|cable|machine|smith|bench|ball|plate|band|ring|trap bar|sled|jump rope|rope|roller|gripper|parallettes|parallel bar|hangboard|fingerboard|kickboard|battle|heavy bag|glider|swiss|trx|foam|bar\b/i;
+  const namedNoGear = LIB.filter((x) => x.e.length === 0 && EQ_NAME.test(x.n) && !/bodyweight/i.test(x.n));
+  eq("no empty-equipment row NAMES equipment (the acceptance bar)", namedNoGear.map((x) => x.n), []);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
