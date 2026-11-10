@@ -1,12 +1,11 @@
 {
-  "versionCode": 115,
-  "versionName": "1.3.20",
+  "versionCode": 116,
+  "versionName": "1.3.21",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "379e79bfdeb12c127200d24e564784f839557b23d335afe24c148e225f1ecadd",
-  "sizeBytes": 3960668,
+  "sha256": "5eeb82b2187b1fb669b8d06c506260e624a624b05b4351bf5fd6cc260b3572ee",
+  "sizeBytes": 3961909,
   "published": "2026-11-10",
   "notes": [
-    "Everyday food words now reach the database: \"aubergine\", \"courgette\", \"prawn\", \"yoghurt\", \"beetroot\", \"swede\", \"rocket\", \"spring onion\", \"capsicum\", \"mangetout\", \"sultanas\", \"mince\", \"porridge\", \"omelette\", \"donut\", \"milkshake\", \"sparkling water\", \"tinned tomatoes\", \"sweets\", \"crisps\" and \"chips\" now find the foods the US database files under its own names (eggplant, zucchini, shrimp, yogurt, ...)",
-    "This is a query-side word map in the search only - the food data itself is unchanged, and an ordinary food search behaves exactly as before; which food a word names says nothing about the food itself"
+    "Ambiguous food words now lead with the US meaning but still include the other reading: \"chips\" leads with potato chips and still reaches french fries, and \"biscuit\" leads with the dataset's savoury biscuit rows and still reaches cookies; \"double cream\", \"jacket potato\", \"candy floss\" and \"banger\" now find the foods the US database files under its own names; This is a query-side word map in the search only - the food data itself is unchanged, and an ordinary food search behaves exactly as before; which food a word names says nothing about the food itself"
   ]
 }

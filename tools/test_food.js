@@ -1012,9 +1012,14 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
      (4) every target is a literal string that occurs in the shipped data, (a) a
      drink surfaces for "soda", (b) a cola drink outranks the Coca-Cola COMPANY's
      non-cola rows, and (c) an ordinary query takes the pre-alias path unchanged. */
+  /* every target, PRIMARY and SECONDARY, of the whole map — a value may be a bare
+     array (all primary) or an ordered-tier object. */
   const aliasTargets = [];
-  Object.keys(Food.SEARCH_ALIASES).forEach((k) =>
-    Food.SEARCH_ALIASES[k].forEach((t) => { if (aliasTargets.indexOf(t) < 0) aliasTargets.push(t); }));
+  Object.keys(Food.SEARCH_ALIASES).forEach((k) => {
+    const v = Food.SEARCH_ALIASES[k];
+    const lists = Array.isArray(v) ? [v] : [v.primary || [], v.secondary || []];
+    lists.forEach((list) => list.forEach((t) => { if (aliasTargets.indexOf(t) < 0) aliasTargets.push(t); }));
+  });
   console.log('alias keys:', Object.keys(Food.SEARCH_ALIASES).length,
     'distinct targets:', aliasTargets.length);
   aliasTargets.forEach((t) => {
@@ -1097,6 +1102,8 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
     ['donut', /doughnut/i], ['milkshake', /shake/i], ['sparkling water', /club soda/i],
     ['tinned tomatoes', /tomato/i], ['sweets', /candy/i],
     ['crisps', /potato chips/i], ['chips', /potato chips/i],
+    ['double cream', /cream, heavy/i], ['jacket potato', /potato, baked/i],
+    ['candy floss', /candy, cotton/i], ['banger', /sausage/i],
   ];
   EVERYDAY.forEach(([q, re]) => {
     const r = Food.search(DB, q, 20);
@@ -1106,11 +1113,101 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
   /* "mince" used to lead with a mince PIE and tinned Spam; it must lead with ground beef. */
   ok('"mince" leads with beef, ground (not a mince pie / Spam)',
     /ground/.test(Food.norm(Food.search(DB, 'mince', 20)[0].name)));
-  /* "biscuit" is DELIBERATELY not remapped: the dataset's own US meaning (a savoury
-     quick bread) is left intact, so its top row is a biscuit, not a cookie. */
-  ok('"biscuit" is not remapped (its US savoury meaning is preserved)',
-    Food.expandAlias('biscuit').length === 0 &&
-    /biscuit/i.test(Food.search(DB, 'biscuit', 20)[0].name));
+  /* ---- ORDERED-TIER AMBIGUOUS WORDS (v1.3.21) -------------------------------
+     the owner: "Prioritize us terms, and include the rest". A key may declare PRIMARY
+     target(s) then SECONDARY target(s). Ranking: primary-target matches, then
+     secondary-target matches, then whole word, then substring. An unsplit key must
+     be byte-for-byte unchanged. */
+
+  /* (c2) BYTE-FOR-BYTE: an alias key with NO primary/secondary split ranks exactly
+     as the pre-tier code did (its three groups were: target, whole word, substring).
+     An independently-written reference reproduces that old ranking and must match. */
+  const oldRefSearch = (q, limit) => {
+    const cap = (limit == null) ? 20 : limit;
+    const targets = Food.expandAlias(q);
+    const hits = [];
+    DB.foods.forEach((f, i) => {
+      const name = Food.norm(f.name);
+      let tScore = 0, tAt = -1;
+      targets.forEach((t) => { const pos = Food.wordAt(name, t); if (pos >= 0) { tScore++; if (tAt < 0 || pos < tAt) tAt = pos; } });
+      const rawWord = Food.wordAt(name, q), rawAt = name.indexOf(q);
+      let group, score, at;
+      if (tScore > 0) { group = 0; score = tScore; at = tAt; }
+      else if (rawWord >= 0) { group = 1; score = 0; at = rawWord; }
+      else if (rawAt >= 0) { group = 2; score = 0; at = rawAt; }
+      else return;
+      hits.push({ f: f, group: group, score: score, prefix: at === 0 ? 0 : 1, at: at, len: name.length, idx: i });
+    });
+    hits.sort((a, b) => (a.group - b.group) || (b.score - a.score) || (a.prefix - b.prefix) ||
+      (a.at - b.at) || (a.len - b.len) || (a.f.code - b.f.code) || (a.idx - b.idx));
+    return Food.dedupe(hits.map((h) => h.f), Food.nameKey(q)).list.slice(0, cap).map((x) => x.code);
+  };
+  const unsplitKeys = Object.keys(Food.SEARCH_ALIASES).filter((k) => Array.isArray(Food.SEARCH_ALIASES[k]));
+  let splitOk = true, splitBad = null;
+  unsplitKeys.concat(['diet coke', 'soft drink']).forEach((q) => {
+    const a = Food.search(DB, q, 25).map((x) => x.code);
+    const b = oldRefSearch(q, 25);
+    if (JSON.stringify(a) !== JSON.stringify(b)) { splitOk = false; splitBad = q; }
+  });
+  ok('(c2) every unsplit key (' + unsplitKeys.length + ') + 2 multi-key queries rank byte-for-byte as the pre-tier code',
+    splitOk, splitBad);
+
+  /* (a) "chips": US potato chips lead; the other reading (US fries) stays present.
+     MEASURED CAP REALITY: js/app.js searches with limit 25, and 45 rows match the
+     primary target "potato chips", so at that cap the fries cannot appear AT ALL —
+     proven below, and stated rather than hidden. The ordering is proven at a cap
+     large enough to hold the whole primary tier. */
+  const isChips = (f) => Food.wordAt(Food.norm(f.name), 'potato chips') >= 0;
+  const isFries = (f) => /fries|fried potatoes/i.test(f.name);
+  const chipsFull = Food.search(DB, 'chips', 80);
+  const chipsPrimary = chipsFull.filter(isChips).length;
+  const chipsFirstFries = chipsFull.findIndex(isFries);
+  ok('(a) "chips" leads with a potato-chips row (the US meaning first)',
+    isChips(chipsFull[0]), chipsFull[0] && chipsFull[0].name);
+  ok('(a) every potato-chips row ranks ABOVE every fries row',
+    chipsPrimary > 0 && chipsFirstFries > chipsPrimary - 1, { primary: chipsPrimary, firstFries: chipsFirstFries });
+  ok('(a) at least one fries row IS present (the other reading stays reachable)',
+    chipsFirstFries >= 0, { firstFries: chipsFirstFries });
+  eq('(a) MEASURED: at the app cap (25) the primary tier fills the list, so no fries row appears',
+    Food.search(DB, 'chips', 25).filter(isFries).length, 0);
+
+  /* (b) "biscuit": the dataset's savoury US biscuit rows lead; cookie rows stay
+     present. MEASURED CAP REALITY: 58 rows match the primary targets
+     "biscuit"/"biscuits", so at the app cap (25) no cookie row appears. */
+  const isSavouryBiscuit = (f) => Food.wordAt(Food.norm(f.name), 'biscuit') >= 0 ||
+    Food.wordAt(Food.norm(f.name), 'biscuits') >= 0;
+  const isCookie = (f) => /cookie/i.test(f.name);
+  const isCookieOnly = (f) => isCookie(f) && !isSavouryBiscuit(f);
+  const biscFull = Food.search(DB, 'biscuit', 90);
+  const biscPrimary = biscFull.filter(isSavouryBiscuit).length;
+  const biscFirstCookie = biscFull.findIndex(isCookie);
+  const biscFirstCookieOnly = biscFull.findIndex(isCookieOnly);
+  ok('(b) "biscuit" leads with a dataset savoury-biscuit row (the US meaning first)',
+    isSavouryBiscuit(biscFull[0]) && !isCookie(biscFull[0]), biscFull[0] && biscFull[0].name);
+  ok('(b) a savoury-biscuit row ranks ABOVE every cookie row (the top row is one, and no cookie sits at its index)',
+    isSavouryBiscuit(biscFull[0]) && biscFirstCookie > 0, { firstCookie: biscFirstCookie });
+  ok('(b) every savoury-biscuit row ranks ABOVE every cookie-only row',
+    biscFirstCookieOnly > biscPrimary - 1, { primary: biscPrimary, firstCookieOnly: biscFirstCookieOnly });
+  ok('(b) at least one cookie row IS present (the other reading stays reachable)',
+    biscFirstCookie >= 0, { firstCookie: biscFirstCookie });
+  ok('(b) ...and at least one cookie-only row is present (a cookie that is not itself a biscuit)',
+    biscFirstCookieOnly >= 0, { firstCookieOnly: biscFirstCookieOnly });
+  eq('(b) MEASURED: at the app cap (25) the primary tier fills the list, so no cookie row appears',
+    Food.search(DB, 'biscuit', 25).filter(isCookie).length, 0);
+
+  /* (d) the two tiered keys declare BOTH tiers, and every target of every tier is a
+     literal string in the shipped data (the whole-map loop above already asserts the
+     latter for primary AND secondary targets). */
+  ['chips', 'biscuit'].forEach((k) => {
+    const v = Food.SEARCH_ALIASES[k];
+    ok('(d) "' + k + '" declares an ordered tier with primary AND secondary targets',
+      !Array.isArray(v) && Array.isArray(v.primary) && v.primary.length > 0 &&
+      Array.isArray(v.secondary) && v.secondary.length > 0 &&
+      Food.aliasTiers(k).primary.join(',') === v.primary.join(',') &&
+      Food.aliasTiers(k).secondary.join(',') === v.secondary.join(','), v);
+  });
+  ok('(d) "crisps" stays single-tier (every target primary) — no second reading exists',
+    Array.isArray(Food.SEARCH_ALIASES['crisps']));
 
   console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

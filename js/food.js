@@ -337,11 +337,24 @@ const Food = (() => {
        types, where USDA names the food in its own catalogue vocabulary — mostly
        British words for foods the US database files under the US word. Measured
        zero-row or wrong-led before this map (see tools/test_food.js).
-       REPORTED, NOT REMAPPED: "biscuit" already resolves to the dataset's own
-       meaning — a US savoury quick bread (25 rows) — so mapping it to a cookie
-       would bury that whole meaning (measured: the top 25 become all cookies).
-       The word is left alone, and the trap is reported. A word that names a food
-       is a food word — mapping it says nothing about the food's merit. */
+
+       A value is either an ARRAY — every target is a PRIMARY target, which is the
+       behaviour the map has always had — or an OBJECT {primary, secondary} that
+       declares an ORDERED-TIER split for a word with two live readings. The tiers
+       exist so a value can say "the US meaning first, the other reading after":
+       ranking places a PRIMARY-target match above a SECONDARY-target match, above
+       the whole-word literal group, above substring, with the same tie-breaks
+       inside every tier. A key that declares no split (still an array) ranks
+       EXACTLY as before, byte-for-byte.
+
+       THE AMBIGUOUS WORDS (the owner: "Prioritize us terms, and include the rest"):
+         chips   — US "chips" is a packet of potato chips; the other reading (UK
+                   chips = US fries) is still reachable, ranked after.
+         biscuit — US "biscuit" is the dataset's own savoury quick bread (its rows
+                   literally say "Biscuit(s)"); the other reading (a cookie) is
+                   reachable, ranked after. Neither reading is renamed or hidden.
+       A word that names a food is a food word — mapping it says nothing about
+       the food's merit. */
     "aubergine":  ["eggplant"],
     "courgette":  ["zucchini"],
     "courgettes": ["zucchini"],
@@ -365,15 +378,37 @@ const Food = (() => {
     "sparkling water": ["club soda"],
     "tinned tomatoes": ["tomatoes"],
     "sweets":     ["candy"],
-    "crisps":     ["potato chips"],   // UK crisps = US potato chips; the plain word returned 3 unrelated rows
-    "chips":      ["potato chips"],   // the everyday US meaning; UK "chips" is the word "fries", its own query
+    /* ---------- SWEEP (v1.3.21): further UK words the map did not cover ----------
+       Measured BEFORE adding: each of these returned ZERO rows, and each target is the
+       dataset's own row for that food (asserted literal below). Words that were
+       CHECKED and deliberately NOT added (no literal row names the food): icing sugar
+       (the only "powdered sugar" literal is a doughnut name), single cream, heavy
+       cream, golden syrup, digestive, mushy peas, brown sauce — see the report. */
+    "double cream":  ["cream, heavy"],    // UK double cream = US heavy cream ("Cream, heavy")
+    "jacket potato": ["potato, baked"],   // UK jacket potato = US baked potato ("Potato, baked, ...")
+    "candy floss":   ["candy, cotton"],   // UK candy floss = US cotton candy ("Candy, cotton")
+    "banger":        ["sausage"],         // UK banger = US sausage
+    "crisps":     ["potato chips"],   // UK crisps = US potato chips (no second reading; every target is primary)
+    /* ORDERED-TIER keys — US meaning PRIMARY, the other reading SECONDARY (still reachable). */
+    "chips":      { primary: ["potato chips"], secondary: ["french fries"] },
+                  // US "chips" = potato chips; UK "chips" = US "french fries", kept reachable after.
+    "biscuit":    { primary: ["biscuit", "biscuits"], secondary: ["cookies"] },
+                  // US "biscuit" = the dataset's savoury quick bread (rows literally say Biscuit/Biscuits);
+                  // the other reading (a cookie) is reachable, ranked after.
   };
 
   /* Case- and punctuation-insensitive form, used ONLY to look a query up in the map
      above — so "Coca-Cola" and "coca cola" reach the same key. */
   const aliasKey = (s) => norm(s).replace(/[^a-z0-9]+/g, " ").trim();
 
-  const ALIAS_KEYS = Object.keys(SEARCH_ALIASES).map((k) => [aliasKey(k), SEARCH_ALIASES[k]]);
+  /* Normalise a map value to the ordered-tier shape: an ARRAY means every target
+     is PRIMARY (the original behaviour), an object declares the split. */
+  const aliasValue = (v) =>
+    (Array.isArray(v) ? { primary: v, secondary: [] }
+      : { primary: (v && Array.isArray(v.primary)) ? v.primary : [],
+          secondary: (v && Array.isArray(v.secondary)) ? v.secondary : [] });
+
+  const ALIAS_KEYS = Object.keys(SEARCH_ALIASES).map((k) => [aliasKey(k), aliasValue(SEARCH_ALIASES[k])]);
 
   /* whole-word containment of `needle` in a space-normalised `hay`. */
   const wordContains = (hay, needle) => {
@@ -387,19 +422,32 @@ const Food = (() => {
     return false;
   };
 
-  /* the alias targets a query expands to, or [] when it names no alias. A multi-key
-     query ("diet coke") collects the targets of every key it contains. */
-  const expandAlias = (query) => {
+  /* The alias targets a query expands to, as {primary, secondary}, or empty tiers
+     when it names no alias. A multi-key query ("diet coke") collects the targets of
+     every key it contains; a target listed as primary by any matching key is primary. */
+  const aliasTiers = (query) => {
     const q = aliasKey(query);
-    if (!q) return [];
-    const out = [];
+    const primary = [], secondary = [];
+    if (!q) return { primary: primary, secondary: secondary };
     for (let i = 0; i < ALIAS_KEYS.length; i++) {
       if (!wordContains(q, ALIAS_KEYS[i][0])) continue;
-      const targets = ALIAS_KEYS[i][1];
-      for (let j = 0; j < targets.length; j++) {
-        if (out.indexOf(targets[j]) < 0) out.push(targets[j]);
-      }
+      const tv = ALIAS_KEYS[i][1];
+      for (let j = 0; j < tv.primary.length; j++)
+        if (primary.indexOf(tv.primary[j]) < 0) primary.push(tv.primary[j]);
+      for (let j = 0; j < tv.secondary.length; j++)
+        if (primary.indexOf(tv.secondary[j]) < 0 && secondary.indexOf(tv.secondary[j]) < 0)
+          secondary.push(tv.secondary[j]);
     }
+    return { primary: primary, secondary: secondary };
+  };
+
+  /* The flat list of every target a query expands to (primary + secondary), or []
+     when it names no alias. Kept flat so callers can assert the whole map at once. */
+  const expandAlias = (query) => {
+    const t = aliasTiers(query);
+    const out = [];
+    for (let i = 0; i < t.primary.length; i++) out.push(t.primary[i]);
+    for (let i = 0; i < t.secondary.length; i++) if (out.indexOf(t.secondary[i]) < 0) out.push(t.secondary[i]);
     return out;
   };
 
@@ -428,23 +476,28 @@ const Food = (() => {
      `.alternates`; every other row is the dataset record itself.
 
      ALIAS-AWARE RANKING (only when the query names an alias — an ordinary query takes
-     the original substring path, unchanged). For an alias query, a row is placed in
-     one of three groups:
-       0 — matched an alias TARGET: the vocabulary the data actually uses, so the
-           drink the user means ranks here, above the literal-word collisions;
-       1 — matched the literal query as a whole word (baking soda, saltines);
-       2 — matched the literal query only as a substring (chocolate for "cola").
-     Within group 0, a row matching MORE of a multi-key query's targets ranks higher,
-     so "diet coke" surfaces a diet cola before an arbitrary low-calorie food. The
-     chosen order is the minimal expansion that puts the drink on top while leaving
-     every literal match reachable. */
+     the original substring path, unchanged). For an alias query a row is placed in one
+     of FOUR groups:
+       0 — matched a PRIMARY alias TARGET (the US meaning the data names itself, so it
+           ranks first, above the literal-word collisions);
+       1 — matched a SECONDARY alias TARGET only (the other reading of an ambiguous
+           word — reachable, ranked after the primary reading);
+       2 — matched the literal query as a whole word (baking soda, saltines);
+       3 — matched the literal query only as a substring (chocolate for "cola").
+     A key with no primary/secondary split declares no secondary targets, so its rows
+     only ever land in groups 0, 2 and 3 — i.e. the SAME order as the original three
+     groups 0, 1, 2, byte-for-byte. Within a target group a row matching MORE of a
+     multi-key query's targets ranks higher, so "diet coke" surfaces a diet cola before
+     an arbitrary low-calorie food. The chosen order is the minimal expansion that puts
+     the intended food on top while leaving every literal match reachable. */
   const search = (db, query, limit) => {
     const q = norm(query);
     if (!q) return [];
     const cap = (limit == null || limit < 0) ? 20 : limit;
     if (cap === 0) return [];
     const foods = foodsOf(db);
-    const targets = expandAlias(query);
+    const tiers = aliasTiers(query);
+    const targets = tiers.primary.concat(tiers.secondary);
 
     /* No alias names this query: the original substring ranking, unchanged. */
     if (targets.length === 0) {
@@ -468,24 +521,30 @@ const Food = (() => {
     const hits = [];
     for (let i = 0; i < foods.length; i++) {
       const name = norm(foods[i].name);
-      let tScore = 0, tAt = -1;
-      for (let k = 0; k < targets.length; k++) {
-        const pos = wordAt(name, targets[k]);
-        if (pos >= 0) { tScore++; if (tAt < 0 || pos < tAt) tAt = pos; }
+      let pScore = 0, pAt = -1;
+      for (let k = 0; k < tiers.primary.length; k++) {
+        const pos = wordAt(name, tiers.primary[k]);
+        if (pos >= 0) { pScore++; if (pAt < 0 || pos < pAt) pAt = pos; }
+      }
+      let sScore = 0, sAt = -1;
+      for (let k = 0; k < tiers.secondary.length; k++) {
+        const pos = wordAt(name, tiers.secondary[k]);
+        if (pos >= 0) { sScore++; if (sAt < 0 || pos < sAt) sAt = pos; }
       }
       const rawWord = wordAt(name, q);
       const rawAt = name.indexOf(q);
       let group, score, at;
-      if (tScore > 0) { group = 0; score = tScore; at = tAt; }
-      else if (rawWord >= 0) { group = 1; score = 0; at = rawWord; }
-      else if (rawAt >= 0) { group = 2; score = 0; at = rawAt; }
+      if (pScore > 0) { group = 0; score = pScore; at = pAt; }
+      else if (sScore > 0) { group = 1; score = sScore; at = sAt; }
+      else if (rawWord >= 0) { group = 2; score = 0; at = rawWord; }
+      else if (rawAt >= 0) { group = 3; score = 0; at = rawAt; }
       else continue;
       hits.push({ food: foods[i], group: group, score: score,
         prefix: at === 0 ? 0 : 1, at: at, len: name.length, idx: i });
     }
     hits.sort((a, b) =>
-      (a.group - b.group) ||            // target matches first, then literal word, then substring
-      (b.score - a.score) ||            // ...and within targets, more matched targets first
+      (a.group - b.group) ||            // primary targets, then secondary, then literal word, then substring
+      (b.score - a.score) ||            // ...and within a target tier, more matched targets first
       (a.prefix - b.prefix) ||
       (a.at - b.at) ||
       (a.len - b.len) ||
@@ -638,7 +697,7 @@ const Food = (() => {
     /* internals exposed for callers/tests */
     foodsOf, norm, round2,
     /* query-side alias map (search aid, not data) */
-    SEARCH_ALIASES, expandAlias, aliasKey, wordAt,
+    SEARCH_ALIASES, expandAlias, aliasTiers, aliasKey, wordAt,
     /* duplicate collapse (FNDDS vs SR Legacy) */
     dedupe, nameKey, exactKey, twinKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS, OPTIONAL_TAIL,
     nutrientPer100, macrosAgree, MACRO_KEYS, MACRO_TOL_REL, MACRO_TOL_ABS,
