@@ -1,11 +1,11 @@
 {
-  "versionCode": 99,
-  "versionName": "1.3.4",
+  "versionCode": 100,
+  "versionName": "1.3.5",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "1f8a07f38cad9b31f389f1512dad11c83350244d4750484729d9040ef96bb68c",
-  "sizeBytes": 3947437,
+  "sha256": "ebda38cd69a67f429e8b2d4dadc61535e68c6687cef3cc389ec928e1185319cd",
+  "sizeBytes": 3949199,
   "published": "2026-11-10",
   "notes": [
-    "The weekly chart now uses the same weeks the rest of the app counts, so it lines up with your week count."
+    "The mobility read now counts the range work you actually log, including loaded end-range work like a Romanian deadlift held at the bottom at a lower rate than a stretch. Toe Touch counts now too. The wording describes what you logged rather than your body."
   ]
 }

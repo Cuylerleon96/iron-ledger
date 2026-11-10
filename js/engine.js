@@ -1012,24 +1012,78 @@ const Engine = (() => {
      much core work it represents: a crunch trains about 30 degrees of flexion
      against resistance and lengthens nothing. Counting it would make this axis
      stop measuring range — and the point of the axis is to be accurate. */
-  const MOB_RE = /stretch|mobility|yoga|foam|flexib|range of motion|dynamic warm|rotat|pallof|anti.?rotation|bird ?dog|dead ?bug|deadbug|clamshell|\bcars?\b|dislocat|thoracic|cervical|90\/90|hip opener|get.?up|cat.?cow|world'?s greatest|bear crawl|plank|\bhold\b|side.?lying|scapular|ankle|wrist|hip circle|shoulder circle|arm circle|leg swing|deep squat/i;
-  // strength done in a short range, not range itself
-  const NOT_MOB_RE = /crunch|sit.?up|roll ?out|jack|knee.?raise|leg ?raise|v.?up|hanging|toe touch|good morning/i;
+  const MOB_RE = /stretch|toe touch|mobility|yoga|foam|flexib|range of motion|dynamic warm|rotat|pallof|anti.?rotation|bird ?dog|dead ?bug|deadbug|clamshell|\bcars?\b|dislocat|thoracic|cervical|90\/90|hip opener|get.?up|cat.?cow|world'?s greatest|bear crawl|plank|\bhold\b|side.?lying|scapular|ankle|wrist|hip circle|shoulder circle|arm circle|leg swing|deep squat/i;
+  /* strength done in a short range, not range itself. Reviewed entry by entry
+     once Toe Touch was found wrongly excluded (it is a stretch — see below):
+       crunch, sit.?up  — loaded spinal flexion under a short range. KEEP.
+       roll ?out        — ab-wheel / TRX rollout: loaded anti-extension strength,
+                          dynamic, range is a byproduct not the point. KEEP.
+       jack             — jumping / plank jacks are conditioning, not deliberate
+                          range drills (keeps cardio out of this axis). KEEP.
+       knee.?raise      — loaded hip-flexion core. KEEP.
+       leg ?raise       — AMBIGUOUS, left excluded on purpose: a lying or hanging
+                          leg raise is core, but a STANDING hip-flexion raise is
+                          range work, and a name cannot tell them apart. Not
+                          guessed either way. KEEP (documented limitation).
+       v.?up            — loaded flexion core. KEEP.
+       hanging          — redundant with the raise terms; no hanging range drill
+                          exists in the library, so it changes nothing. KEEP.
+     toe touch (a stretch) and good morning (a loaded end-range hinge) were
+     REMOVED — both are range work, and both are handled below. */
+  const NOT_MOB_RE = /crunch|sit.?up|roll ?out|jack|knee.?raise|leg ?raise|v.?up|hanging/i;
+
+  /* Loaded END-RANGE work — a hinge HELD or taken to the muscle's longest
+     position under load (a Romanian deadlift held at the bottom, a paused hinge,
+     a good morning, a Jefferson curl). Unlike a mid-range lift, which only
+     EXPRESSES range the lifter already has, this genuinely lengthens tissue under
+     load. It earns a real but deliberately SMALL share of the stretch rate,
+     because range is a side effect of a strength lift, not the point of the set.
+     Deliberately NOT matched: a conventional deadlift pulled from the floor for
+     strength. Its bottom is a launch position, not a held end-range emphasis, so
+     crediting it would be the blanket "any deadlift counts" this axis avoids. */
+  const END_RANGE_RE = /romanian|\brdl\b|stiff.?leg|jefferson curl|good.?morning|paused (dead|hinge|rdl)|deficit (dead|lift)|deep (paused )?hinge|hip hinge/i;
+  const END_RANGE_RATE = 1 / 3;   // product judgement: real, but clearly less than a stretch
   const isMobility = (name) => MOB_RE.test(name) && !NOT_MOB_RE.test(name);
+  const isEndRangeHinge = (name) => !isMobility(name) && END_RANGE_RE.test(name);
+
+  /* A rep of a mobility movement is a controlled pass into range and back — about
+     5 seconds, slower and more deliberate than the ~3 s working rep the density
+     read assumes. The old `reps * 0.5` scored a rep as THIRTY seconds, so a
+     20-rep set read ten minutes of mobility; that was inflation, not accuracy.
+     This basis is a product judgement, stated so the number is auditable.
+     Time-based sets keep their real logged seconds. */
+  const SEC_PER_MOB_REP = 5;
+
+  /* Bands re-derived for how the app is actually used — someone training
+     2-4x/week. A 10-minute mobility block after each session (the app's own
+     suggestion in FIXES.MOB) is 20-40 min/wk, and that is where a solid habit
+     should read mid-scale rather than at the floor. A stretch that is never done
+     still reads ~0. This is a PRODUCT JUDGEMENT, not a published standard — the
+     same convention the app already uses for its recovery window. */
+  const MOB_BANDS_X = [0, 8, 20, 45, 80];
+  const MOB_BANDS_Y = [4, 28, 52, 76, 94];
 
   function mobilityScore(state, ws) {
     let min = 0, sessions = 0;
     for (const w of ws) {
       let touched = false;
       for (const en of w.entries || []) {
-        if (!isMobility(exInfo(state, en.id).n)) continue;
+        const name = exInfo(state, en.id).n;
+        const mob = isMobility(name);
+        const hinge = isEndRangeHinge(name);
+        if (!mob && !hinge) continue;
         touched = true;
-        for (const s of en.sets || []) min += (num(s.t) / 60) || num(s.r) * 0.5;
+        let secs = 0;
+        for (const s of en.sets || []) {
+          const t = num(s.t);
+          secs += t > 0 ? t : num(s.r) * SEC_PER_MOB_REP;
+        }
+        min += (secs / 60) * (mob ? 1 : END_RANGE_RATE);
       }
       if (touched) sessions++;
     }
     const perWk = min / activeWeeks(state, 28);
-    return { score: clamp(interp(perWk, [0, 15, 40, 80, 150], [4, 30, 55, 78, 95])), minPerWk: perWk, sessions };
+    return { score: clamp(interp(perWk, MOB_BANDS_X, MOB_BANDS_Y)), minPerWk: perWk, sessions };
   }
 
   /* Discipline has two parts, and only one of them used to count.
@@ -1959,8 +2013,8 @@ const Engine = (() => {
           /* how far below 30 the score is, as a share of 30: the LOWEST score is
              the biggest gap, so it ranks first. */
           priority: pct((30 - attrs[a.key].score) / 30),
-          title: `${a.label} is where you can gain the most`,
-          detail: `Score ${attrs[a.key].score}/100 (${attrs[a.key].tier}).`,
+          title: `${a.label} has the most room in your log`,
+          detail: `Score ${attrs[a.key].score}/100 (${attrs[a.key].tier}) — the thinnest part of what you have logged.`,
           fix: FIXES[a.key] });
     }
     /* Bucket first (high -> med -> low), then the biggest gap first, and only
@@ -2877,7 +2931,7 @@ const Engine = (() => {
     strengthScore, staminaScore, powerScore, mobilityScore, consistencyScore,
     ageCoefficient, ageAt, MCCULLOCH, MCCULLOCH_SOURCE,
     trainedExerciseIds, bestLifts, liftScore, FIXES, suggestFor, dstr,
-    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
+    nextTarget, kgStep, exerciseWeight, isIsolation, isMobility, isEndRangeHinge, bwFactor, isBodyweight, activeWeeks, backfillBodyweight, workFactor,
     BW_FACTOR, BW_NAME, SUPPLIES_LOAD, hasBwFactor,
     attributeHistory, volumeWeeks, volumeSeriesByGroup, deloadCheck, targetProgress,
     exportNoteShorthand, exportNotesShorthand, filterSessions, dayMap, freshness, recoveryHint, bodyFatProgress, belowEssentialBF, ESSENTIAL_BF,

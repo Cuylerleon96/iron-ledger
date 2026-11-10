@@ -933,8 +933,8 @@
             : " Log rest between sets to factor training density in; nothing else reads it.");
       case "POW": return `${x.plyoReps} explosive reps logged · ${x.heavySets} heavy low-rep sets (≤3 reps).`;
       case "MOB": return x.minPerWk > 0
-        ? `${Math.round(x.minPerWk)} min/wk across ${x.sessions} ${pl(x.sessions, "session")} of mobility and control work — stretching, joint work, and stability or rotation drills. Loaded flexion like crunches is strength, not range, so it counts toward Core instead.`
-        : "No mobility or control work logged. Stretching, foam rolling, joint rotations, or stability and rotation drills (plank, bird dog, Pallof press, Turkish get-up) all count. Crunches and sit-ups do not — they train a short range under load, which is strength.";
+        ? `${Math.round(x.minPerWk)} min/wk across ${x.sessions} ${pl(x.sessions, "session")} of mobility and control work — stretching, joint work, and stability or rotation drills. Loaded end-range work like a Romanian deadlift held at the bottom counts too, at a third of a stretch's rate, because it lengthens tissue under load. Loaded flexion like crunches is strength, not range, so it counts toward Core instead.`
+        : "No mobility or control work logged. Stretching, foam rolling, joint rotations, or stability and rotation drills (plank, bird dog, Pallof press, Turkish get-up) all count. So does loaded end-range work — a Romanian deadlift held at the bottom, a paused hinge — at a third of a stretch's rate. Crunches and sit-ups do not — they train a short range under load, which is strength.";
       case "CON": return `${x.sessions} ${pl(x.sessions, "session")} in 28 days against a target of ${fmt(x.expected)} — frequency ${Math.round(x.frequency)}/100, continuity ${Math.round(x.continuity)}/100`
         + (x.longestGap != null ? ` (longest stretch without training ${x.longestGap} ${pl(x.longestGap, "day")}, ${x.weeksCovered} of the last 4 weeks trained)` : "")
         + `. Continuity rewards turning up regularly, and one missed week costs only a few points.`;

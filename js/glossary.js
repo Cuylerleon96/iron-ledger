@@ -151,8 +151,8 @@ const Glossary = (() => {
     {
       id: "freshness", term: "Freshness", aliases: ["freshness", "Days since each group was last trained"],
       plain: "How long it has been since you last trained each muscle group. It is recency, not a measurement of how recovered you are.",
-      real: "Days since the group's most recent logged session. The chip is coloured on a 0-100 freshness read against a recovery window; a group not trained in the last four weeks reads \"no data\".",
-      source: "This app's own recency read. It is not a recovery measurement and the app does not claim a published recovery window.",
+      real: "Days since the group's most recent logged session. The chip is coloured on a 0-100 freshness read against a 72-hour recency window; a group not trained in the last four weeks reads \"no data\".",
+      source: "This app's own recency read. It is not a recovery measurement and the app does not claim a published recovery window — the 72-hour reference is a product judgement, not a published standard.",
     },
     {
       id: "baseline", term: "Baseline", aliases: ["baseline"],
@@ -332,9 +332,9 @@ const Glossary = (() => {
     },
     {
       id: "attr-MOB", term: "Mobility", aliases: ["Mobility", "MOB", "range"],
-      plain: "The range of movement you can produce and control — stretching, joint work, and stability at end-range. Loaded short-range work like crunches deliberately does not count.",
-      real: "Minutes per week of recognised mobility and control work (stretching, foam rolling, joint rotations, and stability/anti-rotation holds such as plank, bird dog, Pallof press, Turkish get-up), scored against a weekly reference range. Loaded flexion under a short range trains strength, not range.",
-      source: "This app's own minute-range reference and its own definition of what counts. No specific publication is bundled for the weekly range.",
+      plain: "The range of movement you can produce and control — stretching, joint work, and stability at end-range. Loaded short-range work like crunches deliberately does not count, and neither does a mid-range lift: it can only express the range you already have.",
+      real: "Minutes per week of recognised mobility and control work (stretching, foam rolling, joint rotations, and stability/anti-rotation holds such as plank, bird dog, Pallof press, Turkish get-up), scored against a weekly reference range. Loaded END-RANGE work — a Romanian deadlift held at the bottom, a paused hinge, a good morning — counts too, at a third of a stretch's rate, because it genuinely lengthens tissue under load, though range is a side effect of a strength lift rather than its purpose. A conventional deadlift pulled from the floor is a mid-range strength lift, so it does not count. Loaded flexion under a short range (crunches, sit-ups) trains strength, not range.",
+      source: "This app's own minute-range reference and its own definition of what counts, including the one-third rate for loaded end-range work and the 5-second-per-rep assumption. It is a product judgement, not a published standard — the same convention the app uses for its recovery window. No specific publication is bundled for the weekly range.",
     },
     {
       id: "attr-CON", term: "Discipline", aliases: ["Discipline", "CON", "consistency"],

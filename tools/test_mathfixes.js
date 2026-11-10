@@ -2888,7 +2888,7 @@ console.log("\n=== 56. weak points lead with the FURTHEST-OFF card (bucket, then
   const attrLabels = e.E.ATTRIBUTES.map((a) => a.label);
   const gen = { volume: 0, gap: 1, balance: 2, stagnant: 3, density: 4, attribute: 5 };
   const genIdx = (w) => w.kind === "attribute"
-    ? attrLabels.findIndex((lab) => w.title === `${lab} is where you can gain the most`) : gen[w.kind];
+    ? attrLabels.findIndex((lab) => w.title === `${lab} has the most room in your log`) : gen[w.kind];
   const oldOrder = wp.slice().sort((a, b) => (rank[a.severity] - rank[b.severity]) || (genIdx(a) - genIdx(b)));
   const titles = (l) => l.map((w) => w.title).sort().join(" | ");
   eq("the OLD bucket-only order violates the property (the test really discriminates)", monotone(oldOrder), false);
@@ -2904,6 +2904,66 @@ console.log("\n=== 56. weak points lead with the FURTHEST-OFF card (bucket, then
     newAttrs.map((w) => w.priority), newAttrs.map((w) => w.priority).slice().sort((a, b) => b - a));
   eq("the OLD order listed a bigger attribute gap BELOW a smaller one (his Power-above-Mobility list)",
     oldAttrs.some((w, i) => i > 0 && oldAttrs[i - 1].priority < w.priority), true);
+}
+
+console.log("\n=== 57. mobility: honest credit, honest bands, honest copy ===");
+{
+  const e = env();
+  const custom = [
+    { id: "mStretch", n: "Hip Flexor Stretch", c: "Legs", g: ["Legs"], p: ["Quads"], s: [], e: [], m: "time" },
+    { id: "mToe",     n: "Toe Touch",          c: "Legs", g: ["Legs"], p: ["Hamstrings"], s: [], e: [], m: "time" },
+    { id: "mRDL",     n: "Romanian Deadlift",  c: "Legs", g: ["Legs"], p: ["Hamstrings"], s: [], e: [], m: "weight_reps" },
+    { id: "mDL",      n: "Deadlifts",          c: "Legs", g: ["Legs"], p: ["Back"], s: [], e: [], m: "weight_reps" },
+    { id: "mCC",      n: "Cat-Cow",            c: "Back", g: ["Back"], p: ["Spine"], s: [], e: [], m: "time" },
+    { id: "mCrunch",  n: "Incline Crunches",   c: "Abs",  g: ["Core"], p: ["Abs"], s: [], e: [], m: "weight_reps" },
+  ];
+  const C = (workouts) => base({ custom, workouts });
+  const mob = (st) => e.E.attributes(st, 28, 0).MOB;
+
+  /* (a) Toe Touch is a stretch, wrongly excluded before — it must count now */
+  truthy("Toe Touch counts as mobility (it is a stretch)", e.E.isMobility("Toe Touch"));
+  truthy("...and a Toe Touch set actually moves the score",
+    mob(C([wk(iso(1), [{ t: 30 }], "mToe", "Toe Touch", "time")])).score > 0);
+
+  /* (b) loaded end-range hinge credit is STRICTLY less than the stretch rate */
+  const stretchMin = mob(C([wk(iso(1), [{ t: 300 }], "mStretch", "Hip Flexor Stretch", "time")])).detail.minPerWk;
+  const hingeMin   = mob(C([wk(iso(1), [{ t: 300 }], "mRDL", "Romanian Deadlift", "time")])).detail.minPerWk;
+  near("a 300 s stretch scores its real 5 minutes", stretchMin, 5, 0.01);
+  truthy("an equal-duration loaded hinge scores LESS than the stretch", hingeMin < stretchMin);
+  near("...at one third of the stretch rate", hingeMin, 5 / 3, 0.01);
+
+  /* (c) a conventional deadlift is a mid-range strength pull — NO blanket credit */
+  truthy("a conventional deadlift is not mobility", !e.E.isMobility("Deadlifts"));
+  truthy("...and is not an end-range hinge either", !e.E.isEndRangeHinge("Deadlifts"));
+  eq("...so a deadlift-only session scores zero mobility",
+    mob(C([wk(iso(1), [{ w: 100, r: 5 }], "mDL", "Deadlifts")])).score, 0);
+
+  /* (d) the reps x 0.5 inflation is gone: 20 reps is ~1.7 min, not 10 */
+  const repMin = mob(C([wk(iso(1), [{ r: 20 }], "mCC", "Cat-Cow", "time")])).detail.minPerWk;
+  near("a 20-rep mobility set scores ~1.7 min (5 s/rep), not 10", repMin, 20 * 5 / 60, 0.01);
+  truthy("...well under the old ten minutes", repMin < 3);
+
+  /* (e) the bands: a realistic weekly amount is mid-scale, zero stays at the floor */
+  const rScore = mob(C([wk(iso(1), [{ t: 1200 }], "mStretch", "Hip Flexor Stretch", "time")])).score; // 20 min/wk
+  truthy(`a realistic 20 min/wk reads mid-scale (${rScore})`, rScore >= 45 && rScore <= 60);
+  truthy("a stretch that is never done still reads at the floor",
+    mob(C([wk(iso(1), [{ w: 20, r: 15 }], "mCrunch", "Incline Crunches")])).score <= 4);
+  truthy("a token 2 min/wk still reads low",
+    mob(C([wk(iso(1), [{ t: 120 }], "mStretch", "Hip Flexor Stretch", "time")])).score <= 20);
+
+  /* (f) the copy describes the LOG, never the body */
+  const srcE = fs.readFileSync(path.join(B, "js", "engine.js"), "utf8");
+  const srcA = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const srcG = fs.readFileSync(path.join(B, "js", "glossary.js"), "utf8");
+  truthy("the old body-claim title is gone", !/is where you can gain the most/.test(srcE + srcA + srcG));
+  truthy("the weak-point title now names the log", /has the most room in your log/.test(srcE));
+  const attrCards = e.E.weakPoints(
+    C([wk(iso(1), [{ t: 120 }], "mStretch", "Hip Flexor Stretch", "time")]), 28)
+    .filter((w) => w.kind === "attribute");
+  truthy("...and it renders on a real card",
+    attrCards.length >= 1 && attrCards.every((w) => /has the most room in your log$/.test(w.title)));
+  truthy("the mobility detail line explains the loaded-end-range rule",
+    /Romanian deadlift held at the bottom/.test(srcA));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
