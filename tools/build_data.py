@@ -20,7 +20,11 @@ with open(out, "w") as f:
     f.write("   Generated from data/library.json by tools/build_data.py. Do not hand-edit.\n")
     f.write("   Fields: id, n=name, c=category, p=primary muscles, s=secondary muscles,\n")
     f.write("           e=equipment, m=tracking mode, g=radar muscle groups,\n")
-    f.write("           d=form cue (steps separated by \\n), f=1 if the cue is from free-exercise-db. */\n")
+    f.write("           d=form cue (steps separated by \\n), f=1 if the cue is from free-exercise-db,\n")
+    f.write("           dual=1 if a set counts with or without a load,\n")
+    f.write("           nm=1 if the row is NOT A MOVEMENT (a muscle-group blurb) — it is kept\n")
+    f.write("           so an existing reference still resolves by id, and is never offered\n")
+    f.write("           for logging. See the isOffered() comment in js/app.js. */\n")
     f.write("const EXERCISE_LIB = " + json.dumps(lib, separators=(",", ":")) + ";\n")
 print("wrote", out, len(open(out).read()), "bytes")
 

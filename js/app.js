@@ -319,6 +319,36 @@
 
   /* ================= library index ================= */
   function allExercises() { return [...EXERCISE_LIB, ...(S.custom || [])]; }
+
+  /* A row can be KEPT so an old reference still RESOLVES while being no longer
+     OFFERED. data/library.json row 1381 "Upper Back" (nm:1) is not a movement:
+     its description is a muscle-group blurb, it has no implement and no
+     movement, and two independent research passes refused to invent equipment
+     for it. The row STAYS in the library and is never deleted — history, a saved
+     custom or an import can still reference it by id, and findEx()/exDetailHTML()
+     resolve it for display — but it is filtered out of the two surfaces that
+     OFFER something to log (the exercise picker and the library browser), because
+     both of those go through searchExercises(). It was a dead option: a row the
+     user could pick and then find nothing to log. The flag is data, not a list
+     of ids kept here, so the next non-movement row is marked the same way. */
+  const isOffered = (x) => !x.nm;
+  const offeredExercises = () => allExercises().filter(isOffered);
+
+  /* The equipment filter is DERIVED from the library, never a hand-kept list.
+     The library's `e` values are free text ("Cable machine", "Hangboard
+     (climbing fingerboard)", "none (bodyweight exercise)"), so a fixed vocabulary
+     goes stale the moment the data grows: after the v1.3.13 equipment fill, 26 of
+     the 34 values in use could not be filtered at all. The option VALUE is the
+     exact string the row shows, so the substring match in searchExercises can
+     only agree with the label the user read. */
+  function equipmentOptions() {
+    const seen = new Set();
+    offeredExercises().forEach((x) => (x.e || []).forEach((v) => seen.add(v)));
+    return [...seen].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+  }
+  const equipmentOptionsHTML = () => '<option value="">All equipment</option>' +
+    equipmentOptions().map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+
   function buildIndex() {
     libIndex = allExercises().map((x) => ({
       x, key: (x.n + " " + (x.e || []).join(" ") + " " + (x.p || []).join(" ") + " " + x.c).toLowerCase(),
@@ -330,6 +360,7 @@
     const { cat, eq, mode, limit = 60 } = opts;
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
     let res = libIndex.filter(({ x }) => {
+      if (!isOffered(x)) return false;      // a non-movement is never offered to log
       if (cat && x.c !== cat) return false;
       if (mode && x.m !== mode) return false;
       if (eq && !(x.e || []).some((s) => s.toLowerCase().includes(eq.toLowerCase()))) return false;
@@ -1632,12 +1663,11 @@
     const box = el("div", { class: "picker" });
     box.innerHTML = `
       <div class="picker-head">
-        <input class="inp" id="pk-q" placeholder="Search ${EXERCISE_LIB.length} exercises…" autofocus>
+        <input class="inp" id="pk-q" placeholder="Search ${offeredExercises().length} exercises…" autofocus>
         <div class="row">
           <select class="mini" id="pk-cat"><option value="">All categories</option>
             ${["Chest", "Back", "Shoulders", "Arms", "Legs", "Calves", "Abs", "Cardio"].map((c) => `<option>${c}</option>`).join("")}</select>
-          <select class="mini" id="pk-eq"><option value="">All equipment</option>
-            ${["Barbell", "Dumbbell", "Cable", "Machine", "Bench", "Kettlebell", "Bodyweight", "Band"].map((c) => `<option>${c}</option>`).join("")}</select>
+          <select class="mini" id="pk-eq">${equipmentOptionsHTML()}</select>
         </div>
       </div>
       <div class="picker-list" id="pk-list"></div>
@@ -1882,13 +1912,12 @@
   function renderLibrary(host) {
     const head = el("section", { class: "card" });
     head.innerHTML = `
-      <div class="card-head"><h3>Exercise library</h3><span class="muted">${allExercises().length} movements</span></div>
+      <div class="card-head"><h3>Exercise library</h3><span class="muted">${offeredExercises().length} movements</span></div>
       <div class="row">
         <input class="inp" id="lb-q" placeholder="Search…">
         <select class="mini" id="lb-cat"><option value="">All categories</option>
           ${["Chest", "Back", "Shoulders", "Arms", "Legs", "Calves", "Abs", "Cardio", "Other"].map((c) => `<option>${c}</option>`).join("")}</select>
-        <select class="mini" id="lb-eq"><option value="">All equipment</option>
-          ${["Barbell", "Dumbbell", "Cable", "Machine", "Bench", "Kettlebell", "Bodyweight", "Band"].map((c) => `<option>${c}</option>`).join("")}</select>
+        <select class="mini" id="lb-eq">${equipmentOptionsHTML()}</select>
       </div>
       <div class="row" id="lb-progress"></div>`;
     host.append(head);
@@ -3146,6 +3175,10 @@
   window.App = { render, setView, Store, Engine, seedData, parseSet, parseNotes, U, buildIndex, openModal, closeModal, toast, setTrackMode,
     celebrate, awardBadges, saveDraft, weekProgress, weekHudText, weekChipText, cueBlock,
     checkHeroUnlocks, syncHeroHeader,
+    /* the library's OFFERING surfaces (picker + browser) and the data-derived
+       equipment filter — exposed so a suite can assert what is on offer without
+       a browser. */
+    searchExercises, offeredExercises, equipmentOptions, findEx,
     /* draft autosave — exposed so a suite can read the live draft and drive the
        real persist/restore path instead of a copy of it. */
     persistDraft, getDraft: () => draft, restoreDraft,

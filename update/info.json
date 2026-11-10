@@ -1,14 +1,13 @@
 {
-  "versionCode": 108,
-  "versionName": "1.3.13",
+  "versionCode": 109,
+  "versionName": "1.3.14",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "7b48024f2d54a6581b6a7129bb8910671119d5e0269e5d29902e5b32fdaf4da2",
-  "sizeBytes": 3954425,
+  "sha256": "2c71b385b74578579ba894375e6d07541dc453604e26672aca7da4a27064de29",
+  "sizeBytes": 3955420,
   "published": "2026-11-10",
   "notes": [
-    "The exercise library's equipment is filled in from the reviewed research table: 161 movements that recorded none now carry theirs, including gymnastic rings, trap bar, weighted sled, jump rope, heavy bag, wrist roller, parallettes, hangboard, rice bucket and battle ropes",
-    "Some movements that had the wrong gear now carry the right one: a plate-loaded lat pulldown was filed as a cable, ball slams as a Swiss ball, and two incline presses and Weighted Step-ups were wrong",
-    "An exercise whose equipment is simply not recorded no longer reads \"bodyweight\" \u2014 it says \"equipment not listed\", rather than stating a fact the data does not hold",
-    "Unlocking a badge now plays a soft two-note chime, once, alongside the celebration that was already there"
+    "The exercise library no longer offers a row that is not a movement: 'Upper Back' was a muscle-group description with no implement and nothing to log, so it is kept so an existing reference still resolves, but it is out of the exercise picker and the library browser",
+    "The equipment filter is now built from the library itself, so every gear value in use can be filtered \u2014 the long ones the equipment fill added (hangboard, trap bar, battle ropes, weighted sled, massage ball) included, not just the old eight",
+    "The equipment filter listed eight fixed values; it now lists all 34 in use"
   ]
 }

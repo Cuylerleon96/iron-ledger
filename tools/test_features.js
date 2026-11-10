@@ -1269,7 +1269,11 @@ console.log("=== the exercise sheet teaches; the logging controls live in the Lo
 
   // (e) the Log flow can pick an arbitrary exercise and set its mode
   truthy("the Log flow offers a search picker", /function exercisePicker\(onPick\)/.test(src));
-  truthy("...over the whole library, not a recent/frequent subset", /Search \$\{EXERCISE_LIB\.length\} exercises/.test(src));
+  // The count in the placeholder is now the OFFERED count (the whole library
+  // minus the one non-movement row, 1381 "Upper Back") — the INTENT is unchanged:
+  // the picker searches the whole library, not a recent/frequent subset. It reads
+  // EXERCISE_LIB through searchExercises()/libIndex, so it is still the full list.
+  truthy("...over the whole library, not a recent/frequent subset", /Search \$\{offeredExercises\(\)\.length\} exercises/.test(src));
   truthy("the Log entry carries the 'Track as' mode select", /track-as-lab">Track as</.test(src) && /class="mini mode-sel"/.test(src));
   truthy("...wired through the shared setTrackMode helper", /setTrackMode\(en\.id, en\.mode\)/.test(src));
   eq("the picker is reached from the Log tab's add button", /#btn-add"\)\.addEventListener\("click", \(\) => exercisePicker\(\(ex\) => addEntry\(ex\)\)\)/.test(src), true);
@@ -1521,6 +1525,80 @@ console.log("=== Hero tab: tab order, new hero sheets, roster rendering (static)
     !fs.existsSync(path.join(B, "img", "gear-headband.png")) &&
     !fs.existsSync(path.join(B, "img", "gear-belt.png")) &&
     !/\.gear-overlay/.test(css) && !/\.gear-prev/.test(css));
+}
+
+console.log("=== a non-movement row is not OFFERED, but still RESOLVES (v1.3.14) ===");
+{
+  /* data/library.json row 1381 "Upper Back" is a muscle-group blurb, not a
+     movement: it has no implement and no movement, and two independent research
+     passes refused to invent equipment for it. It carries `nm:1` and the row is
+     KEPT, never deleted — anything that already references it still resolves by
+     id — while the two surfaces that OFFER something to log (the exercise picker
+     and the library browser, which both go through searchExercises()) must not
+     list it. A row a user can pick and then find nothing to log is a dead option.
+
+     Loaded behind a DOM stub exactly as the cue section above, so this drives the
+     REAL app.js path rather than a copy of the filter. */
+  const mkN = () => ({ innerHTML: "", className: "", dataset: {}, style: {}, children: [],
+    addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {},
+    append() {}, prepend() {}, remove() {}, click() {}, focus() {}, contains: () => false,
+    querySelector: () => mkN(), querySelectorAll: () => [],
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false } });
+  const st = {};
+  const c = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    Date, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map, WeakMap, Symbol,
+    setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+    document: { addEventListener() {}, removeEventListener() {}, querySelector: () => mkN(), querySelectorAll: () => [], getElementById: () => mkN(), createElement: () => mkN(), createElementNS: () => mkN(), body: mkN(), visibilityState: "visible", activeElement: null },
+    navigator: { clipboard: { writeText: async () => {} } },
+    localStorage: { getItem: (k) => (k in st ? st[k] : null), setItem: (k, v) => { st[k] = String(v); }, removeItem: (k) => { delete st[k]; } },
+    Blob: function () {}, URL: { createObjectURL: () => "blob:x" }, module: { exports: {} },
+  };
+  c.Chart = { radar() {}, bars() {}, line() {}, multi() {}, heatmap() {} };
+  c.window = c; c.globalThis = c; vm.createContext(c);
+  vm.runInContext('localStorage.setItem("fitness-app-v1", JSON.stringify({version:1,createdAt:"2026-01-01T00:00:00.000Z",profile:{name:"C",sex:"M",heightCm:180,weightKg:82,weeklyTarget:4,units:"kg"},workouts:[],bodylog:[],overrides:{},custom:[],achievements:{},settings:{seeded:true}}));', c);
+  vm.runInContext(["js/data.js", "js/seed.js", "js/engine.js", "js/store.js", "js/chart.js", "js/app.js"]
+    .map((f) => fs.readFileSync(path.join(B, f), "utf8")).join("\n;\n") + "\n;globalThis.__X={App,EXERCISE_LIB};", c, { filename: "ui.js" });
+  const A = c.__X.App, LIB = c.__X.EXERCISE_LIB;
+  const src = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  A.buildIndex();
+
+  // (a) the flag is DATA, and it marks exactly the one row that is not a movement
+  eq("exactly one library row is flagged as not a movement", LIB.filter((x) => x.nm).map((x) => x.id), [1381]);
+  eq("...and the row is still IN the library", LIB.filter((x) => x.id === 1381).length, 1);
+  eq("1381 carries no invented equipment", LIB.find((x) => x.id === 1381).e, []);
+
+  // (b) NOT OFFERED — the picker and the browser both read searchExercises()
+  const all = A.searchExercises("", { limit: 5000 });
+  eq("the picker/browser can offer 953 of the 954 rows", all.length, 953);
+  eq("...and 1381 is not one of them", all.filter((x) => x.id === 1381).map((x) => x.id), []);
+  eq("searching for it by name does not offer it (no dead option)",
+     A.searchExercises("upper back", { limit: 5000 }).some((x) => x.id === 1381), false);
+  eq("...and it is absent from the picker's own 80-row window too",
+     A.searchExercises("upper back", {}).some((x) => x.id === 1381), false);
+  eq("offeredExercises() agrees", A.offeredExercises().length, 953);
+  eq("...and no non-movement slips through by another path",
+     A.searchExercises("", { cat: "Back", limit: 5000 }).some((x) => x.id === 1381), false);
+
+  // (c) STILL RESOLVABLE for display, by id — never deleted
+  truthy("findEx resolves it by id", !!A.findEx(1381) && A.findEx(1381).n === "Upper Back");
+  const d = A.exDetailHTML(1381);
+  truthy("...and its sheet still renders", /Upper Back/.test(d));
+  truthy("...with the honest neutral equipment line, not an invented one", /equipment not listed/.test(d));
+
+  // (d) the equipment filter is DERIVED from the library, so no value in use is unreachable
+  const inUse = new Set();
+  LIB.forEach((x) => (x.e || []).forEach((v) => inUse.add(v)));
+  const opts = A.equipmentOptions();
+  eq("there are no more options than values in use", opts.length, inUse.size);
+  eq("every equipment value in the library is selectable", [...inUse].filter((v) => !opts.includes(v)), []);
+  truthy("the options are sorted for a dropdown", JSON.stringify(opts) === JSON.stringify([...opts].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }))));
+  truthy("a long v1.3.13 value is selectable", opts.includes("Hangboard (climbing fingerboard)") && opts.includes("Massage ball (lacrosse ball)"));
+  // the two selects render that same derived list, and the stale hardcoded one is gone
+  eq("the hardcoded equipment vocabulary is GONE from app.js",
+     /\["Barbell", "Dumbbell", "Cable", "Machine", "Bench", "Kettlebell", "Bodyweight", "Band"\]/.test(src), false);
+  eq("...and both selects render the derived list", (src.match(/\$\{equipmentOptionsHTML\(\)\}/g) || []).length, 2);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
