@@ -811,6 +811,13 @@
       </div>`;
     const ch = el("div", { class: "chart-host" });
     card.append(ch);
+    /* With ONE logged week every group has a single point: there is no second
+       week to compare against, so the dots show where each group stands, not a
+       trend. Say that plainly rather than letting a lone point imply a
+       direction it does not have. From two weeks on there is a real segment to
+       read, so the note goes away. */
+    if (weeks.length === 1) card.append(el("p", { class: "muted small vol-sparse" },
+      "One week logged so far — a single point is where you started, not a trend. A line appears once you have a second week to compare it with."));
     /* Seven groups, seven lines: a colour each, taken from the palette the app
        already uses everywhere else rather than an invented set that would clash
        with the screen. The legend is a real list, so it wraps to as many rows as

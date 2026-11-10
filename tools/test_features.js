@@ -13,7 +13,7 @@ const eq = (label, got, want) => {
 };
 const truthy = (label, got) => eq(label, !!got, true);
 
-function env(ls = {}) {
+function env(ls = {}, over = {}) {
   const store = Object.assign({}, ls);
   const s = {
     console: { log() {}, warn() {}, error() {}, info() {} },
@@ -23,6 +23,7 @@ function env(ls = {}) {
     localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     module: { exports: {} },
   };
+  Object.assign(s, over);   // e.g. a frozen Date, to test a day passing
   s.globalThis = s; vm.createContext(s);
   vm.runInContext(SRC + "\n;globalThis.__X={Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
   return { E: s.__X.Engine, S: s.__X.Store };
@@ -358,7 +359,12 @@ console.log("=== weekly volume series, per muscle group (the dashboard's chart) 
      series would silently reintroduce the flat-line defect this chart exists to
      fix, so the per-group shape is pinned here. */
   const recent = env({});
-  recent.S.upsertWorkout({ id: "a", date: iso(3), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] });
+  /* Both sessions sit inside the CURRENT calendar week — its Monday and today —
+     so "the first logged week" is unambiguously ONE slot whatever weekday this
+     suite happens to run on. (A rolling 7-day window would also have called them
+     one slot, but for the wrong reason: it would have swallowed a whole week.) */
+  const thisMon = recent.E.weekKeyOf(iso(0));
+  recent.S.upsertWorkout({ id: "a", date: thisMon, entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] });
   recent.S.upsertWorkout({ id: "b", date: iso(0), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }] });
   const rs = recent.E.volumeSeriesByGroup(recent.S.state, 12);
   eq("the series starts at the first logged week, not 12 slots of pre-history", rs.length, 1);
@@ -393,6 +399,66 @@ console.log("=== weekly volume series, per muscle group (the dashboard's chart) 
   eq("a first session older than 12 weeks still shows the full 12-week span", old.E.volumeSeriesByGroup(old.S.state, 12).length, 12);
   eq("an empty account draws no weeks rather than a row of misses", env({}).E.volumeSeriesByGroup(env({}).S.state, 12).length, 0);
 
+  /* --- the three checks that would have caught the rolling-window defect ---
+     The chart used to bucket by 7-day windows ENDING TODAY, so every session in
+     the last seven days collapsed into one column (a four-session week drawn as
+     a single point) and a session slid to another column overnight. These pin
+     the calendar-week contract the HUD already speaks. */
+  const bench = [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 8 }] }];
+  const slotOf = (E, ser, date) => ser.findIndex((r) => r.from === E.weekKeyOf(date));
+  {
+    /* (a) a session on SUNDAY and one on the FOLLOWING MONDAY are different
+       weeks — the calendar boundary, not a seven-day span, decides. */
+    const e = env({});
+    const mon = new Date(e.E.weekKeyOf(iso(0)) + "T12:00:00");   // Monday of this week
+    const sunD = new Date(mon); sunD.setDate(sunD.getDate() - 1); // the Sunday just before it
+    const sun = e.E.dstr(sunD);
+    e.S.upsertWorkout({ id: "sun", date: sun, entries: JSON.parse(JSON.stringify(bench)) });
+    e.S.upsertWorkout({ id: "mon", date: e.E.weekKeyOf(iso(0)), entries: JSON.parse(JSON.stringify(bench)) });
+    const ser = e.E.volumeSeriesByGroup(e.S.state, 12);
+    const iSun = slotOf(e.E, ser, sun), iMon = slotOf(e.E, ser, e.E.weekKeyOf(iso(0)));
+    eq("(a) a Sunday session and the following Monday land in DIFFERENT weeks", iSun !== iMon, true);
+    eq("(a) ...both slots really exist", [iSun >= 0, iMon >= 0], [true, true]);
+    eq("(a) ...and the Sunday week is exactly one slot older", ser[iSun].weeksAgo - ser[iMon].weeksAgo, 1);
+
+    /* (c) the chart's week keys ARE Engine.weekKeyOf — the same keys the HUD
+       counts against the weekly target — so the chart and the "N of 4 this
+       week" line can never name different weeks. */
+    eq("(c) the Sunday session's slot IS Engine.weekKeyOf(sunday)", ser[iSun].from, e.E.weekKeyOf(sun));
+    eq("(c) the Monday session's slot IS Engine.weekKeyOf(monday)", ser[iMon].from, e.E.weekKeyOf(e.E.weekKeyOf(iso(0))));
+    eq("(c) every slot key is its own Monday-start week key (HUD-agreeing)",
+       ser.every((r) => r.from === e.E.weekKeyOf(r.from)), true);
+  }
+  {
+    /* (b) the SLIDING-WINDOW bug: advance the reference date by ONE DAY and a
+       session must stay in the same column. A frozen clock is used so the test
+       does not depend on when it is run. */
+    const frozen = (ms) => {
+      const Real = Date;
+      class Frozen extends Real {
+        constructor(...a) { if (a.length === 0) super(ms); else super(...a); }
+        static now() { return ms; }
+      }
+      return Frozen;
+    };
+    const T0 = new Date("2026-11-11T12:00:00").getTime();   // a Wednesday
+    const D = "2026-11-05";                                 // six days before T0 — under the
+                                                            // old windows it sat in slot 0
+                                                            // at T0 and slid to slot 1 the
+                                                            // next day; a calendar week holds it
+    const day1 = env({}, { Date: frozen(T0) });
+    day1.S.upsertWorkout({ id: "s", date: D, entries: JSON.parse(JSON.stringify(bench)) });
+    const ser1 = day1.E.volumeSeriesByGroup(day1.S.state, 12);
+    const day2 = env({}, { Date: frozen(T0 + 86400000) });
+    day2.S.upsertWorkout({ id: "s", date: D, entries: JSON.parse(JSON.stringify(bench)) });
+    const ser2 = day2.E.volumeSeriesByGroup(day2.S.state, 12);
+    eq("(b) a day passing leaves EVERY week slot where it was", ser2.map((r) => r.from), ser1.map((r) => r.from));
+    const b1 = ser1[slotOf(day1.E, ser1, D)], b2 = ser2[slotOf(day2.E, ser2, D)];
+    eq("(b) ...and the session's own slot is the SAME week, not a new one", [b1.from, b2.from], [day1.E.weekKeyOf(D), day1.E.weekKeyOf(D)]);
+    eq("(b) ...it does NOT migrate to a different slot index overnight", [b1.weeksAgo, b2.weeksAgo], [1, 1]);
+    eq("(b) ...still carrying the session, in the same week", [b1.sessions, b2.sessions], [1, 1]);
+  }
+
   /* The card really draws the trend through Chart.multi (which the rest of the
      app already uses), one series per group — and the removed weekly-bars helper
      is gone rather than left as dead code. */
@@ -402,6 +468,8 @@ console.log("=== weekly volume series, per muscle group (the dashboard's chart) 
   eq("...and nothing calls it", /Chart\.weekbars/.test(appSrc), false);
   truthy("the card feeds Chart.multi one series per muscle group",
     /const series = Engine\.GROUP_ORDER\.map/.test(appSrc) && /Chart\.multi\(ch, \{/.test(appSrc));
+  truthy("the card says plainly when a single week leaves no trend to read",
+    /vol-sparse/.test(appSrc) && /a single point is where you started, not a trend/.test(appSrc));
 }
 
 console.log("=== recovery suggestion (where to start) ===");

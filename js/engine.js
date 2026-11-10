@@ -1312,15 +1312,34 @@ const Engine = (() => {
     return out;
   }
 
-  /* The weekly windows AS THE DASHBOARD DRAWS THEM: the same volumeWeeks windows,
-     TRIMMED to the user's own history and SPLIT BY MUSCLE GROUP. The oldest slot
-     kept is the window that can hold their EARLIEST session, so the weeks before
-     they started are never drawn — those are pre-history, not misses, and eleven
-     of them made a one-week-old account look broken. Every slot AFTER that point
-     is kept, empty or not: the series is CONTIGUOUS (weeksAgo steps by exactly 1)
-     and each week appears exactly once. That is what lets the chart put EVERY
-     line on the floor for a week nobody logged instead of silently closing the
-     gap. An account with no sessions returns [].
+  /* The weekly slots AS THE DASHBOARD DRAWS THEM, bucketed by the SAME
+     MONDAY-START CALENDAR weeks the rest of the app counts — the weeks
+     weekKeyOf names and the HUD reads out ("2 / 4 this week"), the same weeks
+     weeksAtTarget and the consistency grid count. TRIMMED to the user's own
+     history and SPLIT BY MUSCLE GROUP.
+
+     WHY THIS DOES NOT REUSE volumeWeeks' ROLLING 7-DAY WINDOWS, and why the
+     next reader must not "reconcile" the two — they answer different questions:
+       * volumeWeeks tiles the timeline into half-open 7-day windows ENDING
+         TODAY, so its newest bucket is "the last seven days". That is the right
+         basis for deloadCheck, which asks whether the last few weeks of LOAD
+         have risen, and it is pinned by tests. Such a window SLIDES: the same
+         session falls in a different bucket as the clock advances a day.
+       * the chart must agree with the week count the user reads elsewhere in
+         the app, and a session must stay in the SAME column however many days
+         pass. Only a calendar week does both. A rolling window put every
+         session logged in the last seven days into ONE column, so a user with
+         four sessions across four days saw a single column and no line at all —
+         a week of training drawn as a single point.
+     So do not fold this back onto volumeWeeks.
+
+     The oldest slot kept is the CALENDAR week holding their EARLIEST session, so
+     the weeks before they started are never drawn — those are pre-history, not
+     misses. Every slot after that is kept, empty or not: the series is
+     CONTIGUOUS (one slot per calendar week, weeksAgo stepping by exactly 1) and
+     each week appears exactly once, which is what lets the chart put EVERY line
+     on the floor for a week nobody logged instead of closing the gap. Capped at
+     the most recent maxWeeks. An account with no sessions returns [].
 
      Group attribution follows muscleGroups EXACTLY (the primary group takes full
      credit, any secondary group half), so a group's weekly number here is the
@@ -1330,31 +1349,46 @@ const Engine = (() => {
   function volumeSeriesByGroup(state, maxWeeks = 12) {
     const dates = (state.workouts || []).map((w) => w.date).filter(Boolean).sort();
     if (!dates.length) return [];
-    /* Which 7-day window holds the earliest session. windowWorkouts tiles the
-       timeline half-open from local noon, so that index is the number of whole
-       weeks back to the day; clamped to the last slot we can draw. */
-    const days = daysBetween(dates[0], dstr(Date.now()));
-    const first = Math.max(0, Math.min(maxWeeks - 1, Math.ceil((days - 6) / 7)));
-    const out = [];
-    for (let i = first; i >= 0; i--) {
-      const ws = windowWorkouts(state, 7, i * 7);
+    const weekKeyPlus = (k, n) => { const x = new Date(k + "T12:00:00"); x.setDate(x.getDate() + n * 7); return dstr(x); };
+    /* From the earliest logged week to the week IN PROGRESS (or the latest
+       session's week, if one is dated ahead), one slot per calendar week. */
+    const startKey = weekKeyOf(dates[0]);
+    const endKey = weekKeyOf(dates[dates.length - 1]) > weekKeyOf(dstr(Date.now()))
+      ? weekKeyOf(dates[dates.length - 1]) : weekKeyOf(dstr(Date.now()));
+    const keys = [];
+    for (let k = startKey; k <= endKey; k = weekKeyPlus(k, 1)) keys.push(k);
+    const kept = keys.slice(-maxWeeks);
+    /* One pass over the sessions, bucketed by CALENDAR week, so each session is
+       counted exactly once and always lands in its own week's column. */
+    const byWeek = {};
+    for (const k of kept) {
       const groups = {};
       for (const g of GROUP_ORDER) groups[g] = { sets: 0, tonnage: 0, reps: 0 };
-      for (const w of ws) for (const en of w.entries || []) {
+      byWeek[k] = { sessions: 0, groups };
+    }
+    for (const w of state.workouts || []) {
+      const b = w.date ? byWeek[weekKeyOf(w.date)] : null;
+      if (!b) continue;
+      b.sessions++;
+      for (const en of w.entries || []) {
         const st = entryStats(en);
         if (!st.sets) continue;
         const gs = entryGroups(state, en).filter((g) => GROUP_ORDER.includes(g));
         gs.forEach((g, gi) => {
           const share = gi === 0 ? 1 : 0.5;
-          groups[g].sets += st.sets * share;
-          groups[g].tonnage += st.tonnage * share;
-          groups[g].reps += st.reps * share;
+          b.groups[g].sets += st.sets * share;
+          b.groups[g].tonnage += st.tonnage * share;
+          b.groups[g].reps += st.reps * share;
         });
       }
-      out.push({ weeksAgo: i, sessions: ws.length, groups,
-                 from: dstr(Date.now() - (i * 7 + 6) * DAY) });
     }
-    return out;
+    /* Oldest first, weeksAgo counting back from the week in progress (0), and
+       `from` = that week's own Monday, so the x label names the week the rest of
+       the app would name. */
+    return kept.map((k, i) => ({ weeksAgo: kept.length - 1 - i,
+                                 sessions: byWeek[k].sessions,
+                                 groups: byWeek[k].groups,
+                                 from: k }));
   }
 
   /* Autoregulation read. Only two things count as evidence, both from logged
