@@ -3084,4 +3084,68 @@ console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
   eq("Plantarflexion Stretch maps to the Calves, not the Legs", lib(1275).g.join("|"), "Calves");
 }
 
+console.log("\n=== 59. badges pay XP into the TOTAL — back-paid in full, and nothing can reduce it ===");
+{
+  /* the owner (2026-11-10): "a pr, or a badge should earn you extra XP" and "make
+     sure that if you already have the badge unlocked when the update comes in,
+     that you get all that xp that was missed out on". The term lives in the
+     TOTAL (xp()), paid by tier, so a badge held BEFORE the term existed pays in
+     full on the next xp() call — a per-session term could not do that. The
+     amounts are the app's own constants: a major badge == a PR, a minor == a
+     logged session. */
+  const e = env();
+  eq("BADGE_XP.major is a PR (100)", e.E.BADGE_XP.major, e.E.XP.PR);
+  eq("BADGE_XP.minor is a session (50)", e.E.BADGE_XP.minor, e.E.XP.SESSION);
+  eq("...so the amounts are 100 / 50", [e.E.BADGE_XP.major, e.E.BADGE_XP.minor], [100, 50]);
+
+  /* THE BACK-PAYMENT, BY CONSTRUCTION: a badge already held pays with NO session
+     behind it — nothing about the update date is consulted. */
+  const bare = base({ achievements: { first: "2020-01-01" } });
+  eq("a badge held with no session still pays in full", e.E.xp(bare), e.E.XP.PR);
+  eq("badgeXp reads the stored achievements map", e.E.badgeXp(bare), 100);
+
+  /* (a) UNLOCKING a badge can only ADD to the total. */
+  const start = base({ workouts: [wk(iso(1), [{ w: 100, r: 8 }])] });
+  const xp0 = e.E.xp(start);
+  const one = base({ workouts: start.workouts, achievements: { first: "2020-01-01" } });
+  const xp1 = e.E.xp(one);
+  eq("a major badge adds exactly XP.PR to the TOTAL", xp1 - xp0, 100);
+  const two = base({ workouts: start.workouts, achievements: { first: "2020-01-01", t10k: "2020-01-01" } });
+  const xp2 = e.E.xp(two);
+  eq("a second (minor) badge adds exactly XP.SESSION", xp2 - xp1, 50);
+
+  /* (b) LOGGING a further session cannot LOWER a total that holds badges. */
+  const more = base({ workouts: start.workouts.concat([wk(iso(2), [{ w: 90, r: 8 }])]),
+                      achievements: two.achievements });
+  truthy("logging another session never lowers a total holding badges", e.E.xp(more) >= xp2);
+
+  /* (c) The property across EVERY badge, one at a time: the total is
+     NON-DECREASING. A badge lives in a stored map, which only ever GAINS keys —
+     it can never un-unlock — so the term is monotone by construction. */
+  const acc = {};
+  let prev = e.E.xp(base({ achievements: {} }));
+  let steps = 0, drops = 0;
+  for (const a of e.E.ACHIEVEMENTS) {
+    acc[a.id] = "2020-01-01";
+    const t = e.E.xp(base({ achievements: Object.assign({}, acc) }));
+    steps++;
+    if (!(t >= prev)) { drops++; console.log(`  FAIL total dropped unlocking ${a.id}: ${prev} -> ${t}`); }
+    prev = t;
+  }
+  eq("the total NEVER falls as badges are unlocked", drops, 0);
+  truthy("...checked every badge in the table", steps === e.E.ACHIEVEMENTS.length);
+  eq("every badge unlocked pays its own tier in full",
+     prev, e.E.ACHIEVEMENTS.reduce((n, a) => n + e.E.BADGE_XP[a.tier], 0));
+
+  /* (d) It is shown as its OWN additive line in the XP breakdown, and the
+     one-time note is armed on a CONTENT revision — never the app version, which
+     would re-show it on every release. */
+  const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  truthy("the XP breakdown renders a badge line", appSrc.includes("badgeXpRows()"));
+  truthy("...labelled as paid into the TOTAL, not the session", /Badge XP is paid into your TOTAL/.test(appSrc));
+  truthy("the one-time note is armed on BADGE_NOTE_REV", /badgeXpNote !== BADGE_NOTE_REV/.test(appSrc));
+  truthy("...and BADGE_NOTE_REV is a content revision, not the app version",
+     /const BADGE_NOTE_REV = \d+;/.test(appSrc) && !/badgeXpNote !== APP_?VERSION/.test(appSrc));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -504,6 +504,15 @@ main > * { min-width: 0; }
 .badge-txt { display: flex; flex-direction: column; line-height: 1.5; }
 .badge-txt b { font-size: .64rem; text-shadow: var(--outline-sm); }
 .badge-txt small { color: #b8d0d8; font-size: .62rem; }
+/* The one-time "badges now earn XP" note: a soft gold banner above the badge grid.
+   Positive/neutral colour (never a warning), and it wraps rather than overflow. */
+.badge-note {
+  display: flex; gap: .5rem; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  margin-bottom: .5rem; padding: .42rem .5rem; border-radius: 7px; font-size: .66rem; line-height: 1.4;
+  border: 2px solid var(--gold); background: linear-gradient(180deg, rgba(248, 208, 48, .18), rgba(248, 208, 48, .05));
+}
+.badge-note b { color: var(--gold); font-family: var(--px); font-size: .62rem; }
+.badge-note .btn { flex: 0 0 auto; }
 
 /* ---------------- rows / lists ---------------- */
 .pr-row { display: grid; grid-template-columns: 1fr auto auto; gap: .5rem; align-items: center; padding: .32rem .3rem; font-size: .66rem; border-bottom: 2px dotted rgba(255, 255, 255, .14); }

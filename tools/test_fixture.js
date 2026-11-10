@@ -73,8 +73,15 @@ console.log("\n=== summary + weak points ===");
   const sm = E.summary(st);
   eq("level", sm.level.level, 2);
   /* 357 -> 361: the fixture's one failure set now earns its extra-effort XP
-     (+4 = round(HARD_SET_XP 20 * (1.2 - 1))), the deliberately-added term. */
-  eq("total XP", sm.xp, 361);
+     (+4 = round(HARD_SET_XP 20 * (1.2 - 1))), the deliberately-added term.
+     361 -> 811: the fixture holds SEVEN unlocked badges, and a badge now pays XP
+     into the TOTAL by tier — 2 major x XP.PR (100) + 5 minor x XP.SESSION (50)
+     = 450 (see the badge-XP assertions below). */
+  eq("total XP", sm.xp, 811);
+  /* The badge term, paid by tier into the TOTAL. The fixture holds 7 unlocked
+     badges: 2 major + 5 minor. */
+  eq("badge XP (2 major x 100 + 5 minor x 50)", E.badgeXp(st), 450);
+  eq("...that is the whole difference on the total", sm.xp - 361, E.badgeXp(st));
   eq("title", sm.title, "Rookie");
   eq("density %", sm.density, 36);
   eq("streak days", sm.streak.days, 1);

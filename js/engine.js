@@ -2293,6 +2293,14 @@ const Engine = (() => {
     HARD_SET_CAP: 6,       // ...paid for at most this many hard sets per session
   };
 
+  /* What an unlocked badge pays into the TOTAL (see badgeXp()). Sized from the
+     app's OWN constants — a MAJOR badge is worth a PR (XP.PR) and a MINOR badge a
+     logged session (XP.SESSION) — so a badge never out-earns the work that earned
+     it. The AMOUNTS themselves are the app's own product judgement: they are NOT
+     derived from any published standard or measurement, only chosen off the app's
+     existing scale. This is the one place to tune them. */
+  const BADGE_XP = { major: XP.PR, minor: XP.SESSION };
+
   /* Monday-start week key for a date. Pure in the date itself, so XP does not
      depend on when it happened to be rendered. */
   const weekKeyOf = (d) => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return dstr(x); };
@@ -2508,6 +2516,19 @@ const Engine = (() => {
     };
   }
 
+  /* XP earned from the badges the user has UNLOCKED, paid by tier. state.achievements
+     is a stored one-time map, so a badge in it is never removed and this term can
+     only ever GROW — nothing here can reduce XP. It lives in the TOTAL (xp()), so
+     every badge a user already held is paid IN FULL on the first xp() call after
+     this shipped, whenever it was earned — the back-payment a per-session term
+     could never make (a session that predates the badge cannot be re-priced). */
+  function badgeXp(state) {
+    const unlocked = (state && state.achievements) || {};
+    let xp = 0;
+    for (const a of ACHIEVEMENTS) if (unlocked[a.id]) xp += BADGE_XP[a.tier] || 0;
+    return xp;
+  }
+
   function xp(state) {
     const prs = prsByDate(state);
     const weekSets = {};
@@ -2528,6 +2549,14 @@ const Engine = (() => {
     total += weeksAtTarget(state) * 15 + (streaks(state).bestWeeks || 0) * 50;
     total += intakeXp(state);          // food-logging coverage, one payment per week
     total += bodylogXp(state);         // weigh-in coverage, one payment per week
+    /* Badges the user has unlocked, paid by tier (badgeXp). A badge is an
+       achievement the log actually reached, so it earns XP on top of the work
+       that unlocked it. This is an ADDITIVE term on the TOTAL, never per session:
+       the total counts unlocked badges whenever they were earned, so a badge held
+       before this term existed still pays IN FULL on the next xp() call. It counts
+       a map that can never lose a key, so it is monotone — nothing here can lower
+       XP — and it keeps the total's own invariant. */
+    total += badgeXp(state);
     return total;
   }
   function levelInfo(totalXp) {
@@ -3015,6 +3044,7 @@ const Engine = (() => {
     exInfo, exName, exMode, exGroups, entryGroups, entryWeight, bodyweight, profileAsOf, bestFor, seriesFor, compareLast,
     attributes, muscleGroups, weakPoints, prTable, prCount, streaks, xp, levelInfo,
     sessionXp, composeMult, XP, weekKeyOf, weeksAtTarget, title, achievements, newAchievements, achievementContext, summary, windowWorkouts,
+    badgeXp, BADGE_XP,
     intakeDays, intakeCoverWeeks, intakeFoods, intakeXp, NUTRI_COVER_DAYS,
     heroItems, heroSignals, HERO_ITEMS, hardSetCount, badgeCount,
     bodylogCoverWeeks, bodylogXp,

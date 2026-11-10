@@ -81,6 +81,14 @@
   };
   const fmt = (n, d = 0) => (isFinite(n) ? Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
 
+  /* The badge-XP note's CONTENT revision. Bumped ONLY when that note's wording
+     changes — never on an app release — so the note shows once and does not come
+     back on every update. A user who has acknowledged a revision stays acknowledged
+     across any number of releases; a state with no flag is a genuine first sight
+     and shows it once. (Deliberately NOT the app version, which is what welcome.js
+     uses for the tour and what would re-show this on every release.) */
+  const BADGE_NOTE_REV = 1;
+
   /* ---------- units ---------- */
   const LB = 2.2046226;
   const U = {
@@ -716,6 +724,25 @@
     /* gamification */
     const gam = el("section", { class: "card", id: "badges" });
     gam.innerHTML = `<div class="card-head"><h3>Progress &amp; badges</h3><span class="muted">${s.prsAll} PRs all-time</span></div>`;
+    /* ONE-TIME note: badges now pay XP, and the badges a user ALREADY held are
+       paid in full on the first xp() call after that shipped (badgeXp, the total).
+       Shown until acknowledged, and armed on BADGE_NOTE_REV — a CONTENT revision,
+       bumped only when this wording changes. NEVER the app version: that would
+       re-show it on every release. Nothing to say when the user holds no badges. */
+    if (Engine.badgeXp(S) > 0 && (!S.settings || S.settings.badgeXpNote !== BADGE_NOTE_REV)) {
+      const n = Engine.badgeCount(S);
+      const note = el("div", { class: "badge-note" },
+        `<span>Badges now earn XP. The ${n} you'd already unlocked are worth <b>+${fmt(Engine.badgeXp(S))} XP</b> — that is in your total now.</span>`);
+      const ok = el("button", { class: "btn ghost tiny", type: "button" }, "Got it");
+      ok.addEventListener("click", () => {
+        if (!S.settings) S.settings = {};
+        S.settings.badgeXpNote = BADGE_NOTE_REV;
+        Store.save(true);
+        note.remove();
+      });
+      note.append(ok);
+      gam.append(note);
+    }
     const badges = el("div", { class: "badges" });
     Engine.achievements(S).forEach((a) => {
       badges.append(el("div", { class: "badge " + (a.unlocked ? "on" : "off"), title: a.desc },
@@ -1388,6 +1415,21 @@
      named factors that composed it — each one an idea the app already teaches
      (a PR, the weekly target, a group's own MRV). */
   const xpMultText = (m) => "x" + (Math.round(m * 1000) / 1000);
+  /* The badge term as its OWN additive line in the breakdown. Badge XP is paid
+     into the TOTAL, not into any one session, so it sits in its own group below
+     the session's factors with a plain line saying so — the user can see exactly
+     where that part of the total came from. */
+  function badgeXpRows() {
+    const unlocked = Engine.achievements(S).filter((a) => a.unlocked);
+    const xp = Engine.badgeXp(S);
+    const major = unlocked.filter((a) => a.tier === "major").length;
+    const minor = unlocked.filter((a) => a.tier === "minor").length;
+    const row = (label, val) => `<div class="xp-row"><span>${label}</span><b>${esc(val)}</b></div>`;
+    return `<p class="muted small">Badge XP is paid into your TOTAL, not into this session:</p>
+       <div class="xp-rows">
+         ${row(`Badges — ${unlocked.length} unlocked (${major} major × ${Engine.BADGE_XP.major}, ${minor} minor × ${Engine.BADGE_XP.minor})`, "+" + fmt(xp) + " XP")}
+       </div>`;
+  }
   function xpBreakdown(w, sx) {
     const f = sx.factors;
     const row = (label, val) => `<div class="xp-row"><span>${label}</span><b>${esc(val)}</b></div>`;
@@ -1403,6 +1445,7 @@
          ${row("Consistency — weekly target met", xpMultText(f.consistency))}
        </div>
        <p class="muted small">${esc(xpMultText(f.improvement))} × ${esc(xpMultText(f.consistency))} = ${esc(xpMultText(sx.mult))}${sx.capped ? " (capped)" : ""} · capped at ×${Engine.XP.CAP}</p>
+       ${badgeXpRows()}
        <div class="row end"><button class="btn ghost" id="xb-ok">Got it</button></div>`;
     openModal(box, "narrow");
     $("#xb-ok", box).addEventListener("click", closeModal);

@@ -1,13 +1,13 @@
 {
-  "versionCode": 106,
-  "versionName": "1.3.11",
+  "versionCode": 107,
+  "versionName": "1.3.12",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "4f6e6f47e2dfcac4ee942e9a1c54833ef7822b7f5122a3b9ae84749de9273d0c",
-  "sizeBytes": 3952229,
+  "sha256": "fe3fcba50ae9851f1a7043289834b71f57ec2776f982f0cb28ec7af7afe915df",
+  "sizeBytes": 3953845,
   "published": "2026-11-10",
   "notes": [
-    "The exercise library was re-checked against its open data source: movements that were listed with the wrong equipment (a machine filed as a mat) or missing a muscle group they train (a shoulder press with no shoulder) now carry the right ones",
-    "Five movements you can do with or without a weight \u2014 box squat, good morning, sumo squat, single-leg RDL and single-leg hamstring curl \u2014 now count a set whether or not you logged a load",
-    "Limber 11 and Seated Knee Extension with Overpressure now track as mobility, and Snap Down counts toward Power"
+    "Badges now earn XP: a major badge pays 100 and a minor badge pays 50, added to your total alongside the work that unlocked it",
+    "Every badge you had already unlocked is paid in full as soon as you update - the total counts unlocked badges whenever you earned them, so nothing is left out, and nothing ever takes XP away",
+    "The XP breakdown shows your badge XP as its own line, and the Progress and badges card tells you once what your existing badges are worth"
   ]
 }
