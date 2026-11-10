@@ -1,11 +1,11 @@
 {
-  "versionCode": 103,
-  "versionName": "1.3.8",
+  "versionCode": 104,
+  "versionName": "1.3.9",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "bee3529c4178fcc95f45f0a7992c3a12745b0d93d11365889e0a4583f3676dfb",
-  "sizeBytes": 3951260,
+  "sha256": "8b5deecb865dfe2c1dfbe105776261e0085a8f85c6553d3d4cec42b5ef3ecf82",
+  "sizeBytes": 3951543,
   "published": "2026-11-10",
   "notes": [
-    "a couple of cards were saying slightly different things about the same muscle group, and a couple of numbers were described as if they were settled science \u2014 both tidied up"
+    "some exercises were quietly dropping a set when you logged it without a weight - the audit found them and they count now"
   ]
 }

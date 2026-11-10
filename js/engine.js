@@ -422,7 +422,18 @@ const Engine = (() => {
   /* A set counts only when it records actual work. A bodyweight movement is valid
      on reps alone — the weight box holds only what is strapped on, so requiring
      it would discard every unweighted set. Shared by entryStats and the session
-     XP's effort term so the two cannot disagree about which sets are real. */
+     XP's effort term so the two cannot disagree about which sets are real.
+
+     RULE (audit 2026-11, open class): validSet is deliberately NOT loosened to
+     accept a loadless set on weight_reps — that would let a genuinely loaded
+     movement (a leg press, a lat pulldown) be logged empty and still count. The
+     fix lives in the DATA instead: a library entry whose name and equipment make
+     it plainly bodyweight, or plainly performed for reps or time rather than
+     loaded, is given its real tracking MODE (reps / time) in data/library.json,
+     so the reps/time it is actually logged with reach the volume path. Entries
+     that name their own load source (machine, cable, bar, bell, band, plate, grip
+     tool) stay on weight_reps and correctly refuse a loadless log. See
+     tools/library-openclass-review.tsv and tools/openclass_review.py. */
   function validSet(s, mode, bw) {
     if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw);
     if (mode === "reps") return num(s.r) > 0;

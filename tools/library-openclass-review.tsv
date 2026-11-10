@@ -1,0 +1,219 @@
+id	name	category	equipment	mode_before	what_user_logs	verdict	change_made
+12	Seated Hip Adduction	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+57	Bear Walk 2	Chest	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+71	Single Leg Extension	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+112	Body-Ups	Arms	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+124	Braced Squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+129	Chest Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+135	Butterfly	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+137	Butterfly Narrow Grip	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+139	Butterfly Reverse	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+146	Calf Press Using Leg Press Machine	Calves	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+158	Close-grip Lat Pull Down	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+235	Flutter Kicks	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+254	Front Raises with Plates	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+260	Full Sit Outs	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+279	Hand Grip	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+289	High Pull	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+291	Hindu Squats	Legs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+292	Hip Raise, Lying	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+341	Squats on Multipress	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+354	Lat Pull Down (Leaning Back)	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+355	Lat Pull Down (Straight Back)	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+364	Leg Curl	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+365	Leg Curls (laying)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+366	Leg Curls (sitting)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+367	Leg Curls (standing)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+369	Leg Extension	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+371	Leg Press	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+373	Leg Presses (narrow)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+374	Leg Presses (wide)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+375	Leg Press on Hackenschmidt Machine	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+379	Leverage Machine Chest Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+380	Leverage Machine Iso Row	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+441	Overhead Squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+468	Prone Scapular Retraction - Arms at Side	Back	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+478	Push Press	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+484	Rack Deadlift	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+510	Rowing, Lying on Bench	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+512	Rowing seated, narrow grip	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+513	Rowing, T-bar	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+516	Front Wood Chop	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+539	Incline Bench Press - MP	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+543	Shoulder Press, on Machine	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+545	Scissors	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+569	Shoulder Press, on Multi Press	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+570	Shoulder Shrug	Shoulders	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+575	Shrugs on Multipress	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+578	Side-lying External Rotation	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+598	Smith Machine Close-grip Bench Press	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+604	Speed Deadlift	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+616	Squat Thrust	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+623	Standing Rope Forearm	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+630	Sumo Deadlift	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+632	Sumo Squats	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+661	Triceps on Machine	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+674	Rowing with TRX band	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+684	Underhand Lat Pull Down	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+718	Wall Squat	Legs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+820	Fingerboard 20 mm edge	Arms	(empty)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+911	Incline Skull Crush	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+915	Bus Drivers	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+925	Smith Machine Slight Incline Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+926	Machine chest fly	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+958	Biceps with TRX	Arms	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+959	TRX Rows	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+977	Box squat	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+990	Kneeling kickbacks	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1004	Forward shoulder rotation	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1005	Backward shoulder rotation	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1006	Chin tuck	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1007	Head turns	Shoulders	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1018	Head tilts	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1082	Bent over row to external rotation	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1083	YWTs	Back	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1096	Abduction while standing	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1103	walking bridge	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1105	Seated Knee Tuck	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1114	Rest (for timed workouts)	Arms	(empty)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1119	Remo maquina agarre estrecho	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1120	Remo maquina agarre estrecho supino	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1132	Machine glute extension	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1141	Arabesque	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1195	Side Slides + Squats	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1196	Wall Drills	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1200	Tibialis raises	Calves	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1201	Dragon squat	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1208	Prisoner Squat	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1210	Skydiver with arms in T-position	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1215	Reverse Snow Angel	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1216	Recruitment Pulls	Arms	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1223	Claps over the head	Arms	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1238	Frog stand	Abs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1245	Front Lever	Abs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1246	TRX roll out	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1248	Ice cream maker	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1259	TRX Obliques	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1260	TRX hammer curl	Arms	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1261	TRX gorilla biceps curl	Arms	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1262	Trx Single Arm Bicep Curl	Arms	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1263	Back bridge	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1266	TRX Tricep Extension	Arms	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1280	Biceps Close Grip Pull Down	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1286	Dynamic Planche	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1287	Reach ups	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1294	Single-leg hamstring curl	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1325	Lateral Push Off	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1363	Blackroll	Back	(empty)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1374	Rotary Torso Machine	Abs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1377	Torso Twist	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1381	Upper Back	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1384	Pullover Machine	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1387	Hamstring Kicks	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1388	Single Leg RDL	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1391	Elephant Walks	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1392	Good Morning	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1396	Standing Pancake	Legs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1397	Standing Pancake Good Morning	Legs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1398	Hamstring Chokes	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1407	Cossack squat	Legs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1409	Dragon-flag	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1411	Heel Touches	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1414	Hack Squats	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1424	Biceps Curl Machine	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1425	Toe Taps	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1433	Reverse Wood Chops	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1455	Towel Superman	Back	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1462	punches	Arms	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1464	Pause Hack Squats	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1471	Kroc Row	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1474	W-Raise	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1475	Black Widow Knee Slides	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1477	Seated Corkscrew	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1487	Hyper Y W Combo	Back	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1508	High-Incline Smith Machine Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1514	Lateral Walk	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1515	Leg Press Toe Press	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1521	Pendular hack	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1527	Pendulum Squat	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1528	Glute Drive	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1573	Ab wheel	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1576	Snap Down	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1591	Deep breathing (standing or seated)	Chest	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1606	Arm Raises (T/Y/I)	Arms	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1653	Dumbbell Side Squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1672	Seated Hip Abduction	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1679	Wall Angels	Shoulders	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1723	Glute Kickback (Machine)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1725	Seated Row (Machine)	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1739	Shrimp Squat	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1744	Machine Side Lateral Raises	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1747	Smith machine squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1748	Machine Hip Abduction	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1773	Legend Incline Bench Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1775	Pec deck rear delt fly	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1778	Supino inclinado	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1803	Trap Bar Squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1810	Sphinx	Abs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1822	Open Book	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1828	Abdominal Draw-In	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1831	Hammerstrength Decline Chest Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1833	Floor Glider Hamstring Curls	Shoulders	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1834	Trap-3 Raise	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1845	Seated Pancake Good Morning	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1846	Horse Stance (Side Splits)	Legs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1863	Hip Crossover	Legs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1904	Pec Deck	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1906	Hip Bridge	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1908	Butterfly Superman	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1909	Leg Wheel	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1910	Kneeling Superman	Back	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1914	Isometria alle parallele	Shoulders	(empty)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1916	Tuck planche	Shoulders	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1918	Legend Chest Press	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1935	Belt Squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+1948	1 Leg Box Squat	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1949	Limber 11	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+1952	SMR Glutes (lax ball)	Legs	(empty)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+1954	Roll-overs into V-sits	Legs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1963	Slow Squat	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+1965	Marching High Knees	Legs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+2454	YTW Raises	Shoulders	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+2488	Posterior Pelvic Tilt	Abs	none (bodyweight exercise)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+2531	elbow lever	Abs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+2555	Kegel Exercise	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+2616	Single-leg BOSU balance	Legs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+2620	Reverse V-Squat	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2623	Plate-Loaded Lat Pulldown	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2633	Preacher Curl Machine	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2636	FlexBar Wrist Extension	Arms	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2637	FlexBar Wrist Flexion	Arms	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2638	FlexBar Tyler Twist	Arms	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2645	Squat -> Stand Coordination	Legs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+2655	Gentle Reverse Kegels	Abs	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
+2664	Seated Knee Extension with Overpressure	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+2667	Single-Leg Balance with Eyes Closed	Legs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+2673	Stomach Vacuum	Abs	none (bodyweight exercise)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+2677	Single leg press	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2694	Feet-assisted Straight-bar Support	Shoulders	(empty)	weight_reps	hold seconds (no external load)	bodyweight-only	mode -> time
+2699	Seated Hip Adduction (Custom)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+2702	Butterfly (Custom)	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2703	Butterfly Reverse (Custom)	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2708	Leg Curls (sitting) (Custom)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2709	Leg Extension (Custom)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2711	Shoulder Press, on Machine (Custom)	Shoulders	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2717	Hack Squats (Custom)	Legs	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2718	Seated Hip Abduction (Custom)	Legs	none (bodyweight exercise)	weight_reps	weight x reps (stack / plate / bell / band)	unresolvable	none
+2720	Seated Row (Machine) (Custom)	Back	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2723	Machine Incline Chest Press (Custom)	Chest	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2733	Cable Cupping	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2734	Cable Back Pressure	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2735	Cable Side Pressure	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2736	Cable Wrist Pronation	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2737	Cable Wrist Supination	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2738	Hammer Levering	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2740	Wrist Roller	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2741	Hand Gripper Squeeze	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2743	Hub Lift	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2745	Rice Bucket Training	Arms	(empty)	weight_reps	weight x reps (stack / plate / bell / band)	load-performed	none
+2747	Rope Climb	Back	(empty)	weight_reps	reps (no external load)	bodyweight-only	mode -> reps
