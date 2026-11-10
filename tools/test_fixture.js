@@ -153,5 +153,47 @@ console.log("\n=== distances and pace are untouched by all of this ===");
   eq("body-fat current", bf.current, 15);
 }
 
+console.log("\n=== the APP load path must not read less XP than the RAW state ===");
+{
+  /* THE CLASS THIS GUARDS. the owner's export reads the pinned XP through the FULL
+     bundle (js/data.js + js/seed.js + js/engine.js + js/store.js) — the same
+     files the app's own index.html loads, js/data.js FIRST. A headless harness
+     that loads js/engine.js ALONE silently loses the EXERCISE_LIB global:
+     entryGroups() then degrades an unmatched id to ["Core"], so the per-set
+     weekly MRV taper (sessionSetTaper) mis-prices sets and the SAME export
+     read 13 XP short (session XP 484 vs 497; total 1164 vs 1177). The 13 was a
+     HARNESS artifact, not an app regression. These assertions pin the
+     app-visible value and make the library's necessity explicit. */
+  const LIB = s.__X.EXERCISE_LIB;
+  eq("EXERCISE_LIB is loaded in the suite sandbox (the app loads js/data.js)", LIB.length, 954);
+
+  const rawXp = E.xp(st);
+  const appXp = E.xp(s.__X.Store.migrate(JSON.parse(JSON.stringify(st))));
+  eq("fixture RAW XP (the pinned test value)", rawXp, 811);
+  eq("fixture APP-path XP (Store.migrate) — the value the app shows", appXp, 811);
+  eq("loading the fixture through Store.migrate does not reduce XP", appXp >= rawXp, true);
+
+  /* POSITIVE CONTROL: a Legs exercise (id 375) at 24 raw sets/week — the taper
+     only bites at Legs' MRV 24, but WITHOUT the library the id resolves to Core
+     (MRV 20) and the taper bites sooner. Reproduces the exact 13-XP class on
+     purpose, so a library-less read can never again pass for the app's own. */
+  const tip = { version: 1, profile: { name: "T", weeklyTarget: 4 },
+    workouts: [{ id: "w1", date: "2026-11-10", note: "", entries: [{ id: 375,
+      name: "Leg Press on Hackenschmidt Machine", mode: "weight_reps",
+      sets: Array.from({ length: 24 }, () => ({ w: 100, r: 10 })) }] }],
+    bodylog: [], custom: [], achievements: {}, overrides: {}, settings: { seeded: true } };
+  eq("a library exercise resolves to its REAL group with the bundle loaded", E.exGroups(tip, 375)[0], "Legs");
+  const eCtx = { console: { log() {}, warn() {}, error() {} }, Date, Math, JSON, Object, Array, Number,
+    String, Boolean, RegExp, Promise, Error, isFinite, parseInt, parseFloat, Set, Map,
+    setTimeout: () => 0, clearTimeout() {}, document: { addEventListener() {}, removeEventListener() {} },
+    window: {}, module: { exports: {} }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} } };
+  eCtx.globalThis = eCtx; vm.createContext(eCtx);
+  vm.runInContext(fs.readFileSync(path.join(B, "js/engine.js"), "utf8") + "\n;globalThis.__E=Engine;", eCtx, { filename: "eng-only.js" });
+  const engOnlyXp = eCtx.__E.xp(tip);
+  eq("a library-less engine reads the same state LOWER (proof xp() needs js/data.js)", engOnlyXp < E.xp(tip), true);
+  eq("...the app path uses the library-loaded value", E.xp(tip), 177);
+  eq("...the library-less read is the short one (173)", engOnlyXp, 173);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
