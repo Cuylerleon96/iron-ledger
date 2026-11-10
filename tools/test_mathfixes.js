@@ -3244,4 +3244,120 @@ console.log("\n=== 60. a badge unlock gets its own SOFT chime — and the librar
   truthy("a filled movement's sheet names its real equipment", /Gymnastic rings/.test(detailSet) && !/equipment not listed/.test(detailSet));
 }
 
+console.log("\n=== 61. the 20 library + lifetime-coverage badges (approved 2026-11-10) ===");
+{
+  const e = env();
+  const A = e.E.ACHIEVEMENTS, ids = A.map((a) => a.id);
+  const NEW20 = ["lib10", "mobfirst", "cardiofirst", "notes1", "at2", "hours10", "lib25", "weekend10", "ctypes10", "pull5",
+    "deload3", "lib50", "at26", "at52", "months12", "hours100", "reps10k", "t10m", "ohp100", "dead3"];
+  eq("all 20 new ids are present (no collision with the existing ones)", NEW20.filter((id) => !ids.includes(id)), []);
+  eq("no duplicate id anywhere in the table", ids.filter((x, i) => ids.indexOf(x) !== i), []);
+  eq("all 20 declare a valid tier", NEW20.filter((id) => !["major", "minor"].includes((A.find((a) => a.id === id) || {}).tier)), []);
+
+  const emptyCtx = e.E.achievementContext(base({}));
+  eq("no new badge fires on an empty log", NEW20.filter((id) => { const a = A.find((x) => x.id === id); try { return a.test(emptyCtx); } catch (err) { return true; } }), []);
+  /* HARD LIMIT: a badge may not read a consecutive-day value, and the context may
+     not expose one — the same floor test §44 polices for the older badges. */
+  eq("no new badge reads a consecutive-day value", NEW20.filter((id) => { const a = A.find((x) => x.id === id); return /streakDays|consecutive|bestDays/.test(a.test.toString()); }), []);
+  truthy("the achievement context exposes no consecutive-day field", !("streakDays" in emptyCtx) && !("bestDays" in emptyCtx) && !("consecutiveDays" in emptyCtx));
+
+  /* boundary helper: the SAME badge must be false one step below and true at the
+     threshold. */
+  const met = (st, id) => e.E.achievements(st).find((a) => a.id === id).met;
+  const bnd = (id, below, at) => eq(`${id}: below=false and at-threshold=true`, [met(below, id), met(at, id)], [false, true]);
+  const iso0 = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const mondayOf = (d) => { const x = new Date(d); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+  const custom = (id, n, m) => ({ id, n, c: "Other", m, g: ["Core"], p: [], s: [], e: [] });
+  const ent = (id, name, mode, sets) => ({ id, name, mode, sets });
+  const repEx = (id, nm, r) => ent(id, nm, "reps", [{ r }]);
+  const exN = (n) => Array.from({ length: n }, (_, i) => custom("cx" + i, "Move " + i, "reps"));
+  const exWk = (n) => ({ id: "w" + n, date: iso(1), note: "", entries: Array.from({ length: n }, (_, i) => repEx("cx" + i, "Move " + i, 5)) });
+
+  // distinct exercises
+  bnd("lib10", base({ custom: exN(10), workouts: [exWk(9)] }), base({ custom: exN(10), workouts: [exWk(10)] }));
+  bnd("lib25", base({ custom: exN(25), workouts: [exWk(24)] }), base({ custom: exN(25), workouts: [exWk(25)] }));
+  bnd("lib50", base({ custom: exN(50), workouts: [exWk(49)] }), base({ custom: exN(50), workouts: [exWk(50)] }));
+  // distinct means an id repeated is ONE exercise
+  eq("a repeated id counts once (repeat 3x -> 1 distinct)",
+     e.E.achievementContext(base({ custom: [custom("r1", "Row", "reps")], workouts: [0, 1, 2].map((i) => ({ id: "s" + i, date: iso(i + 1), note: "", entries: [repEx("r1", "Row", 5)] })) })).distinctExercises, 1);
+
+  // mobility: a stretch name; 59 s is short of a minute, 60 s is one
+  const mobSt = (t) => base({ custom: [custom("m1", "Hamstring Stretch", "time")], workouts: [{ id: "s", date: iso(1), note: "", entries: [ent("m1", "Hamstring Stretch", "time", [{ t }])] }] });
+  bnd("mobfirst", mobSt(59), mobSt(60));
+
+  // cardio session: none vs one distance_time session
+  const cardSt = (n) => base({ custom: [custom("cd1", "Zone 2 Running", "distance_time")], workouts: n ? [{ id: "s", date: iso(1), note: "", entries: [ent("cd1", "Zone 2 Running", "distance_time", [{ d: 5000, t: 600 }])] }] : [] });
+  bnd("cardiofirst", cardSt(0), cardSt(1));
+
+  // noted sessions
+  const noteSt = (n) => base({ workouts: Array.from({ length: n }, (_, i) => ({ id: "s" + i, date: iso(i + 1), note: "felt good", entries: [repEx("rx", "X", 5)] })) });
+  bnd("notes1", noteSt(0), noteSt(1));
+
+  // weeks at target (target 2) — both sessions inside the same Mon-start week
+  const wkAt = (nWeeks) => { const ws = []; const m0 = mondayOf(new Date());
+    for (let w = 0; w < nWeeks; w++) for (const k of [1, 2]) { const x = new Date(m0); x.setDate(x.getDate() - w * 7 + k); ws.push({ id: "wk" + w + k, date: iso0(x), note: "", entries: [repEx("rx", "X", 5)] }); }
+    return base({ profile: Object.assign(base().profile, { weeklyTarget: 2 }), workouts: ws }); };
+  bnd("at2", wkAt(1), wkAt(2));
+  bnd("at26", wkAt(25), wkAt(26));
+  bnd("at52", wkAt(51), wkAt(52));
+
+  // work-time minutes (the density numerator); 59 s short of the hour boundary
+  const hmSt = (sec) => base({ custom: [custom("t1", "Plank", "time")], workouts: [{ id: "s", date: iso(1), note: "", entries: [ent("t1", "Plank", "time", [{ t: sec }])] }] });
+  bnd("hours10", hmSt(36000 - 1), hmSt(36000));
+  bnd("hours100", hmSt(360000 - 1), hmSt(360000));
+
+  // weekend days: 9 vs 10 distinct Sat/Sun dates; a repeated Sunday is ONE day
+  function weekendDates(n) { const out = []; const x = new Date(new Date().setHours(12, 0, 0, 0)); while (out.length < n) { if (x.getDay() === 0 || x.getDay() === 6) out.push(iso0(x)); x.setDate(x.getDate() - 1); } return out; }
+  const wkSt = (n) => base({ workouts: weekendDates(n).map((dt, i) => ({ id: "s" + i, date: dt, note: "", entries: [repEx("rx", "X", 5)] })) });
+  bnd("weekend10", wkSt(9), wkSt(10));
+  const twoSundays = weekendDates(1)[0];
+  eq("two sessions on the SAME weekend day count as ONE weekend day",
+     e.E.achievementContext(base({ workouts: [{ id: "a", date: twoSundays, note: "", entries: [repEx("rx", "X", 5)] }, { id: "b", date: twoSundays, note: "", entries: [repEx("ry", "Y", 5)] }] })).weekendDays, 1);
+
+  // cardio activities: distinct distance_time ids
+  const cActSt = (n) => base({ custom: exN(n).map((c, i) => custom("ca" + i, "Cardio " + i, "distance_time")),
+    workouts: [{ id: "s", date: iso(1), note: "", entries: Array.from({ length: n }, (_, i) => ent("ca" + i, "Cardio " + i, "distance_time", [{ d: 5000, t: 600 }])) }] });
+  bnd("ctypes10", cActSt(9), cActSt(10));
+
+  // pull-up best, and the assisted / machine / band exclusions
+  const puSt = (r) => base({ custom: [custom("pu", "Pull-ups", "reps")], workouts: [{ id: "s", date: iso(1), note: "", entries: [repEx("pu", "Pull-ups", r)] }] });
+  bnd("pull5", puSt(4), puSt(5));
+  const puExcl = (name) => base({ custom: [custom("x", name, "reps")], workouts: [{ id: "s", date: iso(1), note: "", entries: [repEx("x", name, 12)] }] });
+  eq("an assisted pull-up of 12 does NOT unlock it (best reads 0)", [e.E.achievementContext(puExcl("Assisted Pull-Up")).pullUpBest, met(puExcl("Assisted Pull-Up"), "pull5")], [0, false]);
+  eq("a band-assisted chin-up of 12 does NOT unlock it", [e.E.achievementContext(puExcl("Band Assisted Chin-up")).pullUpBest, met(puExcl("Band Assisted Chin-up"), "pull5")], [0, false]);
+  eq("a machine chin-up of 12 does NOT unlock it", [e.E.achievementContext(puExcl("Machine Chin-Up")).pullUpBest, met(puExcl("Machine Chin-Up"), "pull5")], [0, false]);
+  eq("an unassisted set of 5 pull-ups reads 5", e.E.achievementContext(puSt(5)).pullUpBest, 5);
+
+  // deloads: 2 vs 3 recovery weeks
+  function deloadSt(n) { const weeks = []; const heavy = () => ent("hv", "Back Squat", "weight_reps", Array.from({ length: 30 }, () => ({ w: 50, r: 5 })));
+    for (let w = 0; w < 12; w++) weeks.push({ id: "d" + w, date: iso(w * 7 + 3), note: "", entries: [heavy()] });
+    const lightAt = [8, 4, 0];
+    for (let i = 0; i < n; i++) weeks[lightAt[i]].entries = [ent("hv", "Back Squat", "weight_reps", Array.from({ length: 10 }, () => ({ w: 50, r: 5 })))];
+    return base({ workouts: weeks }); }
+  bnd("deload3", deloadSt(2), deloadSt(3));
+
+  // months trained: distinct YYYY-MM
+  function monthSt(n) { const ws = []; for (let m = 0; m < n; m++) { const x = new Date(new Date().setHours(12, 0, 0, 0)); x.setMonth(x.getMonth() - m); x.setDate(15); ws.push({ id: "m" + m, date: iso0(x), note: "", entries: [repEx("rx", "X", 5)] }); } return base({ workouts: ws }); }
+  bnd("months12", monthSt(11), monthSt(12));
+
+  // total reps / tonnage
+  const rpSt = (r) => base({ custom: [custom("rp", "Push-ups", "reps")], workouts: [{ id: "s", date: iso(1), note: "", entries: [repEx("rp", "Push-ups", r)] }] });
+  bnd("reps10k", rpSt(9999), rpSt(10000));
+  const tonSt = (w) => base({ custom: [custom("tn", "Barbell Back Squat", "weight_reps")], workouts: [{ id: "s", date: iso(1), note: "", entries: [ent("tn", "Barbell Back Squat", "weight_reps", [{ w, r: 100 }])] }] });
+  bnd("t10m", tonSt(99999), tonSt(100000));
+
+  // bodyweight ratios (library ids: 687 Overhead Press -> ohp, 184 Deadlifts -> dead)
+  const ohpSt = (w, r) => base({ workouts: [{ id: "s", date: iso(1), note: "", entries: [ent(687, "Overhead Press", "weight_reps", [{ w, r }])] }] });
+  bnd("ohp100", ohpSt(60, 1), ohpSt(80, 8));
+  const deadSt = (w, r) => base({ workouts: [{ id: "s", date: iso(1), note: "", entries: [ent(184, "Deadlifts", "weight_reps", [{ w, r }])] }] });
+  bnd("dead3", deadSt(180, 8), deadSt(190, 12));
+
+  /* totalMinutes is the SAME work-time the density chip reads: the work seconds
+     entryStats accumulates over the VALID sets (reps x REP_SECONDS + holds). */
+  const mix = base({ workouts: [wk(iso(1), [{ w: 100, r: 8 }]), wk(iso(2), [{ t: 600 }], 1695, "Plank", "time")] });
+  let wsSec = 0;
+  for (const w of mix.workouts) for (const en of w.entries) wsSec += e.E.entryStats(en).workSec;
+  near("totalMinutes is exactly the density numerator (workSec/60)", e.E.achievementContext(mix).totalMinutes, wsSec / 60, 1e-9);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);

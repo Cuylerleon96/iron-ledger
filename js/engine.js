@@ -2742,6 +2742,13 @@ const Engine = (() => {
   const BIG_SESSION_MIN = 18;    // effort-weighted sets in one session
   const BIG_SESSION_GROUPS = 3;  // ...spread over at least this many groups
 
+  /* The pull-up / chin-up family by NAME (the same name-regex the library axis
+     uses), with the assisted, machine-assisted and banded variants EXCLUDED — so
+     the best-set number read is the user's own bodyweight movement, not a machine
+     or a band doing part of the lift. */
+  const PULLUP_RE = /\b(pull[- ]?ups?|chin[- ]?ups?)\b/i;
+  const PULLUP_EXCL_RE = /\bassisted\b|\bmachine\b|\bband(ed)?\b/i;
+
   /* COPY-TRUTH RULE for every user-facing string that sits beside numbers:
        - a score may describe the LOG, never the BODY — say what was measured,
          not what the user is;
@@ -2809,6 +2816,32 @@ const Engine = (() => {
     { id: "logcover4",   name: "Well Tracked", desc: "Log food on 5+ days in each of 4 weeks",  tier: "minor", test: (c) => c.intakeCoverWeeks >= 4 },
     { id: "logcover12",  name: "In the Habit", desc: "Log food on 5+ days a week for 12 weeks", tier: "major", test: (c) => c.intakeCoverWeeks >= 12 },
     { id: "foodvariety", name: "Varied Plate", desc: "Log 20 different foods",                 tier: "minor", test: (c) => c.intakeFoods >= 20 },
+    /* ---------- library + lifetime-coverage badges (approved 2026-11-10) ----------
+       Every condition below reads a LIFETIME COUNT of DISTINCT things the log
+       already holds, or a total it already carries — never a run of consecutive
+       days — so none of them can be farmed by logging more of one thing, and none
+       pushes daily training. The `desc` states the SAME window and scope its
+       `test` reads. Ids are new (distinct from t1m/ohp1/dead2/cardio10/deload1/s3). */
+    { id: "lib10",      name: "Library Card",     desc: "Try 10 different exercises",                 tier: "minor", test: (c) => c.distinctExercises >= 10 },
+    { id: "mobfirst",   name: "Warm Welcome",     desc: "Log your first mobility or stretching session", tier: "minor", test: (c) => c.mobilityMin >= 1 },
+    { id: "cardiofirst",name: "First Steps",      desc: "Log your first cardio session",              tier: "minor", test: (c) => c.cardioSessions >= 1 },
+    { id: "notes1",     name: "In Your Words",    desc: "Add a note to a session",                    tier: "minor", test: (c) => c.notedSessions >= 1 },
+    { id: "at2",        name: "Steady On",        desc: "Meet your weekly session target in 2 weeks",  tier: "minor", test: (c) => c.weeksAtTarget >= 2 },
+    { id: "hours10",    name: "Ten Hours In",     desc: "10 hours of logged training",                tier: "minor", test: (c) => c.totalMinutes >= 600 },
+    { id: "lib25",      name: "Explorer",         desc: "Try 25 different exercises",                 tier: "minor", test: (c) => c.distinctExercises >= 25 },
+    { id: "weekend10",  name: "Weekend Habit",    desc: "Train on 10 different weekends",             tier: "minor", test: (c) => c.weekendDays >= 10 },
+    { id: "ctypes10",   name: "Mixed Terrain",    desc: "10 different cardio activities",             tier: "minor", test: (c) => c.cardioActivities >= 10 },
+    { id: "pull5",      name: "Bar Star",         desc: "Log a set of 5 pull-ups",                    tier: "minor", test: (c) => c.pullUpBest >= 5 },
+    { id: "deload3",    name: "Rest Is Progress", desc: "Take 3 recovery weeks",                      tier: "minor", test: (c) => c.deloads >= 3 },
+    { id: "lib50",      name: "Curious",          desc: "Try 50 different exercises",                 tier: "major", test: (c) => c.distinctExercises >= 50 },
+    { id: "at26",       name: "The Long Game",    desc: "Meet your weekly session target in 26 weeks", tier: "major", test: (c) => c.weeksAtTarget >= 26 },
+    { id: "at52",       name: "Every Week Counts",desc: "Meet your weekly session target in 52 weeks", tier: "major", test: (c) => c.weeksAtTarget >= 52 },
+    { id: "months12",   name: "Twelve Months",    desc: "Train in 12 different months",               tier: "major", test: (c) => c.monthsTrained >= 12 },
+    { id: "hours100",   name: "Hundred Hours",    desc: "100 hours of logged training",               tier: "major", test: (c) => c.totalMinutes >= 6000 },
+    { id: "reps10k",    name: "Ten Thousand Reps",desc: "Log 10,000 reps",                            tier: "major", test: (c) => c.totalReps >= 10000 },
+    { id: "t10m",       name: "Ten Kilotonnes",   desc: "10,000,000 kg total tonnage",                tier: "major", test: (c) => c.tonnage >= 1e7 },
+    { id: "ohp100",     name: "Press Club",       desc: "Press your bodyweight overhead",             tier: "major", test: (c) => c.ratio.ohp >= 1 },
+    { id: "dead3",      name: "Triple Bodyweight",desc: "Deadlift 3× bodyweight",                     tier: "major", test: (c) => c.ratio.dead >= 3 },
   ];
 
   /* Effort-weighted sets in one session: the same stimulus-equivalent unit the
@@ -2870,13 +2903,41 @@ const Engine = (() => {
   function achievementContext(state) {
     const ws = state.workouts || [];
     let tonnage = 0, cardioKm = 0, mobilityMin = 0, weekend = false;
+    /* Lifetime COVERAGE counters: how many DIFFERENT things the log holds, never
+       how many times. An id logged fifty times is ONE exercise; a third set on the
+       same Sunday is still ONE weekend day; two sessions in a month are ONE month.
+       Counting distinct things is what makes these un-farmable by volume, and —
+       like every other value here — none of them is a run of consecutive days.
+       totalMinutes is the SAME "work time" the density chip reads: the work
+       seconds entryStats accumulates (reps x REP_SECONDS + hold seconds) over the
+       VALID sets, so the badge and the on-screen work-time figure cannot disagree. */
+    const distinctEx = new Set(), cardioActs = new Set(), weekendDates = new Set(), monthKeys = new Set();
+    let cardioSessions = 0, notedSessions = 0, totalReps = 0, pullUpBest = 0, workSec = 0;
     for (const w of ws) {
+      if (String(w.note == null ? "" : w.note).trim() !== "") notedSessions++;
+      if (w.date) monthKeys.add(String(w.date).slice(0, 7));
+      const dow = new Date(w.date + "T12:00:00").getDay();
+      if (dow === 0 || dow === 6) { weekend = true; weekendDates.add(w.date); }
+      let cardioHere = false;
       for (const en of w.entries || []) {
         const s = entryStats(en); tonnage += s.tonnage; cardioKm += s.dist / 1000;
-        if (/stretch|mobility|yoga|foam/i.test(exInfo(state, en.id).n)) mobilityMin += s.time / 60;
+        workSec += s.workSec; totalReps += s.reps;
+        const name = exInfo(state, en.id).n;
+        if (/stretch|mobility|yoga|foam/i.test(name)) mobilityMin += s.time / 60;
+        if (!s.sets) continue;                    // a row with no valid set is not logged work
+        distinctEx.add(en.id);
+        const mode = en.mode || exMode(state, en.id);
+        if (mode === "distance_time") { cardioHere = true; cardioActs.add(en.id); }
+        /* Best single-set reps on the UNASSISTED pull-up family. Counts valid sets
+           only, and reads reps (not an e1RM), so "a set of 5 pull-ups" is exactly
+           what it measures. */
+        if (PULLUP_RE.test(name) && !PULLUP_EXCL_RE.test(name)) {
+          for (const st of en.sets || []) {
+            if (validSet(st, mode, isBodyweight(name), entryDual(en))) pullUpBest = Math.max(pullUpBest, num(st.r));
+          }
+        }
       }
-      const dow = new Date(w.date + "T12:00:00").getDay();
-      if (dow === 0 || dow === 6) weekend = true;
+      if (cardioHere) cardioSessions++;
     }
     // same rule as strengthScore: a ratio needs a real weight, or the badge fires
     // on a number the user never gave
@@ -2899,6 +2960,17 @@ const Engine = (() => {
       balanced: trainedG.length >= 5 && trainedG.every((g) => mg[g].score >= 60),
       groupsWeek: trainedG.length, weighins: (state.bodylog || []).length,
       weeksAtTarget: weeksAtTarget(state),
+      /* Lifetime COVERAGE reads — counts of DISTINCT things, and the work-time
+         total. All derived from state.workouts; nothing new is tracked. */
+      distinctExercises: distinctEx.size,
+      cardioSessions,
+      notedSessions,
+      totalMinutes: workSec / 60,        // the density chip's own "work time"
+      weekendDays: weekendDates.size,
+      cardioActivities: cardioActs.size,
+      monthsTrained: monthKeys.size,
+      totalReps,
+      pullUpBest,
       /* Nutrition logging: distinct DAYS, weeks covered (5+ logged days) and
          distinct foods. Counts, never amounts — so no badge below can fire on a
          low-calorie day or reward eating less. */
