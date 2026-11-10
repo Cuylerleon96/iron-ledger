@@ -1,0 +1,955 @@
+id	name	category	primary	secondary	equipment	mode	groups	attributes	data_paths	verdict
+1966	1/2 Kneeling Thoracic Rotation	Abs			none (bodyweight exercise)	reps	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+9	2 Handed Kettlebell Swing	Abs	Hamstrings|Glutes	Quads|Abs	Kettlebell	weight_reps	Legs|Core	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1924	3008 Abdominal Crunch	Abs	Abs		none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2564	90/90 Breathing	Abs				time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1573	Ab wheel	Abs	Abs	Obliquus externus abdominis|Serratus anterior	none (bodyweight exercise)	weight_reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1933	Abdominal Crunch	Abs	Abs	Obliquus externus abdominis|Serratus anterior	Gym mat	weight_reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1828	Abdominal Draw-In	Abs	Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+56	Abdominal Stabilization	Abs	Abs	Obliquus externus abdominis	Gym mat	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1590	Arm and neck stretch	Abs	Shoulders|Trapezius|Triceps	Lats|Serratus anterior	none (bodyweight exercise)	time	Shoulders|Back|Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+165	Ball crunches	Abs	Abs	Obliquus externus abdominis		reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+41	Barbell Ab Rollout	Abs	Obliquus externus abdominis		Barbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1687	Bear crawl pull through	Abs	Shoulders|Glutes|Quads|Abs	Hamstrings|Calves|Trapezius	Dumbbell	weight_reps	Shoulders|Legs|Core|Calves|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1572	Bird Dog	Abs	Abs	Shoulders|Glutes	none (bodyweight exercise)	weight_reps	Core|Shoulders|Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1475	Black Widow Knee Slides	Abs	Obliquus externus abdominis|Abs			weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1476	Butterfly Sit Up	Abs	Obliquus externus abdominis|Abs		none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+145	Cable Woodchoppers	Abs	Obliquus externus abdominis		Cable machine	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2674	Captain's Chair Knee Raise	Abs	Abs	Serratus anterior	none (bodyweight exercise)	reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2675	Captain's Chair Oblique Knee Raise	Abs	Obliquus externus abdominis	Abs|Serratus anterior	none (bodyweight exercise)	reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1823	Clamshell	Abs	Glutes|Abs		none (bodyweight exercise)	reps	Legs|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1912	Core Rotation	Abs	Quads|Abs	Obliquus externus abdominis|Serratus anterior	none (bodyweight exercise)	reps	Legs|Core|Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+167	Crunches	Abs	Abs	Serratus anterior	Gym mat	weight_reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2704	Crunches (Custom)	Abs	Abs	Serratus anterior	Gym mat	weight_reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+173	Crunches With Cable	Abs	Abs		Cable machine	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2705	Crunches With Cable (Custom)	Abs	Abs		Cable machine	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+174	Crunches With Legs Up	Abs	Abs	Obliquus externus abdominis		reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+172	Crunches on Machine	Abs	Abs			reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+178	Deadbug	Abs	Abs	Obliquus externus abdominis		weight_reps	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1889	Decline Bench Leg Raise	Abs	Abs		Incline bench	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1827	Double-Leg Abdominal Press	Abs	Abs		Gym mat	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1409	Dragon-flag	Abs	Obliquus externus abdominis|Abs	Shoulders|Glutes|Lats|Triceps		weight_reps	Core|Shoulders|Legs|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1415	Dumbbell Crunches	Abs	Abs	Obliquus externus abdominis	Dumbbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1650	Dumbbell Side Bend	Abs	Obliquus externus abdominis		Dumbbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1286	Dynamic Planche	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1099	Dynamic side hold	Abs	Obliquus externus abdominis	Abs	Kettlebell	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1288	Dynamic side plank	Abs	Obliquus externus abdominis	Abs	none (bodyweight exercise)	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+235	Flutter Kicks	Abs	Obliquus externus abdominis|Abs			weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1238	Frog stand	Abs	Shoulders|Biceps|Brachialis|Abs		none (bodyweight exercise)	weight_reps	Shoulders|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1245	Front Lever	Abs	Lats|Abs		none (bodyweight exercise)	weight_reps	Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1307	Front Plank	Abs	Abs	Obliquus externus abdominis|Chest|Quads|Serratus anterior	none (bodyweight exercise)	time	Core|Chest|Legs|Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1252	Front lever pull-up	Abs	Biceps|Lats|Abs	Shoulders	Pull-up bar	weight_reps	Arms|Back|Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+260	Full Sit Outs	Abs	Glutes|Obliquus externus abdominis|Abs		none (bodyweight exercise)	weight_reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2655	Gentle Reverse Kegels	Abs				weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+283	Hanging Leg Raises	Abs	Abs		Pull-up bar	time	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2707	Hanging Leg Raises (Custom)	Abs	Abs		Pull-up bar	time	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1411	Heel Touches	Abs	Obliquus externus abdominis	Abs	none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+297	Hollow Hold	Abs	Obliquus externus abdominis|Abs		Gym mat	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1248	Ice cream maker	Abs	Lats	Abs	none (bodyweight exercise)	weight_reps	Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+171	Incline Crunches	Abs	Abs		Incline bench	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+312	Incline Plank With Alternate Floor Touch	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2555	Kegel Exercise	Abs				weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+978	Knee Raises	Abs	Abs	Obliquus externus abdominis	Pull-up bar	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+382	L Hold	Abs			none (bodyweight exercise)	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1853	L-Sit (Foot Supported)	Abs	Lats|Chest|Abs|Serratus anterior	Quads|Triceps	none (bodyweight exercise)	time	Back|Chest|Core|Shoulders|Legs|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1852	L-sit	Abs	Lats|Chest|Abs	Quads|Triceps	none (bodyweight exercise)	time	Back|Chest|Core|Legs|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1779	Landmine Rotation	Abs	Obliquus externus abdominis	Shoulders|Abs	Barbell	weight_reps	Core|Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+377	Leg Raises, Lying	Abs	Abs	Serratus anterior	Gym mat	weight_reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+378	Leg Raises, Standing	Abs	Abs	Serratus anterior		reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1909	Leg Wheel	Abs	Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+979	Leg raises pull up bar	Abs	Abs	Obliquus externus abdominis|Quads	Pull-up bar	weight_reps	Core|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1478	Levitation Crunch	Abs	Abs		none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+976	Medicine ball booklet crunch	Abs	Abs		none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1089	Medicine ball twist	Abs	Obliquus externus abdominis|Abs		Swiss Ball	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+427	Negative Crunches	Abs	Abs			reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1293	One armed push-ups	Abs	Chest|Triceps	Shoulders|Abs	none (bodyweight exercise)	reps	Chest|Arms|Shoulders|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+439	Overhand Cable Curl	Abs	Biceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1194	Pallof Press	Abs	Shoulders|Glutes|Obliquus externus abdominis|Abs|Serratus anterior|Trapezius	Chest|Triceps	Cable machine	weight_reps	Shoulders|Legs|Core|Back|Chest|Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+458	Plank	Abs	Obliquus externus abdominis|Abs	Biceps|Quads|Triceps	none (bodyweight exercise)	time	Core|Arms|Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1489	Plank Jacks	Abs	Glutes|Obliquus externus abdominis|Abs	Calves|Quads	none (bodyweight exercise)	time	Legs|Core|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1766	Plank Reach	Abs	Abs	Shoulders|Obliquus externus abdominis	none (bodyweight exercise)	time	Core|Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1091	Plank Shoulder Taps	Abs	Shoulders|Glutes|Abs	Lats	Gym mat	time	Shoulders|Legs|Core|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1406	Plank-to-Elbow Extension	Abs	Shoulders|Abs|Triceps	Obliquus externus abdominis|Chest	none (bodyweight exercise)	time	Shoulders|Core|Arms|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2488	Posterior Pelvic Tilt	Abs	Abs	Glutes|Obliquus externus abdominis	none (bodyweight exercise)	weight_reps	Core|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1287	Reach ups	Abs	Obliquus externus abdominis	Abs	none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+500	Reverse Plank	Abs			none (bodyweight exercise)	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1772	Reverse crunch	Abs	Abs		none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1292	Reverse-grip pull-ups	Abs	Biceps|Lats	Abs	Pull-up bar	weight_reps	Arms|Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+505	Roman Chair Crunch	Abs	Abs	Obliquus externus abdominis		reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1374	Rotary Torso Machine	Abs	Abs			weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1193	Russian Twist	Abs	Lats|Obliquus externus abdominis|Abs		Dumbbell|Gym mat|Swiss Ball	weight_reps	Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+545	Scissors	Abs	Abs			weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1477	Seated Corkscrew	Abs	Obliquus externus abdominis|Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1105	Seated Knee Tuck	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+556	Side Bends on Machine	Abs	Obliquus externus abdominis	Abs	Dumbbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+576	Side Crunch	Abs	Obliquus externus abdominis	Abs	Gym mat	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+577	Side Dumbbell Trunk Flexion	Abs	Obliquus externus abdominis	Abs	Dumbbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+580	Side Plank	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1188	Side bend	Abs	Obliquus externus abdominis	Abs	Dumbbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1019	Side plank right	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	time	Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1479	Sit Up Elbow Thrust	Abs	Obliquus externus abdominis|Abs		none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+591	Sit-ups	Abs	Abs			reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1810	Sphinx	Abs	Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+607	Splinter Sit-ups	Abs	Obliquus externus abdominis			reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1426	Standing Side Crunches	Abs	Obliquus externus abdominis	Abs	none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2673	Stomach Vacuum	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1847	Straddle L-Sit	Abs	Abs	Lats|Chest|Quads|Serratus anterior	none (bodyweight exercise)	time	Core|Back|Chest|Legs|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1776	Suitcase Carry	Abs	Obliquus externus abdominis	Abs|Trapezius	Dumbbell	weight_distance	Core|Back	END|CON|STR	muscle_volume|attributes|xp|prs|carry_dist	ok
+1259	TRX Obliques	Abs	Obliquus externus abdominis|Abs|Serratus anterior	Shoulders|Chest		weight_reps	Core|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1246	TRX roll out	Abs	Abs	Obliquus externus abdominis|Serratus anterior	none (bodyweight exercise)	weight_reps	Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1425	Toe Taps	Abs	Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1529	Toes to bar	Abs	Abs	Lats|Obliquus externus abdominis	Pull-up bar	weight_reps	Core|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1377	Torso Twist	Abs	Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+672	Trunk Rotation With Cable	Abs	Obliquus externus abdominis	Lats	Cable machine	weight_reps	Core|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1704	Tuck L-sit	Abs	Abs	Brachialis|Chest|Quads|Trapezius|Triceps	Bench	time	Core|Arms|Chest|Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+675	Turkish Get-Up	Abs	Shoulders|Glutes|Obliquus externus abdominis|Serratus anterior		Dumbbell	weight_reps	Shoulders|Legs|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2689	V-Up	Abs	Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1090	Vpushup	Abs	Chest|Quads|Abs|Triceps		none (bodyweight exercise)	weight_reps	Chest|Legs|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1474	W-Raise	Abs	Obliquus externus abdominis|Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1648	Weighted Crunch	Abs	Obliquus externus abdominis		Dumbbell	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1743	Windshield Wipers	Abs	Obliquus externus abdominis|Abs		Pull-up bar	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1412	bicycle crunches	Abs	Abs	Obliquus externus abdominis	none (bodyweight exercise)	reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2531	elbow lever	Abs	Abs	Shoulders|Triceps	none (bodyweight exercise)	weight_reps	Core|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1103	walking bridge	Abs	Abs	Shoulders|Biceps|Glutes|Lats	none (bodyweight exercise)	weight_reps	Core|Shoulders|Arms|Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1192	Alternating Biceps Curls With Dumbbell	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1012	Alternating bicep curls	Arms	Biceps	Brachialis	Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1567	Alternating dumbbell hammer curl	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1606	Arm Raises (T/Y/I)	Arms	Shoulders|Lats|Serratus anterior|Trapezius	Obliquus externus abdominis	none (bodyweight exercise)	weight_reps	Shoulders|Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1219	Australian pull-ups	Arms	Shoulders|Biceps|Lats	Trapezius	none (bodyweight exercise)	reps	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+31	Axe Hold	Arms			Dumbbell	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+995	Backward arm circles	Arms			none (bodyweight exercise)	reps	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2742	Band Finger Extensions	Arms			Resistance band	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+48	Barbell Reverse Wrist Curl	Arms			Barbell|Bench	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+50	Barbell Triceps Extension	Arms	Triceps	Shoulders|Chest	Barbell	weight_reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+51	Barbell Wrist Curl	Arms		Biceps	Barbell|Bench	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1493	Bayesian Curl	Arms	Biceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1320	Bench Dips On Floor HD	Arms	Biceps|Brachialis|Triceps	Shoulders|Chest|Soleus|Trapezius	none (bodyweight exercise)	reps	Arms|Shoulders|Chest|Calves|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+76	Bench Press Narrow Grip	Arms	Triceps	Shoulders|Chest	Barbell|Bench	weight_reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1280	Biceps Close Grip Pull Down	Arms	Biceps	Shoulders|Lats		weight_reps	Arms|Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1424	Biceps Curl Machine	Arms	Biceps	Brachialis		weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+95	Biceps Curl With Cable	Arms	Biceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+91	Biceps Curls With Barbell	Arms	Biceps	Brachialis	Barbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+92	Biceps Curls With Dumbbell	Arms	Biceps	Brachialis	Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2701	Biceps Curls With Dumbbell (Custom)	Arms	Biceps	Brachialis	Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+94	Biceps Curls With SZ-bar	Arms	Biceps	Brachialis	SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+958	Biceps with TRX	Arms	Biceps		none (bodyweight exercise)	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1483	Bizeps Curls Trifecta	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+112	Body-Ups	Arms	Triceps	Shoulders|Abs	none (bodyweight exercise)	weight_reps	Arms|Shoulders|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1608	Bodyweight Biceps Curl	Arms	Biceps		none (bodyweight exercise)	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2734	Cable Back Pressure	Arms	Biceps	Brachialis|Lats		weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1109	Cable Concentration Curl	Arms	Biceps|Brachialis		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2733	Cable Cupping	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1531	Cable Curls	Arms	Biceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2735	Cable Side Pressure	Arms	Chest	Shoulders		weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1662	Cable Tri Extension - Internal Rotation	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1509	Cable Tricep Kickback	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1661	Cable Triceps Press	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2736	Cable Wrist Pronation	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2737	Cable Wrist Supination	Arms	Biceps			weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1223	Claps over the head	Arms	Shoulders		none (bodyweight exercise)	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1666	Curl  - With Shoulder Elevated	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2452	Curl De Muñeca Con Barra	Arms			Barbell|Bench	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+974	Curl with kettlebell two hands	Arms	Biceps		Kettlebell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1502	DB Cross Body Hammer Curls	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1881	DB Wrist Extension	Arms			Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+182	Deadhang	Arms				time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+197	Dips Between Two Benches	Arms	Triceps		Bench	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1360	Double Kettlebell Clean and Press	Arms	Shoulders|Biceps|Brachialis|Quads|Trapezius|Triceps	Hamstrings|Glutes|Lats|Abs	Kettlebell	weight_reps	Shoulders|Arms|Legs|Back|Core	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1481	Drag Pushdown	Arms	Triceps		Cable machine|SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1512	Drop Curl	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1482	Dumbbell Cheat Curl	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+202	Dumbbell Concentration Curl	Arms	Brachialis	Biceps	Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1931	Dumbbell Curl	Arms	Biceps|Brachialis	Shoulders|Abs	Dumbbell	weight_reps	Arms|Shoulders|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+204	Dumbbell Incline Curl	Arms	Biceps	Brachialis	Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+211	Dumbbell Triceps Extension	Arms	Triceps	Shoulders|Chest	Dumbbell	weight_reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2739	Dumbbell Ulnar Deviation	Arms			Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1463	Dumbbell Underhand Dead Row	Arms	Biceps	Lats	Dumbbell	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2725	Dumbbell Wrist Rising	Arms			Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1226	Dumbbell bicep curl to press	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1228	Dumbbell close grip bench press	Arms	Chest|Triceps		Dumbbell	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1224	Dumbbell drag curls	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1225	Dumbbell wide bicep curls	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+208	Dumbbells on Scott Machine	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1824	Dumbell Tate Press	Arms	Triceps	Shoulders|Chest	Bench|Dumbbell	weight_reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1498	Elbows Tucked DB Bench Press	Arms	Triceps	Chest	Bench|Dumbbell	weight_reps	Arms|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2744	Fat Grip Dumbbell Hold	Arms			Dumbbell	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1217	Finger Pushup	Arms	Chest	Shoulders|Abs|Triceps	none (bodyweight exercise)	weight_reps	Chest|Shoulders|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+820	Fingerboard 20 mm edge	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2638	FlexBar Tyler Twist	Arms		Brachialis	none (bodyweight exercise)	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2636	FlexBar Wrist Extension	Arms		Brachialis	none (bodyweight exercise)	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2637	FlexBar Wrist Flexion	Arms		Brachialis	none (bodyweight exercise)	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1468	Floor Skull Crusher	Arms	Triceps		SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1000	Floor dips	Arms	Triceps	Shoulders|Chest	none (bodyweight exercise)	reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1333	Forearm Curls (underhand grip)	Arms			Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+994	Forward arm circles	Arms			none (bodyweight exercise)	reps	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1686	Glute Bridge Single-Arm Press	Arms	Chest	Shoulders|Biceps|Hamstrings|Glutes|Triceps	Dumbbell	weight_reps	Chest|Shoulders|Arms|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+272	Hammer Curls	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2738	Hammer Levering	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+275	Hammercurls on Cable	Arms	Biceps	Brachialis	Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+279	Hand Grip	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2741	Hand Gripper Squeeze	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+284	Hercules Pillars	Arms	Biceps|Brachialis|Triceps	Shoulders	Cable machine	weight_reps	Arms|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1298	High-Cable Cross Tricep Extention - NB	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2743	Hub Lift	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1467	Incline Close Grip Barbell Bench Press	Arms	Triceps	Shoulders|Chest	Barbell	weight_reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+911	Incline Skull Crush	Arms	Triceps			weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2728	Isometric Dumbbell Pronation Hold	Arms			Bench|Dumbbell	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2729	Isometric Wrist Curl Hold	Arms			Bench|Dumbbell	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2726	Isometric Wrist Rising Hold	Arms			Dumbbell	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1302	JM Press	Arms	Triceps	Biceps|Chest	Barbell	weight_reps	Arms|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2727	Kettlebell Wrist Turnover	Arms			Bench|Kettlebell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1511	Kong Curl	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1741	L-Sit Pull-ups	Arms	Lats	Biceps|Brachialis|Abs	none (bodyweight exercise)	time	Back|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1530	Lying Dumbbell Curls	Arms	Biceps		Bench|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1480	Lying Triceps Extensions	Arms	Triceps		Barbell|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1490	Lying Triceps Kickback	Arms	Triceps		Dumbbell|Incline bench	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1971	Mentzer Pulldown	Arms	Biceps	Lats	Cable machine|Incline bench	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1717	Neck extension	Arms	Biceps		Cable machine|SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1738	Neutral-grip pull-ups or TRX rows	Arms	Lats	Biceps	Pull-up bar	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1668	One Arm Overhead Cable Tricep Extension	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+803	One Arm Triceps Extensions on Cable	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1513	Overhead Cable Tricep Extension	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1519	Overhead Triceps Extension	Arms	Trapezius		SZ-Bar	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1808	Parallel Bar Hold	Arms	Shoulders|Chest|Triceps	Lats|Obliquus externus abdominis|Abs		time	Shoulders|Chest|Arms|Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1703	Patadas traseras	Arms	Triceps		Bench|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+454	Pike Push Ups	Arms	Chest	Triceps	none (bodyweight exercise)	reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1430	Plate Pinch Hold	Arms	Shoulders			time	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1658	Preacher Curl - Externally Rotated	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1657	Preacher Curl - Internally Rotated	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2539	Preacher Curl Isometric	Arms	Biceps		Dumbbell|SZ-Bar	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2633	Preacher Curl Machine	Arms	Biceps	Brachialis		weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+465	Preacher Curls	Arms	Brachialis		SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+821	Pullup on fingerboard	Arms	Biceps|Lats	Brachialis|Trapezius	none (bodyweight exercise)	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+985	Push-up rotations	Arms	Chest|Triceps	Shoulders|Obliquus externus abdominis	none (bodyweight exercise)	reps	Chest|Arms|Shoulders|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1216	Recruitment Pulls	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1114	Rest (for timed workouts)	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+493	Reverse Bar Curl	Arms	Biceps		SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+495	Reverse Curl	Arms	Biceps|Brachialis		Barbell|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+914	Reverse EZ Bar Cable Curls	Arms	Biceps		Cable machine|SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1290	Reverse Grip Barbell Curls	Arms	Biceps	Brachialis	Barbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+913	Reverse Preacher Curl (Close Grip)	Arms	Biceps		SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2745	Rice Bucket Training	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+501	Ring Dips	Arms	Triceps			reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1485	Rocking Triceps Pushdown	Arms	Triceps		Cable machine|SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1289	Seated Dumbbell Curls	Arms	Biceps	Brachialis	Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+549	Seated Triceps Press	Arms	Triceps		Bench|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1448	Seated W Curl	Arms	Biceps|Brachialis		Bench|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1209	Shoulder width three-point push-up	Arms	Chest	Shoulders|Abs|Triceps	none (bodyweight exercise)	reps	Chest|Shoulders|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+584	Single-arm Preacher Curl	Arms	Biceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1969	Single-arm cable pushdown	Arms	Triceps	Abs	Cable machine	weight_reps	Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+245	Skullcrusher Dumbbells	Arms	Triceps		Bench|Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+246	Skullcrusher SZ-bar	Arms	Triceps		Bench|SZ-Bar	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+804	Sloper hanging	Arms			none (bodyweight exercise)	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+598	Smith Machine Close-grip Bench Press	Arms	Triceps	Chest		weight_reps	Arms|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1465	Spider Curl	Arms	Biceps		Incline bench	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+621	Standing Bicep Curl	Arms	Biceps|Brachialis		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+623	Standing Rope Forearm	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1232	Standing biceps stretch left	Arms	Shoulders|Biceps|Chest		none (bodyweight exercise)	time	Shoulders|Arms|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1233	Standing biceps stretch right	Arms	Shoulders|Biceps|Chest		none (bodyweight exercise)	time	Shoulders|Arms|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+912	Straight Bar Cable Curls	Arms	Biceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1266	TRX Tricep Extension	Arms	Triceps			weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1269	TRX dips	Arms	Triceps	Chest		reps	Arms|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1261	TRX gorilla biceps curl	Arms	Brachialis	Biceps		weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1260	TRX hammer curl	Arms	Biceps			weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2732	Towel Grip Dead Hang	Arms		Lats	Pull-up bar	time	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+655	Tricep Dumbbell Kickback	Arms	Triceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+805	Tricep Pushdown on Cable	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1900	Tricep Rope Pushdowns	Arms	Triceps	Lats	Cable machine	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1372	Triceps Dips (Assisted)	Arms	Triceps	Chest		reps	Arms|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+659	Triceps Extensions on Cable	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+660	Triceps Extensions on Cable With Bar	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1336	Triceps Overhead (Dumbbell)	Arms	Triceps		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1185	Triceps Pushdown	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2716	Triceps Pushdown (Custom)	Arms	Triceps		Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2541	Triceps Pushdown Isometric	Arms	Triceps		Cable machine	time	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+661	Triceps on Machine	Arms	Triceps			weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2684	Triceps push up	Arms	Triceps		none (bodyweight exercise)	reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1230	Triceps stretch left	Arms	Triceps		none (bodyweight exercise)	time	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1231	Triceps stretch right	Arms	Triceps		none (bodyweight exercise)	time	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1262	Trx Single Arm Bicep Curl	Arms	Biceps|Brachialis	Shoulders|Trapezius		weight_reps	Arms|Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+713	Wall Pushup	Arms	Shoulders|Chest|Triceps	Glutes|Abs|Serratus anterior|Trapezius	none (bodyweight exercise)	weight_reps	Shoulders|Chest|Arms|Legs|Core|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2740	Wrist Roller	Arms				weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2686	Wrist Stretch	Arms			none (bodyweight exercise)	time	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2543	Wrist circles	Arms				reps	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1771	Wrist curl, cable	Arms		Biceps	Cable machine	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1205	Wrist curl, dumbbells	Arms			Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2680	Wrist rocks	Arms			none (bodyweight exercise)	reps	Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1683	Zottman curl	Arms	Biceps|Brachialis		Dumbbell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1218	knee push-ups	Arms	Shoulders|Chest	Serratus anterior|Triceps	none (bodyweight exercise)	reps	Shoulders|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+975	one-handed kettlebell curls	Arms	Biceps		Kettlebell	weight_reps	Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1462	punches	Arms	Shoulders|Triceps		none (bodyweight exercise)	weight_reps	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1470	1-Arm Half-Kneeling Lat Pulldown	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2690	Active Hang	Back	Lats|Trapezius		Pull-up bar	time	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1486	Alternating High Cable Row	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1501	Alternative DB Gorilla rows	Back	Lats		Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1545	Archer Pull Up	Back	Lats	Biceps|Trapezius		reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1929	Assisted Pull-Up	Back	Lats|Trapezius	Shoulders|Biceps|Abs|Serratus anterior	Resistance band	weight_reps	Back|Shoulders|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1737	Assisted chin-ups	Back	Biceps|Lats	Brachialis|Trapezius		reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1742	Back Lever	Back			Pull-up bar	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1263	Back bridge	Back		Shoulders|Hamstrings|Calves|Lats|Trapezius|Triceps	none (bodyweight exercise)	weight_reps	Shoulders|Legs|Calves|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1010	Back neck stretch	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1005	Backward shoulder rotation	Back			none (bodyweight exercise)	weight_reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1380	Band pull-aparts	Back			Resistance band	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1877	Banded Scapular Retraction	Back	Shoulders|Trapezius		Resistance band	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1700	Barbell Romanian Deadlift (RDL)	Back	Hamstrings|Glutes		Barbell	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1698	Barbell Row (Overhand)	Back	Lats		Barbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1699	Barbell Row (Underhand)	Back	Lats		Barbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2719	Barbell Row (Underhand) (Custom)	Back	Lats		Barbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+81	Bent Over Dumbbell Rows (Single Arm)	Back	Lats		Bench|Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2669	Bent Over Dumbbell Rows (Two Arms)	Back	Lats|Trapezius	Biceps|Brachialis	Dumbbell	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+83	Bent Over Rowing	Back	Lats	Shoulders|Biceps	Barbell	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+84	Bent Over Rowing Reverse	Back	Lats	Shoulders|Biceps	Barbell	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1082	Bent over row to external rotation	Back				weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1363	Blackroll	Back				weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1577	Bretzel stretch	Back	Glutes	Hamstrings|Lats|Chest	none (bodyweight exercise)	time	Legs|Back|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1908	Butterfly Superman	Back	Trapezius		none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1938	Cat-Cow	Back				time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1002	Child's pose	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+152	Chin Up	Back	Biceps|Lats	Brachialis|Trapezius	Pull-up bar	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1006	Chin tuck	Back			none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1282	Chin-up Isometric Hold	Back	Lats	Biceps|Trapezius	Pull-up bar	time	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1015	Clockwise neck circles	Back			none (bodyweight exercise)	reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+158	Close-grip Lat Pull Down	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1127	Close-grip supinated lat pulldown	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1450	Cobra Stretch	Back	Abs	Chest	none (bodyweight exercise)	time	Core|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1016	Counterclockwise neck circles	Back			none (bodyweight exercise)	reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1458	Cross-Body Cable Y-Raise	Back	Shoulders|Lats|Trapezius		Cable machine	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+184	Deadlifts	Back	Lats	Glutes	Barbell	weight_reps	Back|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+189	Deficit Deadlift	Back		Hamstrings|Glutes|Lats|Abs|Soleus	Barbell	weight_reps	Legs|Back|Core|Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1639	Dumbbell Bent Over Face Pull	Back	Shoulders|Lats	Trapezius	Dumbbell	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1087	Dumbbell Hang Power Cleans	Back	Hamstrings|Glutes	Calves|Quads|Trapezius	Dumbbell	time	Legs|Calves|Back	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1027	Elevated prayer stretch	Back	Lats		Bench	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1921	Extreme Lat Stretch	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1732	Face pulls with yellow/green band	Back	Lats	Trapezius	Resistance band	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1004	Forward shoulder rotation	Back			none (bodyweight exercise)	weight_reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+259	Front Pull narrow	Back	Lats	Biceps|Brachialis	Barbell|SZ-Bar	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+516	Front Wood Chop	Back				weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1214	Front lever tuck	Back	Shoulders|Biceps|Lats	Triceps	Pull-up bar	weight_reps	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1011	Front neck stretch	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+258	Front pull wide	Back	Lats	Shoulders|Biceps|Brachialis	Barbell|SZ-Bar	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1018	Head tilts	Back			none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1303	Helms Row	Back	Lats	Trapezius	Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1492	High Row	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1137	High-pulley pullover	Back	Lats|Serratus anterior		Cable machine	weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+292	Hip Raise, Lying	Back	Glutes	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1101	Horizontal traction isometry	Back	Lats|Chest	Shoulders|Biceps	Pull-up bar	weight_reps	Back|Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1487	Hyper Y W Combo	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+301	Hyperextensions	Back	Trapezius			reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+828	Incline Bench Reverse Fly	Back	Shoulders|Trapezius		Dumbbell|Incline bench	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1283	Incline Chest-Supported Dumbbell Row	Back	Biceps|Lats|Trapezius		Bench|Dumbbell	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+310	Incline Dumbbell Row	Back		Lats	Dumbbell|Incline bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2678	Incline Row - Rings	Back	Shoulders|Biceps|Lats|Trapezius		none (bodyweight exercise)	weight_reps	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1138	Incline bench pulldown	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1927	Inverted Lat Pull Down	Back	Lats|Trapezius	Biceps|Brachialis|Obliquus externus abdominis|Abs|Serratus anterior	Pull-up bar	weight_reps	Back|Arms|Core|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1702	Jalón al pecho con agarre ancho	Back	Lats|Trapezius	Biceps|Brachialis	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2748	Jumping Pull-Up	Back	Lats	Biceps	Pull-up bar	weight_reps	Back|Arms	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+2672	Kelso Shrugs	Back	Trapezius		Barbell|Bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1003	Kettlebell deadlifts	Back	Hamstrings|Glutes	Quads|Trapezius	Kettlebell	weight_reps	Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1970	Kettlebell sumo high pull	Back	Trapezius	Shoulders|Hamstrings|Glutes|Quads	Kettlebell	weight_reps	Back|Shoulders|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1910	Kneeling Superman	Back	Hamstrings|Trapezius	Abs	none (bodyweight exercise)	weight_reps	Legs|Back|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1471	Kroc Row	Back	Lats|Trapezius			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1434	Lat Pull DB	Back	Lats	Glutes	Dumbbell	weight_reps	Back|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+354	Lat Pull Down (Leaning Back)	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+355	Lat Pull Down (Straight Back)	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1659	Lat Pulldown - Cross Body Single Arm	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2540	Lat Pulldown Isometric	Back	Lats		Cable machine	time	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1514	Lateral Walk	Back	Glutes		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1013	Left levator scapulae stretch	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+380	Leverage Machine Iso Row	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+394	Long-Pulley (low Row)	Back	Lats	Biceps|Brachialis	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+395	Long-Pulley, Narrow	Back	Lats	Biceps|Brachialis	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1348	Lower Back Extensions	Back				reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+923	Lying Dumbbell Row SS Seated Shrug	Back	Lats|Trapezius	Biceps	Dumbbell	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1304	Meadows Row	Back	Lats|Trapezius	Biceps|Abs	Barbell	weight_reps	Back|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1635	Modified pulldown	Back	Lats		Cable machine|Incline bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+423	Muscle up	Back	Biceps|Lats	Shoulders|Triceps	Pull-up bar	weight_reps	Arms|Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1017	Neck half circles	Back			none (bodyweight exercise)	reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1510	Neutral Grip Lat Pulldown	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1136	Neutral-grip chest pulldown	Back	Biceps|Lats|Serratus anterior		Cable machine	weight_reps	Arms|Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1186	One Arm Bent Row	Back	Lats	Biceps|Trapezius	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1701	One-Arm Heavy Row	Back	Lats		Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1822	Open Book	Back			none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+448	Pendelay Rows	Back	Lats|Trapezius	Biceps|Triceps	Barbell	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2623	Plate-Loaded Lat Pulldown	Back	Lats	Biceps|Brachialis|Trapezius		weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+468	Prone Scapular Retraction - Arms at Side	Back	Trapezius			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+477	Pull Ups on Machine	Back	Lats	Shoulders|Biceps|Trapezius		reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2731	Pull-Up Top Position Hold	Back	Lats	Biceps|Brachialis	Pull-up bar	time	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1696	Pull-Ups (Neutral Grip)	Back	Lats			reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1695	Pull-Ups (Wide Grip)	Back	Lats		none (bodyweight exercise)	reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1537	Pull-up Isometric Hold	Back	Biceps|Lats|Trapezius		Pull-up bar	time	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+475	Pull-ups	Back	Lats	Shoulders|Biceps|Trapezius	Pull-up bar	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2715	Pull-ups (Custom)	Back	Lats	Shoulders|Biceps|Trapezius	Pull-up bar	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1905	Pullback	Back	Biceps|Lats	Brachialis	Cable machine	weight_reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1273	Pullover	Back	Chest	Lats	Dumbbell	weight_reps	Chest|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1384	Pullover Machine	Back	Lats	Chest|Triceps		weight_reps	Back|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+957	Quadriped Arm and Leg Raise	Back	Shoulders|Glutes|Serratus anterior|Trapezius	Lats	none (bodyweight exercise)	reps	Shoulders|Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1028	Quadruped thoracic rotation left	Back			none (bodyweight exercise)	reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1029	Quadruped thoracic rotation right	Back			none (bodyweight exercise)	reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+484	Rack Deadlift	Back	Glutes	Biceps		weight_reps	Legs|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1718	Remo alto polea alta	Back	Obliquus externus abdominis|Serratus anterior|Triceps		Cable machine	weight_reps	Core|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1119	Remo maquina agarre estrecho	Back	Lats	Biceps|Trapezius		weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1120	Remo maquina agarre estrecho supino	Back	Lats	Biceps|Trapezius		weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+490	Renegade Row	Back	Lats|Trapezius		Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1473	Reverse Cable Flye	Back	Shoulders	Trapezius	Cable machine	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1215	Reverse Snow Angel	Back	Trapezius	Shoulders|Hamstrings|Glutes|Obliquus externus abdominis|Abs	none (bodyweight exercise)	weight_reps	Back|Shoulders|Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1433	Reverse Wood Chops	Back	Glutes|Lats	Shoulders|Biceps|Obliquus externus abdominis|Quads|Abs	none (bodyweight exercise)	weight_reps	Legs|Back|Shoulders|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1014	Right levator scapulae stretch	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1399	Roll Down	Back		Hamstrings	none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2747	Rope Climb	Back	Lats	Biceps|Brachialis		weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1634	Rope Pullover/row	Back	Lats		Cable machine|Incline bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+508	Row	Back	Lats|Trapezius	Quads	Barbell|Dumbbell|Pull-up bar	weight_reps	Back|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+512	Rowing seated, narrow grip	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+674	Rowing with TRX band	Back	Lats	Biceps|Trapezius	none (bodyweight exercise)	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+510	Rowing, Lying on Bench	Back	Lats			weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+513	Rowing, T-bar	Back	Lats	Shoulders|Biceps|Brachialis		weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1435	Scapula Pulls	Back	Lats|Trapezius		Pull-up bar	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2681	Scapular Pushups	Back	Serratus anterior	Shoulders	none (bodyweight exercise)	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1207	Scorpion Kick	Back			none (bodyweight exercise)	reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1143	Seated Back Extension Machine	Back	Lats|Serratus anterior			reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2635	Seated Band Row	Back	Lats	Biceps|Brachialis|Trapezius	Resistance band	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+922	Seated Cable Mid Trap Shrug	Back	Trapezius		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1117	Seated Cable Row	Back	Lats	Biceps|Trapezius	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1725	Seated Row (Machine)	Back	Lats	Shoulders|Trapezius		weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2720	Seated Row (Machine) (Custom)	Back	Lats	Shoulders|Trapezius		weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1928	Seated V-Grip Row	Back	Lats|Trapezius	Shoulders|Biceps|Abs|Serratus anterior	Cable machine	weight_reps	Back|Shoulders|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1098	Seated rear delt rise	Back	Lats		Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+562	Shotgun Row	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1730	Side Lateral Raise (Cable)	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1727	Side Straight-Arm Pulldown (Cable)	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1861	Side stretch	Back			none (bodyweight exercise)	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1022	Single Arm Plank to Row	Back	Shoulders|Biceps|Brachialis|Lats|Obliquus externus abdominis|Abs|Serratus anterior		Kettlebell	time	Shoulders|Arms|Back|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1637	Single arm row	Back	Lats		Cable machine|Incline bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2663	Single-Arm Cable Row with Rotation (Floor)	Back	Lats	Trapezius	Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1972	Single-Arm Lat Pulldown	Back	Lats|Trapezius	Biceps|Brachialis	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2722	Single-Arm Lat Pulldown (Custom)	Back	Lats|Trapezius	Biceps|Brachialis	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1394	Sit & Reach	Back	Hamstrings		Gym mat	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1210	Skydiver with arms in T-position	Back			none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2730	Slow Eccentric Pull-Up Negative	Back	Lats	Biceps|Brachialis	Pull-up bar	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1447	Snatch OL	Back	Shoulders|Hamstrings|Glutes|Quads	Lats	Barbell	weight_reps	Shoulders|Legs|Back	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1726	Straight-Arm Pulldown (Cable)	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+628	Straight-arm Pull Down (bar Attachment)	Back	Lats	Triceps	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2712	Straight-arm Pull Down (bar Attachment) (Custom)	Back	Lats	Triceps	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+629	Straight-arm Pull Down (rope Attachment)	Back	Lats	Triceps	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+636	Superman	Back	Glutes|Lats		Gym mat	weight_reps	Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1583	Supine press	Back	Trapezius		Barbell|Bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+919	T-Bar row	Back	Lats|Trapezius		Barbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+959	TRX Rows	Back	Shoulders|Biceps|Lats		none (bodyweight exercise)	weight_reps	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2746	Towel Pull-Up	Back	Lats	Biceps|Brachialis	Pull-up bar	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1455	Towel Superman	Back	Lats	Shoulders		weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1834	Trap-3 Raise	Back	Trapezius		none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1607	Typewriter Pull-ups	Back	Biceps|Lats	Trapezius	none (bodyweight exercise)	reps	Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+684	Underhand Lat Pull Down	Back	Lats	Biceps		weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1621	Unilateral Cable row	Back	Lats|Serratus anterior		Bench|Cable machine	weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1381	Upper Back	Back	Shoulders|Trapezius	Biceps|Lats		weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+695	V-Bar Pulldown	Back	Lats	Biceps|Trapezius	Cable machine	weight_reps	Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+716	Wall Slides	Back	Biceps|Hamstrings|Chest|Trapezius|Triceps		none (bodyweight exercise)	reps	Arms|Legs|Chest|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2676	Weighted neck flexion	Back	Trapezius		Bench	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+723	Wide-grip Pulldown	Back	Lats	Shoulders|Brachialis|Serratus anterior|Trapezius	Cable machine	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2713	Wide-grip Pulldown (Custom)	Back	Lats	Shoulders|Brachialis|Serratus anterior|Trapezius	Cable machine	weight_reps	Back|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1125	Wide-grip supinated lat pulldown	Back	Lats		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1083	YWTs	Back				weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1244	Yoga exercise: Cow-cat	Back	Shoulders|Lats|Trapezius	Obliquus externus abdominis|Abs	Gym mat	time	Shoulders|Back|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+980	commando pull-ups	Back	Shoulders|Biceps|Lats|Trapezius		Pull-up bar	weight_reps	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1967	lento avanti seduto	Back	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+146	Calf Press Using Leg Press Machine	Calves	Calves|Soleus			weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+148	Calf Raises on Hackenschmitt Machine	Calves	Calves	Soleus		reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1203	Calf raises, left leg	Calves	Calves		none (bodyweight exercise)	reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+702	Calf raises, one legged	Calves	Calves			reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1021	Calf raises, right leg	Calves	Calves	Soleus	none (bodyweight exercise)	reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2661	Dumbbell Calf Raise	Calves	Calves	Soleus	Dumbbell	weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1603	Leg curl with elastic	Calves	Calves	Hamstrings	Resistance band	weight_reps	Calves|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1915	Quadruped Hip Abduction	Calves			Resistance band	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1620	Seated Dumbbell Calf Raise	Calves	Calves		Dumbbell	weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+590	Sitting Calf Raises	Calves	Soleus	Calves		reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+622	Standing Calf Raises	Calves	Calves	Soleus		reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2666	Step Calf Stretch	Calves	Calves	Soleus	none (bodyweight exercise)	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1876	Supported Calf Stretch	Calves			none (bodyweight exercise)	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1200	Tibialis raises	Calves			none (bodyweight exercise)	weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1115	3D lunge warmup	Cardio			Dumbbell	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2670	Alternate Walking	Cardio	Calves|Quads		none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1092	Bag training	Cardio	Shoulders|Chest|Trapezius	Biceps|Hamstrings|Calves|Lats|Obliquus externus abdominis|Abs	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1525	Ball Slams	Cardio	Lats|Obliquus externus abdominis|Abs	Shoulders|Glutes		distance_time	Cardio	END|CON|POW	attributes|cardio_dist	ok
+1524	Battle Ropes	Cardio	Hamstrings|Glutes|Lats|Obliquus externus abdominis|Quads|Abs	Shoulders|Biceps|Chest|Trapezius|Triceps		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1630	Blaze	Cardio	Shoulders|Glutes|Chest|Quads	Biceps|Hamstrings|Lats|Abs	Bench|Dumbbell|Kettlebell	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2482	Bobbing Exhale Drill	Cardio	Abs			distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2542	Boxing	Cardio	Shoulders|Triceps	Biceps|Lats		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1579	Bronco	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1449	ClimbMill	Cardio	Quads	Hamstrings|Glutes		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2695	Controlled Brisk Swim	Cardio	Shoulders|Lats	Chest		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2487	Cool-Down Swim	Cardio	Shoulders|Lats|Chest	Glutes|Abs|Triceps		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+177	Cycling	Cardio	Obliquus externus abdominis|Trapezius	Hamstrings|Brachialis|Glutes|Lats|Quads	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1204	Cycling cardio session	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1940	Diaphragmatic Breathing	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2480	Easy Continuous Swim (Freestyle)	Cardio	Shoulders|Lats|Chest	Hamstrings|Calves|Glutes|Quads|Abs|Triceps		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+962	Elliptical	Cardio	Glutes|Quads|Trapezius	Biceps|Abs|Triceps	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2692	Exhale and Body-position Swim Drill	Cardio	Shoulders|Lats	Chest		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1592	Guided or free meditation	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+285	High Knee Jumps	Cardio	Hamstrings|Calves|Quads|Soleus	Obliquus externus abdominis|Abs|Serratus anterior		distance_time	Cardio	END|CON|POW	attributes|cardio_dist	ok
+1318	High Knee Skips HD	Cardio	Obliquus externus abdominis|Abs	Biceps|Glutes|Quads|Triceps	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+983	High knees	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+319	Jogging	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+993	Jump rope: basic jumps	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON|POW	attributes|cardio_dist	ok
+1314	Jumping Jack HD	Cardio	Quads	Glutes|Obliquus externus abdominis|Abs	none (bodyweight exercise)	distance_time	Cardio	END|CON|POW	attributes|cardio_dist	ok
+2481	Kick with Board	Cardio	Glutes|Quads	Hamstrings|Calves|Abs		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1584	March or jog in place	Cardio	Hamstrings|Calves|Glutes|Quads	Shoulders|Biceps|Obliquus externus abdominis|Abs|Triceps	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2671	Radio Taiso	Cardio	Shoulders|Lats|Quads|Abs	Glutes|Obliquus externus abdominis|Chest	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2486	Recovery Bobbing	Cardio	Abs			distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1376	Recumbent Bike	Cardio	Hamstrings|Calves|Glutes|Quads			distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2549	Retro Treadmill Walking	Cardio	Calves|Quads	Hamstrings|Glutes		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1093	Rowing Machine	Cardio	Shoulders|Biceps|Hamstrings|Brachialis|Calves|Glutes|Lats|Obliquus externus abdominis|Quads|Abs|Serratus anterior|Soleus|Trapezius		none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+527	Run	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+529	Run - Interval Training	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+530	Run - Treadmill	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1574	Schwimmen	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2484	Side-Kick Breathing (Kickboard)	Cardio	Glutes	Shoulders|Hamstrings|Obliquus externus abdominis|Quads		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1526	Ski Machine	Cardio	Calves|Lats|Trapezius|Triceps	Hamstrings|Glutes|Quads|Abs		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+595	Skipping - Standard	Cardio	Calves			distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1523	Sled Push	Cardio	Calves|Glutes|Quads	Shoulders|Hamstrings|Triceps		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1548	Stair Master	Cardio	Hamstrings|Calves|Glutes|Quads		none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+624	Stationary Bike	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1618	Stationary bike cardio	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1962	Step Jack	Cardio	Quads	Shoulders|Glutes|Obliquus externus abdominis|Abs	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2485	Stroke-and-Roll Drill	Cardio	Shoulders|Obliquus externus abdominis	Lats|Abs		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+927	Suspended crossess	Cardio	Chest		none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+961	Swimming 50m sprints	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1285	Talons fesses	Cardio	Calves	Hamstrings	none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1615	Treadmill Cardio	Cardio			none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1104	Walking	Cardio	Hamstrings|Calves|Glutes|Lats|Obliquus externus abdominis|Quads|Abs		none (bodyweight exercise)	distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+2483	Wall-Hold Rotation	Cardio	Obliquus externus abdominis	Abs		distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+908	Zone 2 Running	Cardio				distance_time	Cardio	END|CON	attributes|cardio_dist	ok
+1373	box jumps	Cardio	Glutes	Calves	none (bodyweight exercise)	distance_time	Cardio	END|CON|POW	attributes|cardio_dist	ok
+997	4-count burpees	Chest			none (bodyweight exercise)	reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+57	Bear Walk 2	Chest	Shoulders|Calves|Chest|Abs|Serratus anterior|Soleus|Triceps	Glutes|Lats|Obliquus externus abdominis|Quads|Trapezius	none (bodyweight exercise)	weight_reps	Shoulders|Calves|Chest|Core|Arms|Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+73	Bench Press	Chest	Chest	Shoulders|Triceps	Barbell|Bench	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2700	Bench Press (Custom)	Chest	Chest	Shoulders|Triceps	Barbell|Bench	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2536	Bench Press Isometric	Chest	Shoulders|Chest|Triceps	Obliquus externus abdominis|Abs|Serratus anterior	Barbell|Bench	time	Shoulders|Chest|Arms|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+75	Benchpress Dumbbells	Chest	Chest	Shoulders|Triceps	Bench|Dumbbell	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1469	Bent over Cable Flye	Chest	Chest		Cable machine	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+132	Burpees	Chest				reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+135	Butterfly	Chest	Chest	Shoulders		weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2702	Butterfly (Custom)	Chest	Chest	Shoulders		weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+137	Butterfly Narrow Grip	Chest	Chest			weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1656	Cable Chest Press - Decline	Chest	Chest	Triceps	Cable machine	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1660	Cable Chest Press - Incline	Chest	Chest	Triceps	Cable machine	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+323	Cable Cross-over	Chest	Chest	Shoulders	Cable machine	weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1691	Cable Fly Lower Chest	Chest	Chest		Cable machine	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1689	Cable Fly Middle Chest	Chest	Chest		Cable machine	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1690	Cable Fly Upper Chest	Chest	Chest		Cable machine	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1457	Cable Press Around	Chest	Shoulders|Chest|Triceps	Biceps|Serratus anterior	Cable machine	weight_reps	Shoulders|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+129	Chest Press	Chest	Chest			weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1554	Clap Push-UP	Chest	Chest	Shoulders|Abs|Triceps	none (bodyweight exercise)	reps	Chest|Shoulders|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1086	Close-grip Press-ups	Chest	Brachialis|Lats|Chest|Trapezius	Shoulders|Biceps|Triceps	none (bodyweight exercise)	weight_reps	Arms|Back|Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+161	Cross-Bench Dumbbell Pullovers	Chest	Lats|Chest|Serratus anterior		Dumbbell	weight_reps	Back|Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1497	DB Underhand bench press	Chest	Chest	Shoulders	Bench|Dumbbell	weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1496	DB Upper Chest Variation	Chest	Chest	Shoulders	Dumbbell	weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+185	Decline Bench Press Barbell	Chest	Chest		Barbell|Bench	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+186	Decline Bench Press Dumbbell	Chest	Chest		Bench|Dumbbell	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1591	Deep breathing (standing or seated)	Chest	Obliquus externus abdominis|Abs		none (bodyweight exercise)	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1777	Deficit Push ups	Chest	Chest	Triceps	none (bodyweight exercise)	reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+386	Diamond push ups	Chest	Chest	Triceps	none (bodyweight exercise)	reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+194	Dips	Chest	Chest|Triceps		none (bodyweight exercise)	reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2706	Dips (Custom)	Chest	Chest|Triceps		none (bodyweight exercise)	reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1713	Doorway Pectoral Stretch	Chest	Chest		none (bodyweight exercise)	time	Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1084	Dumbbell Floor Press	Chest	Chest	Shoulders|Biceps|Triceps	Dumbbell	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1353	Dumbbell Hex Press	Chest	Chest|Triceps	Shoulders	Dumbbell	weight_reps	Chest|Arms|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+801	Dumbbell Push-Up	Chest	Chest	Shoulders|Triceps	Dumbbell	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2529	Explosive Push-Ups	Chest	Chest	Shoulders|Triceps	none (bodyweight exercise)	reps	Chest|Shoulders|Arms	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1919	Extreme Pec Stretch	Chest			none (bodyweight exercise)	time	Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1694	Flat Machine Press	Chest	Chest		Bench	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+237	Fly With Cable	Chest	Chest		Cable machine	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+238	Fly With Dumbbells	Chest	Chest		Dumbbell	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+239	Fly With Dumbbells, Decline Bench	Chest	Chest		Bench|Dumbbell	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1831	Hammerstrength Decline Chest Press	Chest	Chest	Shoulders|Triceps		weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1001	High plank	Chest	Abs	Shoulders|Obliquus externus abdominis|Triceps	none (bodyweight exercise)	time	Core|Shoulders|Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1508	High-Incline Smith Machine Press	Chest	Shoulders|Chest|Triceps			weight_reps	Shoulders|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+538	Incline Bench Press - Barbell	Chest	Chest	Shoulders|Triceps	Barbell|Incline bench	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+537	Incline Bench Press - Dumbbell	Chest	Chest	Shoulders|Triceps	Dumbbell|Incline bench	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+539	Incline Bench Press - MP	Chest	Chest	Shoulders|Triceps		weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+308	Incline Dumbbell Fly	Chest	Chest		Dumbbell|Incline bench	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1716	Incline Shoulder Press Up	Chest	Shoulders|Chest		Bench	weight_reps	Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1693	Incline Static Hold	Chest	Chest		Dumbbell	time	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1198	Inverted Rows	Chest	Biceps|Lats	Chest|Abs|Trapezius	none (bodyweight exercise)	reps	Arms|Back|Chest|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+314	Isometric Wipers	Chest	Chest	Abs	none (bodyweight exercise)	time	Chest|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1546	Larsen Press	Chest	Chest	Triceps	Barbell	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1918	Legend Chest Press	Chest	Chest	Shoulders|Triceps		weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1773	Legend Incline Bench Press	Chest	Chest	Shoulders|Triceps		weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+379	Leverage Machine Chest Press	Chest	Chest			weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1270	Low Pulley Cable Fly	Chest	Chest	Shoulders	Cable machine	weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1296	Low-Cable Cross-Over - NB	Chest	Chest	Shoulders	Cable machine	weight_reps	Chest|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2723	Machine Incline Chest Press (Custom)	Chest	Shoulders|Chest			weight_reps	Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+926	Machine chest fly	Chest	Chest			weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+996	Mountain climbers	Chest			none (bodyweight exercise)	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1461	No Leg Drive Dumbbell Chest Press	Chest	Chest	Shoulders|Triceps	Bench|Dumbbell	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+998	No push-up burpees	Chest			none (bodyweight exercise)	reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1484	Omni Cable Cross-over	Chest	Chest		Cable machine|SZ-Bar	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+687	Overhead Press	Chest	Shoulders		Barbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+445	Pause Bench	Chest	Chest	Triceps	Barbell|Bench	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1904	Pec Deck	Chest	Chest			weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1436	Pin Bench Press BB	Chest	Chest|Triceps		Barbell	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+683	Power Clean	Chest	Chest		Barbell	weight_reps	Chest	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1551	Push-Up	Chest	Chest	Shoulders|Abs|Triceps	none (bodyweight exercise)	reps	Chest|Shoulders|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1112	Push-Ups | Decline	Chest	Chest	Shoulders|Triceps	Bench|Incline bench	weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1111	Push-Ups | Incline	Chest	Chest	Triceps	Bench|Incline bench	weight_reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1113	Push-Ups | Parallettes	Chest	Chest	Shoulders|Triceps		reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+498	Reverse Grip Bench Press	Chest	Chest|Triceps	Shoulders	Barbell|Bench	weight_reps	Chest|Arms|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1832	Ring Support Hold	Chest				time	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2530	Russian Push Ups	Chest	Chest	Shoulders|Abs|Triceps	none (bodyweight exercise)	reps	Chest|Shoulders|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1094	Seated Bench Press	Chest	Chest		Bench	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1922	Seated Cable chest fly	Chest	Chest		Cable machine	weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+583	Side to Side Push Ups	Chest	Shoulders|Obliquus externus abdominis|Chest|Triceps			reps	Shoulders|Core|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+925	Smith Machine Slight Incline Press	Chest	Chest			weight_reps	Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2528	Squat Sky Reach Stretch	Chest	Lats|Chest			time	Back|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1778	Supino inclinado	Chest	Chest	Shoulders|Triceps		weight_reps	Chest|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1451	Torso rotation stretch	Chest	Obliquus externus abdominis	Chest	none (bodyweight exercise)	time	Core|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2679	Tyson push-ups	Chest	Chest|Triceps	Shoulders|Abs		reps	Chest|Arms|Shoulders|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+688	Upper External Oblique	Chest	Obliquus externus abdominis		Pull-up bar	weight_reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1902	Weighted push-ups	Chest	Chest	Triceps	none (bodyweight exercise)	reps	Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1964	Wide Push-Up	Chest	Chest	Abs|Triceps	none (bodyweight exercise)	reps	Chest|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1948	1 Leg Box Squat	Legs	Hamstrings|Quads		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2613	90/90 Hip Switches	Legs	Glutes		none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1096	Abduction while standing	Legs			none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2614	Adductor Rock Backs	Legs		Hamstrings|Glutes	none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1102	Alternate back lunges	Legs	Glutes|Quads		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1864	Ankle Roll	Legs				reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1141	Arabesque	Legs	Hamstrings|Glutes		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2494	Band Terminal Knee extension	Legs	Quads		Resistance band	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1865	Banded Ankle Mobility	Legs				time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1842	Banded Clamshell	Legs	Glutes|Abs	Quads	Resistance band	reps	Legs|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2665	Banded Monster Walk	Legs	Glutes	Quads	Resistance band	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1801	Barbell Full Squat	Legs	Hamstrings|Glutes|Quads	Calves|Abs	Barbell	weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+43	Barbell Hack Squats	Legs	Quads	Hamstrings|Glutes	Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+46	Barbell Lunges Standing	Legs	Quads	Glutes	Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+802	Barbell Lunges Walking	Legs	Glutes|Quads	Hamstrings|Calves	Barbell	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1830	Barbell Step Back Lunge	Legs	Quads		Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1935	Belt Squat	Legs	Glutes|Quads	Hamstrings		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1840	Bent-Leg Hamstring Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1953	Bent-knee Iron Cross	Legs				weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1312	Bodyweight Squat HD	Legs	Quads	Calves|Glutes|Obliquus externus abdominis|Abs|Soleus	none (bodyweight exercise)	weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1324	Bodyweight lunge HD	Legs	Quads	Glutes|Soleus	none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+977	Box squat	Legs	Glutes|Quads|Soleus		none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+124	Braced Squat	Legs	Quads	Glutes		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1706	Bulgarian Squat with Dumbbells	Legs	Glutes|Quads	Hamstrings	Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+988	Bulgarian split squats left	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+989	Bulgarian split squats right	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1843	Butterfly Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1131	Cable glute extension	Legs	Glutes		Cable machine	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1751	Cable pull through	Legs	Glutes	Hamstrings|Calves|Quads|Soleus	Cable machine	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1466	Calf Raise using Hack Squat Machine	Legs	Calves|Soleus			reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1854	Calves foam roller	Legs	Calves		none (bodyweight exercise)	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1911	Cat Plank	Legs	Quads|Abs	Shoulders	none (bodyweight exercise)	time	Legs|Core|Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2449	Clamshell to Reverse Clamshell	Legs	Glutes		none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1438	Clean	Legs	Glutes|Quads	Hamstrings|Lats|Abs	Barbell	weight_reps	Legs|Back|Core	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1605	Copenhagen Adduction Exercise	Legs	Glutes|Quads	Obliquus externus abdominis|Serratus anterior|Trapezius	Bench	weight_reps	Legs|Core|Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1407	Cossack squat	Legs	Glutes|Quads	Calves|Abs		weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2525	Couch Stretch	Legs			Bench	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1400	Crossbody Hamstring Stretch	Legs	Hamstrings		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1395	Crossbody Leg Swings	Legs	Hamstrings		none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1361	Double Kettlebell Front Squat	Legs	Glutes|Quads	Hamstrings|Calves|Abs	Kettlebell	weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1243	Double Leg Calf Raise	Legs	Calves|Soleus		none (bodyweight exercise)	reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1201	Dragon squat	Legs	Quads	Hamstrings|Calves|Glutes	none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1370	Dumbbell Deadlift	Legs	Hamstrings|Glutes	Quads|Trapezius	Dumbbell	weight_reps	Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1503	Dumbbell Frog Press	Legs	Glutes		Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1640	Dumbbell Front Squat	Legs	Glutes|Quads	Shoulders|Abs	Dumbbell	weight_reps	Legs|Shoulders|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+203	Dumbbell Goblet Squat	Legs	Quads		Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1642	Dumbbell Hip Thrust	Legs	Glutes|Quads		Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+205	Dumbbell Lunges Standing	Legs	Quads	Glutes	Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+206	Dumbbell Lunges Walking	Legs	Quads	Glutes	Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1651	Dumbbell Rear Lunge	Legs	Glutes|Quads	Soleus	Dumbbell	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1652	Dumbbell Romanian Deadlift	Legs	Hamstrings|Glutes		Dumbbell	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1653	Dumbbell Side Squat	Legs	Glutes|Quads	Hamstrings		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1234	Dumbbell Single-leg Hip Thrust	Legs	Glutes	Hamstrings|Quads	Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1366	Dumbbell Split Squat	Legs	Glutes|Quads	Hamstrings|Calves	Dumbbell	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1684	Dumbbell Thruster	Legs	Hamstrings|Glutes|Quads	Shoulders	Dumbbell	weight_reps	Legs|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2682	Dumbbell cyclist squat	Legs	Hamstrings|Calves|Quads		Dumbbell	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1616	Dumbbell donkey kick	Legs	Hamstrings|Glutes		Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1116	Dumbbell farmer's carry	Legs			Dumbbell	weight_distance	Legs	END|CON|STR	muscle_volume|attributes|xp|prs|carry_dist	ok
+1088	Dumbbell sumo deadlift	Legs	Hamstrings|Glutes	Quads|Trapezius	Dumbbell	weight_reps	Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1391	Elephant Walks	Legs	Hamstrings	Calves	none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2615	Elevated Hamstring Stretch	Legs	Hamstrings		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1241	Exercise Band Dorsiflexion	Legs	Soleus		Resistance band	weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1242	Exercise Band Plantarflexion	Legs	Calves	Soleus	Resistance band	weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1956	Fire Hydrant Circles	Legs				reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1950	Foam Roll IT Band	Legs				time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1860	Foam Roller Adductors	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1856	Foam Roller Anterior tibialis	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1859	Foam Roller Gluteus	Legs	Glutes		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1857	Foam Roller Iliotibial band	Legs	Quads		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1858	Foam Roller quadriceps	Legs	Quads		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1844	Frog Stretch	Legs	Glutes		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2527	Front Split Stretch	Legs	Hamstrings|Quads	Calves	Gym mat	time	Legs|Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+257	Front Squats	Legs	Glutes	Abs	Barbell	weight_reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+265	Glute Bridge	Legs	Glutes	Hamstrings		reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1528	Glute Drive	Legs	Glutes	Hamstrings|Quads		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1723	Glute Kickback (Machine)	Legs	Glutes			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2478	Glute-Ham Raise	Legs	Hamstrings	Glutes	Bench	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1392	Good Morning	Legs	Hamstrings		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1414	Hack Squats	Legs	Quads	Hamstrings|Calves|Glutes		weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2717	Hack Squats (Custom)	Legs	Quads	Hamstrings|Calves|Glutes		weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1398	Hamstring Chokes	Legs	Hamstrings		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1855	Hamstring Foam roller	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1387	Hamstring Kicks	Legs	Hamstrings	Glutes	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2656	Happy Baby	Legs	Glutes	Hamstrings		time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+291	Hindu Squats	Legs	Quads	Glutes		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2447	Hip Airplane	Legs	Glutes	Hamstrings|Calves|Soleus	Kettlebell	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1906	Hip Bridge	Legs	Glutes|Abs	Obliquus externus abdominis	none (bodyweight exercise)	weight_reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1862	Hip Circles	Legs				reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1863	Hip Crossover	Legs				weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1867	Hip Flexor Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+294	Hip Thrust	Legs	Glutes		Barbell|Bench	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1578	Hip hinge	Legs	Hamstrings|Glutes	Calves|Quads|Abs	Barbell	weight_reps	Legs|Calves|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+2618	Hip-Out and Hip-In Lateral Steps	Legs			Resistance band	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1846	Horse Stance (Side Splits)	Legs	Glutes		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1733	Isometric Squat to Failure	Legs	Glutes|Quads		none (bodyweight exercise)	time	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+320	Jumping Jacks	Legs	Quads			reps	Legs	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1641	Kettlebell One Legged Deadlift	Legs	Glutes		Dumbbell|Kettlebell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+960	Kettlebell Swing	Legs	Shoulders|Glutes	Quads|Abs|Trapezius	Kettlebell	weight_reps	Shoulders|Legs|Core|Back	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+331	Kettlebell Swings	Legs	Glutes	Hamstrings	Kettlebell	weight_reps	Legs	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1688	Kickstand RDL	Legs	Hamstrings		Barbell	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1452	Knee to Chest Stretch	Legs	Glutes	Hamstrings	none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+990	Kneeling kickbacks	Legs	Glutes	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1829	Landmine Squat to Press	Legs	Shoulders|Glutes|Quads	Hamstrings|Abs	Barbell	weight_reps	Shoulders|Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1325	Lateral Push Off	Legs	Calves	Hamstrings	none (bodyweight exercise)	weight_reps	Calves|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+364	Leg Curl	Legs	Hamstrings|Glutes			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+365	Leg Curls (laying)	Legs	Hamstrings			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+366	Leg Curls (sitting)	Legs	Hamstrings			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2708	Leg Curls (sitting) (Custom)	Legs	Hamstrings			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+367	Leg Curls (standing)	Legs	Hamstrings			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+369	Leg Extension	Legs	Quads			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2709	Leg Extension (Custom)	Legs	Quads			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2535	Leg Extension Isometric	Legs	Quads			time	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+371	Leg Press	Legs	Hamstrings|Calves|Glutes|Quads			weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1515	Leg Press Toe Press	Legs	Calves			weight_reps	Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+375	Leg Press on Hackenschmidt Machine	Legs	Quads			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+373	Leg Presses (narrow)	Legs	Quads	Glutes		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+374	Leg Presses (wide)	Legs	Quads	Glutes		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+376	Leg Raise	Legs	Obliquus externus abdominis|Abs			reps	Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1670	Leg Swings (Front–Back)	Legs	Hamstrings	Glutes|Quads	none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1589	Leg and hip stretch	Legs	Hamstrings|Glutes|Quads	Lats	none (bodyweight exercise)	time	Legs|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1949	Limber 11	Legs				weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2526	Long Lunge Pulse Stretch	Legs			Resistance band	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+397	Low Box Squat - Wide Stance	Legs	Glutes|Quads		Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1868	Lunge with Twist Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+984	Lunges	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1869	Lying Figure Four Stretch	Legs	Glutes		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1870	Lying Hamstring Stretch with Band	Legs			Resistance band	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1748	Machine Hip Abduction	Legs	Glutes			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1132	Machine glute extension	Legs	Glutes			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1965	Marching High Knees	Legs	Quads	Calves|Glutes|Abs	none (bodyweight exercise)	weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+910	Nordic Curl	Legs	Hamstrings	Glutes		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+441	Overhead Squat	Legs	Glutes|Quads	Shoulders|Hamstrings|Trapezius		weight_reps	Legs|Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1464	Pause Hack Squats	Legs	Quads	Hamstrings|Calves|Glutes		weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2662	Paused Squats	Legs	Quads	Hamstrings|Glutes	Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1521	Pendular hack	Legs				weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1527	Pendulum Squat	Legs	Quads	Hamstrings|Glutes	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1872	Pigeon Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1437	Pin Squat	Legs	Hamstrings|Glutes|Quads	Abs	Barbell	weight_reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+456	Pistol Squat	Legs	Hamstrings|Glutes	Shoulders|Biceps|Brachialis		reps	Legs|Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1020	Pistol squats right	Legs	Glutes|Quads	Hamstrings|Calves|Abs	none (bodyweight exercise)	reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1410	Plank with Alternating Leg Lift	Legs	Glutes		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1275	Plantarflexion Stretch with Band	Legs			Resistance band	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1208	Prisoner Squat	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2617	Quad Sets	Legs			Gym mat	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2687	Quadriceps Stretch	Legs	Quads		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1960	Rear-foot-elevated Hip Flexor Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2448	Reverse Clamshell	Legs	Glutes		none (bodyweight exercise)	reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1809	Reverse Hyperextension	Legs	Hamstrings|Glutes		Bench	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+909	Reverse Nordic Curl	Legs	Quads	Glutes|Abs		weight_reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2620	Reverse V-Squat	Legs	Glutes|Quads	Hamstrings		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+999	Reverse lunges	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1954	Roll-overs into V-sits	Legs				weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+507	Romanian Deadlift	Legs	Hamstrings|Glutes	Trapezius	Barbell	weight_reps	Legs|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+2710	Romanian Deadlift (Custom)	Legs	Hamstrings|Glutes	Trapezius	Barbell	weight_reps	Legs|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1874	Runners Lunge Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1952	SMR Glutes (lax ball)	Legs				weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1672	Seated Hip Abduction	Legs	Glutes		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2718	Seated Hip Abduction (Custom)	Legs	Glutes		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+12	Seated Hip Adduction	Legs	Glutes			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2699	Seated Hip Adduction (Custom)	Legs	Glutes			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2664	Seated Knee Extension with Overpressure	Legs	Hamstrings	Quads	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1845	Seated Pancake Good Morning	Legs	Glutes		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1959	Seated Piriformis Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1884	Shinbox IR Stretch	Legs	Glutes|Obliquus externus abdominis		none (bodyweight exercise)	time	Legs|Core	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1739	Shrimp Squat	Legs	Glutes|Quads	Hamstrings|Calves	none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1202	Side Lying Hip Abduction	Legs			none (bodyweight exercise)	reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1195	Side Slides + Squats	Legs	Quads	Calves|Glutes	none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+986	Side split squats left	Legs			none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+987	Side split squats right	Legs			none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+71	Single Leg Extension	Legs	Quads			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1740	Single Leg Glute Bridge	Legs	Glutes		none (bodyweight exercise)	reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1393	Single Leg Hamstring Stretch	Legs	Hamstrings		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1388	Single Leg RDL	Legs	Hamstrings	Glutes	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+2677	Single leg press	Legs	Hamstrings|Calves|Glutes|Quads			weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2667	Single-Leg Balance with Eyes Closed	Legs		Calves|Glutes	none (bodyweight exercise)	weight_reps	Calves|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2668	Single-Leg Balance with Kettlebell Circles	Legs	Glutes	Shoulders|Abs	Kettlebell	weight_reps	Legs|Shoulders|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1736	Single-Leg Deadlift with Dumbbell	Legs	Hamstrings|Glutes		Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1734	Single-Leg Lunge with Kettlebell:	Legs	Calves|Glutes|Quads		Kettlebell	weight_reps	Calves|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2619	Single-Leg Soft-Landing Holds	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2616	Single-leg BOSU balance	Legs			none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1294	Single-leg hamstring curl	Legs	Hamstrings	Glutes	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1735	Single-leg side glute press	Legs	Calves|Glutes|Quads		Incline bench	weight_reps	Calves|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1274	Sitting Calf Stretch (Dorsiflexion)	Legs	Calves|Soleus		none (bodyweight exercise)	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1604	Sliding Lateral Lunge	Legs	Hamstrings|Glutes|Quads	Calves|Obliquus externus abdominis	Barbell	weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1963	Slow Squat	Legs	Quads	Hamstrings|Glutes|Abs	none (bodyweight exercise)	weight_reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1593	Smith Machine Split Squat	Legs	Hamstrings|Quads		Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1747	Smith machine squat	Legs	Glutes|Quads			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1576	Snap Down	Legs	Hamstrings|Glutes|Quads	Calves|Abs		weight_reps	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1839	Solo Hip Flexor Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+604	Speed Deadlift	Legs	Hamstrings|Glutes	Quads|Trapezius		weight_reps	Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+991	Split squats left	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+992	Split squats right	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2645	Squat -> Stand Coordination	Legs	Glutes|Quads			weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+614	Squat Jumps	Legs	Quads			reps	Legs	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+616	Squat Thrust	Legs	Glutes|Quads|Abs|Soleus		none (bodyweight exercise)	weight_reps	Legs|Core|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+615	Squats	Legs	Quads	Glutes	Barbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+341	Squats on Multipress	Legs	Quads	Glutes		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1724	Standing Adduction (Cable)	Legs			Cable machine	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1239	Standing Calf Stretch	Legs	Calves		none (bodyweight exercise)	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1875	Standing IT Band Stretch	Legs			none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1396	Standing Pancake	Legs	Hamstrings		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1397	Standing Pancake Good Morning	Legs	Hamstrings		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+1240	Standing Soleus Stretch	Legs	Soleus		none (bodyweight exercise)	time	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+981	Step-ups	Legs	Glutes|Quads	Hamstrings|Calves	Bench	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+627	Stiff-legged Deadlifts	Legs	Hamstrings	Glutes	Barbell	weight_reps	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min(hinge_1/3)	ok
+630	Sumo Deadlift	Legs	Hamstrings|Glutes|Quads	Trapezius		weight_reps	Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+632	Sumo Squats	Legs	Glutes|Quads		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1886	Supine Hip Abduction	Legs	Glutes|Quads		Dumbbell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2696	Supported Deep Squat Hold	Legs	Glutes|Quads		none (bodyweight exercise)	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2557	Supported Split Squat	Legs	Quads	Hamstrings|Glutes	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+650	Thruster	Legs	Shoulders	Trapezius	Barbell	weight_reps	Shoulders|Legs|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1390	Toe Touch	Legs	Hamstrings|Glutes	Calves	none (bodyweight exercise)	time	Legs|Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1803	Trap Bar Squat	Legs	Quads	Hamstrings		weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1913	Unilateral Hip Thrust	Legs	Glutes	Abs	none (bodyweight exercise)	reps	Legs|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1907	Unilateral Lunges	Legs	Glutes|Quads	Hamstrings	none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1196	Wall Drills	Legs	Quads	Calves	none (bodyweight exercise)	weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+718	Wall Squat	Legs	Hamstrings|Quads		none (bodyweight exercise)	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1100	Wall balls	Legs	Shoulders|Glutes|Quads	Biceps|Chest|Abs|Trapezius	Swiss Ball	weight_reps	Shoulders|Legs|Arms|Chest|Core|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1408	Wall-sit	Legs	Glutes|Quads	Calves|Abs		time	Legs|Calves|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+722	Weighted Step-ups	Legs	Glutes|Quads	Hamstrings|Calves		weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1804	ankle dorsiflexion rocks	Legs	Calves|Soleus		none (bodyweight exercise)	reps	Calves	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1947	dumbbell snatch	Legs	Hamstrings|Glutes|Quads		Dumbbell	weight_reps	Legs	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1612	kettlebell sumo deadlift	Legs	Hamstrings|Glutes|Quads		Kettlebell	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1613	rubber band glute kickback	Legs	Glutes		Resistance band	weight_reps	Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1680	seated figure four	Legs	Glutes		Bench	time	Legs	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1754	45° lateral raises	Shoulders			Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2533	Arch Hang	Shoulders			Pull-up bar	time	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+20	Arnold Shoulder Press	Shoulders	Shoulders	Trapezius|Triceps	Dumbbell	weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1826	Band pull-apart with external rotation	Shoulders	Shoulders		Resistance band	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2622	Banded Front Raise	Shoulders	Shoulders	Serratus anterior|Trapezius	Resistance band	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1838	Banded Shoulder Drills	Shoulders	Shoulders|Chest|Trapezius		Resistance band	weight_reps	Shoulders|Chest|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1638	Barbell Clean and press	Shoulders	Shoulders|Chest		Dumbbell	weight_reps	Shoulders|Chest	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1925	Barbell Silverback Shrug	Shoulders	Trapezius		Barbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1807	Behind the Back Cable Lateral Raise	Shoulders	Shoulders	Trapezius	Cable machine	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+79	Bent High Pulls	Shoulders	Trapezius		Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+82	Bent-over Lateral Raises	Shoulders			Bench|Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2621	Box Handstand Push-up	Shoulders	Shoulders|Chest|Triceps		none (bodyweight exercise)	time	Shoulders|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+915	Bus Drivers	Shoulders	Shoulders			weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1710	Butchers Block Stretch	Shoulders	Lats	Trapezius	Bench	time	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+139	Butterfly Reverse	Shoulders	Shoulders			weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2703	Butterfly Reverse (Custom)	Shoulders	Shoulders			weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+142	Cable External Rotation	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1745	Cable Front Raise with a small bar	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1378	Cable Lateral Raises (Single Arm)	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+822	Cable Rear Delt Fly	Shoulders	Shoulders|Trapezius	Triceps	Cable machine	weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1936	Cable Rear-Delt Fly (single arm)	Shoulders			Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1472	Cable Shrug-In	Shoulders	Trapezius		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1774	Chair dips	Shoulders	Triceps	Shoulders|Chest	none (bodyweight exercise)	reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1825	Chest-Supported Rear Delt Raise	Shoulders	Shoulders	Trapezius	Bench|Dumbbell	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1446	Clean and Jerk OL	Shoulders	Shoulders|Hamstrings|Glutes|Quads	Lats|Abs|Trapezius|Triceps	Barbell	weight_reps	Shoulders|Legs|Back|Core|Arms	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1901	Clean and Press	Shoulders	Shoulders	Quads	Barbell	weight_reps	Shoulders|Legs	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+2685	Cross-Body Stretch	Shoulders	Shoulders		none (bodyweight exercise)	time	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1536	Delt Stretch	Shoulders	Shoulders		none (bodyweight exercise)	time	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1556	Devil’s Press	Shoulders	Shoulders|Glutes|Chest	Hamstrings|Lats|Obliquus externus abdominis|Triceps	Dumbbell	weight_reps	Shoulders|Legs|Chest|Back|Core|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+193	Diagonal Shoulder Press	Shoulders			Bench	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1504	Dumbbell Bradford press	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2724	Dumbbell Lateral Raise (Custom)	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1602	Dumbbell Scaption	Shoulders	Trapezius	Shoulders	Dumbbell	weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1429	Dumbbell Shoulder Rotations	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1227	Dumbbell rear delt row	Shoulders	Shoulders|Brachialis|Trapezius		Dumbbell	weight_reps	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1835	External Rotation Stretch	Shoulders	Shoulders|Trapezius		Barbell	time	Shoulders|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1920	Extreme Shoulder Stretch	Shoulders			none (bodyweight exercise)	time	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+222	Facepull	Shoulders	Trapezius		Cable machine	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2694	Feet-assisted Straight-bar Support	Shoulders	Triceps	Shoulders|Chest		weight_reps	Arms|Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1833	Floor Glider Hamstring Curls	Shoulders	Hamstrings	Calves|Glutes		weight_reps	Legs|Calves	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1731	Front Raise (Cable)	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+256	Front Raises	Shoulders	Shoulders		Barbell|Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+254	Front Raises with Plates	Shoulders	Shoulders|Trapezius			weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1516	Handstand	Shoulders	Shoulders			time	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+282	Handstand Pushup	Shoulders	Shoulders|Triceps	Trapezius	none (bodyweight exercise)	time	Shoulders|Arms|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1007	Head turns	Shoulders			none (bodyweight exercise)	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+289	High Pull	Shoulders	Shoulders	Glutes		weight_reps	Shoulders|Legs	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1882	High-Cable Lateral Raise	Shoulders	Shoulders	Lats|Serratus anterior	Cable machine	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1080	Hindu Pushups	Shoulders	Shoulders|Chest	Triceps		weight_reps	Shoulders|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1712	Horizontal Shoulder Flexion Stretch	Shoulders	Chest	Shoulders	none (bodyweight exercise)	time	Chest|Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1879	Incline DB Y-Raise	Shoulders	Shoulders	Trapezius	Dumbbell	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2721	Incline DB Y-Raise (Custom)	Shoulders	Shoulders	Trapezius	Dumbbell	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1441	Incline OHP DB	Shoulders	Shoulders	Triceps	Dumbbell	weight_reps	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1914	Isometria alle parallele	Shoulders	Chest|Trapezius			weight_reps	Chest|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1445	Jerk OL	Shoulders	Shoulders	Glutes|Quads|Triceps	Barbell	weight_reps	Shoulders|Legs|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1442	Kreis Press DB	Shoulders	Shoulders	Biceps|Chest|Abs|Triceps	Dumbbell	weight_reps	Shoulders|Arms|Chest|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+346	Landmine press	Shoulders	Shoulders	Chest|Triceps	Barbell	weight_reps	Shoulders|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2538	Lateral Raise Isometric	Shoulders	Shoulders		Dumbbell	time	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+348	Lateral Raises	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+349	Lateral Rows on Cable, One Armed	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+351	Lateral-to-Front Raises	Shoulders	Shoulders|Trapezius		Dumbbell	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2624	Lean-Away Cable Lateral Raise	Shoulders	Shoulders	Trapezius	Cable machine	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1008	Left neck stretch	Shoulders			none (bodyweight exercise)	time	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+406	Lying Rotator Cuff Exercise	Shoulders			Dumbbell	weight_reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1654	Machine Lateral Raise	Shoulders	Shoulders		Gym mat	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1744	Machine Side Lateral Raises	Shoulders	Shoulders			weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+418	Military Press mit SZ-Bar	Shoulders	Shoulders	Trapezius|Triceps	SZ-Bar	weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1939	Neck CARs	Shoulders				reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1893	Overhead Barbell Press	Shoulders	Shoulders		Barbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2537	Overhead Press Isometric	Shoulders	Shoulders|Triceps		Barbell	time	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1775	Pec deck rear delt fly	Shoulders				weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1580	Perpendicular Unilateral Landmine Row	Shoulders	Shoulders|Trapezius		Barbell	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2691	Pike Hold (Floor)	Shoulders	Shoulders|Serratus anterior	Abs|Triceps	none (bodyweight exercise)	time	Shoulders|Core|Arms	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1439	Pin OHP	Shoulders	Shoulders|Triceps		Barbell	weight_reps	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2532	Planche Lean Hold	Shoulders	Shoulders|Serratus anterior	Biceps|Chest|Abs	none (bodyweight exercise)	time	Shoulders|Arms|Chest|Core	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1284	Pseudo Planche Push-up	Shoulders	Shoulders	Chest	none (bodyweight exercise)	reps	Shoulders|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1440	Push OHP	Shoulders	Shoulders|Glutes|Quads	Triceps	Barbell	weight_reps	Shoulders|Legs|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+478	Push Press	Shoulders	Trapezius	Glutes		weight_reps	Back|Legs	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+487	Rear Delt Raises	Shoulders			Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1709	Reverse Fly Standing	Shoulders	Shoulders|Trapezius		Cable machine	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1009	Right neck stretch	Shoulders			none (bodyweight exercise)	time	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+918	Seated Dumbbell Side Lateral	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2714	Seated Dumbbell Side Lateral (Custom)	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1841	Seated Shoulder Extension Stretch	Shoulders	Lats|Chest		none (bodyweight exercise)	time	Back|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2523	Serratus Wall Slide Stretch	Shoulders	Serratus anterior	Shoulders		time	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1714	Shoulder Dumbbell Pendular Exercise	Shoulders	Shoulders|Lats|Chest|Trapezius		Dumbbell	weight_reps	Shoulders|Back|Chest	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1729	Shoulder External Rotation (Cable)	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1715	Shoulder External Rotation with Dumbbell	Shoulders	Shoulders|Brachialis	Trapezius	Dumbbell	weight_reps	Shoulders|Arms|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+2693	Shoulder Flexion Wall Stretch	Shoulders	Lats	Chest	none (bodyweight exercise)	time	Back|Chest	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1728	Shoulder Internal Rotation (Cable)	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+566	Shoulder Press, Barbell	Shoulders	Shoulders		Barbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+567	Shoulder Press, Dumbbells	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+543	Shoulder Press, on Machine	Shoulders	Shoulders	Triceps		weight_reps	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2711	Shoulder Press, on Machine (Custom)	Shoulders	Shoulders	Triceps		weight_reps	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+569	Shoulder Press, on Multi Press	Shoulders	Shoulders			weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1338	Shoulder Raise (Dumbbell)	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1443	Shoulder Raise Side and Front DB	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+570	Shoulder Shrug	Shoulders	Trapezius		none (bodyweight exercise)	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1755	Shoulder Y-pull cable	Shoulders			Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1081	Shoulder dislocates	Shoulders				reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+575	Shrugs on Multipress	Shoulders	Shoulders	Triceps		weight_reps	Shoulders|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+571	Shrugs, Barbells	Shoulders	Shoulders		Barbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+572	Shrugs, Dumbbells	Shoulders	Shoulders		Dumbbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1753	Side lateral raise - Back (Cable)	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1752	Side lateral raise - Front (Cable)	Shoulders	Shoulders		Cable machine	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1582	Side-laying interior rotation	Shoulders	Trapezius		Barbell|Bench|Dumbbell	weight_reps	Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+578	Side-lying External Rotation	Shoulders				weight_reps	Shoulders	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+1968	Single-arm dumbbell shoulder press	Shoulders	Shoulders	Abs|Serratus anterior|Trapezius|Triceps	Dumbbell	weight_reps	Shoulders|Core|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1711	Sleeper Stretch	Shoulders	Shoulders	Trapezius	none (bodyweight exercise)	time	Shoulders|Back	END|CON|STR|MOB	muscle_volume|attributes|xp|prs|mobility_min	ok
+916	Smith Press	Shoulders	Shoulders		Incline bench	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+599	Snatch	Shoulders	Shoulders		Barbell	weight_reps	Shoulders	END|CON|POW|STR	muscle_volume|attributes|xp|prs	ok
+1575	Standing Dowel Shoulder press	Shoulders			Barbell	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+917	Straight Bar Cable Front Raise	Shoulders	Shoulders		Cable machine|SZ-Bar	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1581	Trap press	Shoulders	Trapezius		Barbell|Bench|Dumbbell	weight_reps	Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1916	Tuck planche	Shoulders	Shoulders|Abs|Serratus anterior	Obliquus externus abdominis|Chest|Triceps	none (bodyweight exercise)	weight_reps	Shoulders|Core|Chest|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+694	Upright Row w/ Dumbbells	Shoulders	Shoulders|Trapezius	Biceps	Dumbbell	weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+693	Upright Row, SZ-bar	Shoulders	Shoulders|Trapezius	Biceps	SZ-Bar	weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+691	Upright Row, on Multi Press	Shoulders	Shoulders|Trapezius	Biceps		weight_reps	Shoulders|Back|Arms	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1679	Wall Angels	Shoulders	Trapezius	Shoulders		weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+711	Wall Handstand	Shoulders			none (bodyweight exercise)	time	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+2454	YTW Raises	Shoulders	Shoulders		none (bodyweight exercise)	weight_reps	Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1885	YTWL Exercise	Shoulders	Shoulders|Trapezius		Dumbbell|Incline bench	weight_reps	Shoulders|Back	END|CON|STR	muscle_volume|attributes|xp|prs	ok
+1795	unilateral cross body cable pull down	Shoulders	Lats	Shoulders	Cable machine	weight_reps	Back|Shoulders	END|CON|STR	muscle_volume|attributes|xp|prs	ok

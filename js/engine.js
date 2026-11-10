@@ -983,7 +983,15 @@ const Engine = (() => {
       const info = exInfo(state, en.id), s = entryStats(en);
       const k = liftKey(info.n);
       if (k === "clean" || k === "snatch") { if (s.est1RM > olympic) { olympic = s.est1RM; olyKey = k; } }
-      if (/jump|plyo|hop|bound|throw|slam|explosive|kettlebell swing|clean|snatch|push press/i.test(info.n)) {
+      /* Plyometric reps as a second, independent power signal. Two corrections
+         from the library-audit sweep (2026-11-10):
+           (a) an OLYMPIC lift is already scored above through the olympic-standard
+               path, so its reps are NOT counted again here — the old matcher named
+               "clean|snatch" and charged a power clean's work to Power twice;
+           (b) `hop` is word-bounded, so "wood chop" (a loaded rotation) is not
+               read as a jump. */
+      if (k !== "clean" && k !== "snatch" &&
+          /jump|plyo|\bhops?\b|bound|throw|slam|explosive|kettlebell swing|push press/i.test(info.n)) {
         for (const x of en.sets || []) plyoReps += num(x.r) || 1;
       }
       for (const x of en.sets || []) if (num(x.r) > 0 && num(x.r) <= 3 && num(x.w) > 0) heavySets++;
@@ -1012,7 +1020,7 @@ const Engine = (() => {
      much core work it represents: a crunch trains about 30 degrees of flexion
      against resistance and lengthens nothing. Counting it would make this axis
      stop measuring range — and the point of the axis is to be accurate. */
-  const MOB_RE = /stretch|toe touch|mobility|yoga|foam|flexib|range of motion|dynamic warm|rotat|pallof|anti.?rotation|bird ?dog|dead ?bug|deadbug|clamshell|\bcars?\b|dislocat|thoracic|cervical|90\/90|hip opener|get.?up|cat.?cow|world'?s greatest|bear crawl|plank|\bhold\b|side.?lying|scapular|ankle|wrist|hip circle|shoulder circle|arm circle|leg swing|deep squat/i;
+  const MOB_RE = /stretch|toe touch|mobility|yoga|foam|flexib|range of motion|dynamic warm|rotat|pallof|anti.?rotation|bird ?dog|dead ?bug|deadbug|clamshell|\bcars?\b|dislocat|thoracic|cervical|90\/90|hip opener|get.?up|cat.?cow|world'?s greatest|bear crawl|plank|\bhold\b|side.?lying|scapular|ankle|wrist|hip circle|shoulder circle|arm circle|leg swing|deep squat|sit ?(and|&) ?reach|child'?s pose|happy baby|figure ?four|fire hydrant|neck (half )?circles|adductor rock|scorpion|roll ?down|wall slide/i;
   /* strength done in a short range, not range itself. Reviewed entry by entry
      once Toe Touch was found wrongly excluded (it is a stretch — see below):
        crunch, sit.?up  — loaded spinal flexion under a short range. KEEP.
@@ -1030,7 +1038,25 @@ const Engine = (() => {
                           exists in the library, so it changes nothing. KEEP.
      toe touch (a stretch) and good morning (a loaded end-range hinge) were
      REMOVED — both are range work, and both are handled below. */
-  const NOT_MOB_RE = /crunch|sit.?up|roll ?out|jack|knee.?raise|leg ?raise|v.?up|hanging/i;
+  /* The mobility axis is name-classified, so a word that merely APPEARS in a
+     name can drag a movement into it (the library-audit sweep, 2026-11-10):
+       wrist curl / extension / roller / pronation / supination / rising /
+       turnover, FlexBar  — forearm STRENGTH, not range. The genuine wrist range
+       work (Wrist Stretch / Wrist circles / Wrist rocks) stays in.
+       fat grip / plate pinch / pronation hold / axe hold / isometric wrist —
+       GRIP holds (a hold is not range just because it is held).
+       pull.?up / chin.?up isometric or top-position, static hold, support hold,
+       parallel bar hold, planche lean — a static STRENGTH feat on a strength
+       movement, not a range drill. (The core stability positions — plank family,
+       hollow, L-sit, deep-squat/pike holds — stay in: those ARE control-at-range.)
+       preacher curl / cable tri extension / "… to external rotation" / "… with
+       rotation" / band pull-apart — a curl, an extension or a row whose NAME
+       mentions the rotation it is performed in is still a curl/extension/row.
+       side-lying hip abduction, scapular retraction/pushups — loaded strength.
+       "wall-hold rotation" — a swim drill that HOLDs the pool wall.
+     Reviewed entry by entry; anything a name genuinely cannot decide (see the
+     Leg Raise note above) is left in place rather than guessed. */
+  const NOT_MOB_RE = /crunch|sit.?up|roll ?out|jack|knee.?raise|leg ?raise|v.?up|hanging|wrist (curl|extension|roller|pronation|supination|rising|turnover)|flexbar|fat grip|plate pinch|pronation hold|axe hold|static hold|support hold|parallel bar hold|planche lean|pull.?up (isometric|top position)|chin.?up isometric|preacher curl|cable tri extension|side.?lying hip abduction|scapular (retraction|pushup)|wall.?hold|to (external|internal) rotation|with rotation|pull.?apart/i;
 
   /* Loaded END-RANGE work — a hinge HELD or taken to the muscle's longest
      position under load (a Romanian deadlift held at the bottom, a paused hinge,

@@ -2989,4 +2989,88 @@ console.log("\n=== 57. mobility: honest credit, honest bands, honest copy ===");
   truthy("Head to Toe's window is the same 4 weeks", /in 4 weeks/.test(descOf("everygroup")));
 }
 
+console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
+{
+  const e = env();
+  const L = e.LIB;
+  const lib = (id) => L.find((x) => x.id === id);
+  const mobOf = (st) => e.E.mobilityScore(st, e.E.windowWorkouts(st, 28, 0));
+
+  /* (a) FALSE POSITIVES — a word in the name no longer drags a movement into the
+         mobility axis: grip/wrist strength, isometric strength holds, a curl or a
+         row whose name mentions its rotation, side-lying and scapular strength, and
+         a swim drill that holds the pool WALL. */
+  const noLongerMob = [
+    "Barbell Wrist Curl", "Barbell Reverse Wrist Curl", "Cable Wrist Pronation",
+    "DB Wrist Extension", "FlexBar Wrist Flexion", "Kettlebell Wrist Turnover",
+    "Wrist Roller", "Wrist curl, dumbbells",
+    "Isometric Wrist Curl Hold", "Isometric Wrist Rising Hold",
+    "Fat Grip Dumbbell Hold", "Plate Pinch Hold", "Isometric Dumbbell Pronation Hold",
+    "Axe Hold", "Chin-up Isometric Hold", "Pull-Up Top Position Hold",
+    "Pull-up Isometric Hold", "Incline Static Hold", "Ring Support Hold",
+    "Parallel Bar Hold", "Planche Lean Hold",
+    "Preacher Curl - Externally Rotated", "Preacher Curl - Internally Rotated",
+    "Cable Tri Extension - Internal Rotation",
+    "Bent over row to external rotation", "Single-Arm Cable Row with Rotation (Floor)",
+    "Band pull-apart with external rotation",
+    "Side Lying Hip Abduction", "Banded Scapular Retraction",
+    "Scapular Pushups", "Wall-Hold Rotation",
+  ];
+  for (const n of noLongerMob) eq(`"${n}" is not mobility`, e.E.isMobility(n), false);
+
+  /* the genuine range work these names sit next to must STAY in */
+  for (const n of ["Wrist Stretch", "Wrist circles", "Wrist rocks", "Plank", "Side Plank",
+                   "Turkish Get-Up", "Cat-Cow", "Hollow Hold", "Supported Deep Squat Hold",
+                   "Shoulder dislocates", "Clamshell", "Reverse Clamshell"])
+    truthy(`"${n}" is still mobility`, e.E.isMobility(n));
+
+  /* (b) FALSE NEGATIVES — genuine range drills a name-regex missed now fire */
+  for (const n of ["Sit & Reach", "Child's pose", "Happy Baby", "seated figure four",
+                   "Fire Hydrant Circles", "Clockwise neck circles", "Neck half circles",
+                   "Adductor Rock Backs", "Scorpion Kick", "Roll Down", "Wall Slides", "Toe Touch"])
+    truthy(`"${n}" now counts as mobility`, e.E.isMobility(n));
+
+  /* (c) MODE decides ROUTING. Under the old weight_reps mode a reps-only log on a
+         bodyweight movement was an INVALID set and vanished; the corrected mode
+         makes the very same set count and reach the muscle-volume path. */
+  eq("a reps-only set on a bodyweight movement is DROPPED under weight_reps mode",
+     e.E.entryStats({ mode: "weight_reps", name: "Ankle Roll", sets: [{ r: 10 }] }).sets, 0);
+  eq("...the library now stores Ankle Roll as reps", lib(1864).m, "reps");
+  eq("...so the same set now counts", e.E.entryStats({ mode: "reps", name: "Ankle Roll", sets: [{ r: 10 }] }).sets, 1);
+  const legState = base({ workouts: [wk(iso(1), [{ r: 10 }], 1864, "Ankle Roll", "reps")] });
+  truthy("...and reaches the Legs volume path", e.E.muscleGroups(legState, 28).Legs.setsPerWk > 0);
+  eq("Toe Touch is stored as a held stretch (time)", lib(1390).m, "time");
+  const toe = base({ workouts: [wk(iso(1), [{ t: 60 }], 1390, "Toe Touch", "time")] });
+  near("a 60 s Toe Touch log scores one real minute of mobility", mobOf(toe).minPerWk, 1, 0.01);
+
+  /* (d) RATES pinned: a mobility rep is 5 s (the old 0.5 gave 30 s/rep), the loaded
+         end-range hinge earns one third of the stretch rate. */
+  const cc = base({ workouts: [wk(iso(1), [{ r: 20 }], 1938, "Cat-Cow", "reps")] });
+  near("a 20-rep mobility set scores ~1.67 min (5 s/rep, not ten)", mobOf(cc).minPerWk, 20 * 5 / 60, 0.02);
+  const stretch = base({ workouts: [wk(iso(1), [{ t: 300 }], 1867, "Hip Flexor Stretch", "time")] });
+  const hinge = base({ workouts: [wk(iso(1), [{ t: 300 }], 507, "Romanian Deadlift", "time")] });
+  near("a 300 s stretch scores its full 5 minutes", mobOf(stretch).minPerWk, 5, 0.02);
+  near("...an equal-duration loaded hinge earns exactly one third", mobOf(hinge).minPerWk, 5 / 3, 0.02);
+
+  /* (e) POWER — an olympic lift is scored once, through its own standard, and NOT
+         again as plyometric reps; and a wood chop is not read as a jump. */
+  const clean = base({ workouts: [wk(iso(1), [{ w: 100, r: 3 }], 683, "Power Clean", "weight_reps"),
+                                 wk(iso(2), [{ w: 100, r: 3 }], 683, "Power Clean", "weight_reps")] });
+  const cp = e.E.powerScore(clean, e.E.windowWorkouts(clean, 28, 0));
+  eq("a power clean's reps are not double-counted as plyometric work", cp.plyoReps, 0);
+  truthy("...but the clean still sets the olympic signal", cp.olympic > 0);
+  const jumps = base({ workouts: [wk(iso(1), [{ r: 10 }], 614, "Squat Jumps", "reps"),
+                                 wk(iso(2), [{ r: 10 }], 614, "Squat Jumps", "reps"),
+                                 wk(iso(3), [{ r: 10 }], 614, "Squat Jumps", "reps")] });
+  eq("a genuine plyometric movement still counts its reps", e.E.powerScore(jumps, e.E.windowWorkouts(jumps, 28, 0)).plyoReps, 30);
+  const chop = base({ workouts: [wk(iso(1), [{ w: 20, r: 12 }], 145, "Cable Woodchoppers", "weight_reps")] });
+  eq("a wood chop is not read as a jump (`hop` is word-bounded now)",
+     e.E.powerScore(chop, e.E.windowWorkouts(chop, 28, 0)).plyoReps, 0);
+
+  /* (f) MUSCLE MAPPING — a group a movement plainly trains, which was absent. */
+  truthy("Thruster trains the Legs (the group was missing)", lib(650).g.includes("Legs"));
+  eq("Quadruped Hip Abduction maps to the Legs, not the Calves", lib(1915).g.join("|"), "Legs");
+  eq("Plantarflexion Stretch maps to the Calves, not the Legs", lib(1275).g.join("|"), "Calves");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
