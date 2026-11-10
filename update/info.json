@@ -1,11 +1,12 @@
 {
-  "versionCode": 104,
-  "versionName": "1.3.9",
+  "versionCode": 105,
+  "versionName": "1.3.10",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "8b5deecb865dfe2c1dfbe105776261e0085a8f85c6553d3d4cec42b5ef3ecf82",
-  "sizeBytes": 3951543,
+  "sha256": "738ccd728c21d31d5d631c99bc1d62f9154b316861021785a5fd64908670b0b1",
+  "sizeBytes": 3951644,
   "published": "2026-11-10",
   "notes": [
-    "some exercises were quietly dropping a set when you logged it without a weight - the audit found them and they count now"
+    "The Power attribute now counts a heavy low-rep set at fewer than 5 reps \u2014 a set of 4 counts, a set of 5 does not (some people's low reps are 5, not 3)",
+    "the Power card, the Power glossary entry and the README now state that same threshold"
   ]
 }

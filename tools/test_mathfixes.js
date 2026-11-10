@@ -3067,6 +3067,17 @@ console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
   eq("a wood chop is not read as a jump (`hop` is word-bounded now)",
      e.E.powerScore(chop, e.E.windowWorkouts(chop, 28, 0)).plyoReps, 0);
 
+  /* (e2) THE HEAVY-SET REP THRESHOLD (v1.3.10): "heavy low-rep" is now UNDER 5
+         reps, so a 4-rep set counts and a 5-rep set does not. NEW assertion:
+         the pre-change suite pinned NO rep threshold here — (e) above covers
+         only the olympic double-count and the plyo matcher, and no other test
+         reads `heavySets`, so there was no 3-rep assertion to reproduce. This
+         pins the boundary itself, exclusive at 5. */
+  const heavySetsFor = (r) => { const st = base({ workouts: [wk(iso(1), [{ w: 100, r }])] });
+    return e.E.powerScore(st, e.E.windowWorkouts(st, 28, 0)).heavySets; };
+  eq("a 4-rep set at a real load counts as heavy low-rep (under 5)", heavySetsFor(4), 1);
+  eq("a 5-rep set does NOT count (the threshold is exclusive at 5)", heavySetsFor(5), 0);
+
   /* (f) MUSCLE MAPPING — a group a movement plainly trains, which was absent. */
   truthy("Thruster trains the Legs (the group was missing)", lib(650).g.includes("Legs"));
   eq("Quadruped Hip Abduction maps to the Legs, not the Calves", lib(1915).g.join("|"), "Legs");

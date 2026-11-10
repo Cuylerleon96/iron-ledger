@@ -1005,7 +1005,10 @@ const Engine = (() => {
           /jump|plyo|\bhops?\b|bound|throw|slam|explosive|kettlebell swing|push press/i.test(info.n)) {
         for (const x of en.sets || []) plyoReps += num(x.r) || 1;
       }
-      for (const x of en.sets || []) if (num(x.r) > 0 && num(x.r) <= 3 && num(x.w) > 0) heavySets++;
+      /* A "heavy low-rep" set is one logged for FEWER THAN 5 reps at a real
+         load (a set of 4 counts; 5 does not) — some people's low reps are 5,
+         not 3. This is a READ of the log only; it never changes what earns XP. */
+      for (const x of en.sets || []) if (num(x.r) > 0 && num(x.r) < 5 && num(x.w) > 0) heavySets++;
     }
     const parts = [];
     if (olyKey) parts.push(liftScore(olympic / bw, olyKey, sex));

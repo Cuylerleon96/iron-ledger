@@ -327,7 +327,7 @@ const Glossary = (() => {
     {
       id: "attr-POW", term: "Power", aliases: ["Power", "POW", "explosiveness"],
       plain: "Explosive strength — how fast you can put force out. Jumps, throws and heavy low-rep sets build it.",
-      real: "Olympic-lift score (clean/snatch 1RM vs bodyweight standards, when logged), explosive reps logged (jumps, plyos, throws, swings), and heavy low-rep sets (3 reps or fewer at a real load), averaged together.",
+      real: "Olympic-lift score (clean/snatch 1RM vs bodyweight standards, when logged), explosive reps logged (jumps, plyos, throws, swings), and heavy low-rep sets (under 5 reps at a real load), averaged together.",
       source: "The Olympic-lift standards are published bodyweight tables; the averaging of the three components is this app's own weighting.",
     },
     {
