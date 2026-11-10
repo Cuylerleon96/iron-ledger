@@ -1082,6 +1082,36 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
       Food.expandAlias(q).length === 0 && JSON.stringify(a) === JSON.stringify(b));
   });
 
+  /* ---- everyday food words -> USDA's formal names (v1.3.20) ------------------
+     A person types "aubergine"; the data says "Eggplant". Each formerly broken
+     term must now return rows AND lead with the food the term names (checked by a
+     literal on the row's name). Every mapped target is a literal string in the
+     dataset (asserted for the whole map just above). */
+  const EVERYDAY = [
+    ['aubergine', /eggplant/i], ['courgette', /zucchini/i], ['courgettes', /zucchini/i],
+    ['prawn', /shrimp/i], ['prawns', /shrimp/i], ['yoghurt', /yogurt/i],
+    ['beetroot', /beet/i], ['swede', /rutabaga/i], ['rocket', /arugula/i],
+    ['spring onion', /scallions|spring onion/i], ['capsicum', /peppers/i],
+    ['mangetout', /edible-podded/i], ['sultanas', /raisins/i], ['mince', /beef, ground/i],
+    ['minced beef', /beef, ground/i], ['porridge', /oatmeal/i], ['omelette', /omelet/i],
+    ['donut', /doughnut/i], ['milkshake', /shake/i], ['sparkling water', /club soda/i],
+    ['tinned tomatoes', /tomato/i], ['sweets', /candy/i],
+    ['crisps', /potato chips/i], ['chips', /potato chips/i],
+  ];
+  EVERYDAY.forEach(([q, re]) => {
+    const r = Food.search(DB, q, 20);
+    ok('everyday word "' + q + '" returns rows whose top name includes the food',
+      r.length > 0 && re.test(Food.norm(r[0].name)), r[0] && r[0].name);
+  });
+  /* "mince" used to lead with a mince PIE and tinned Spam; it must lead with ground beef. */
+  ok('"mince" leads with beef, ground (not a mince pie / Spam)',
+    /ground/.test(Food.norm(Food.search(DB, 'mince', 20)[0].name)));
+  /* "biscuit" is DELIBERATELY not remapped: the dataset's own US meaning (a savoury
+     quick bread) is left intact, so its top row is a biscuit, not a cookie. */
+  ok('"biscuit" is not remapped (its US savoury meaning is preserved)',
+    Food.expandAlias('biscuit').length === 0 &&
+    /biscuit/i.test(Food.search(DB, 'biscuit', 20)[0].name));
+
   console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

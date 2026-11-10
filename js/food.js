@@ -330,6 +330,43 @@ const Food = (() => {
        literal strings in data/food.json. */
     "dr pepper":  ["pepper-type", "pepper type", "pepper-types"],
     "diet":       ["low calorie", "reduced sugar", "aspartame"],
+
+    /* ---------- EVERYDAY FOOD WORDS -> USDA's formal names (v1.3.20) ----------
+       Same query-side rule as above: the data is NEVER renamed; each value is a
+       literal string the shipped data already uses. These are the words a person
+       types, where USDA names the food in its own catalogue vocabulary — mostly
+       British words for foods the US database files under the US word. Measured
+       zero-row or wrong-led before this map (see tools/test_food.js).
+       REPORTED, NOT REMAPPED: "biscuit" already resolves to the dataset's own
+       meaning — a US savoury quick bread (25 rows) — so mapping it to a cookie
+       would bury that whole meaning (measured: the top 25 become all cookies).
+       The word is left alone, and the trap is reported. A word that names a food
+       is a food word — mapping it says nothing about the food's merit. */
+    "aubergine":  ["eggplant"],
+    "courgette":  ["zucchini"],
+    "courgettes": ["zucchini"],
+    "prawn":      ["shrimp"],
+    "prawns":     ["shrimp"],
+    "yoghurt":    ["yogurt"],
+    "beetroot":   ["beets"],
+    "swede":      ["rutabaga"],
+    "rocket":     ["arugula"],
+    "spring onion": ["scallions"],
+    "capsicum":   ["peppers"],
+    "mangetout":  ["edible-podded"],
+    "marrow":     ["squash", "zucchini"],
+    "sultanas":   ["raisins"],
+    "mince":      ["beef, ground"],
+    "minced beef": ["beef, ground"],
+    "porridge":   ["oatmeal"],
+    "omelette":   ["omelet"],
+    "donut":      ["doughnut"],
+    "milkshake":  ["shake"],
+    "sparkling water": ["club soda"],
+    "tinned tomatoes": ["tomatoes"],
+    "sweets":     ["candy"],
+    "crisps":     ["potato chips"],   // UK crisps = US potato chips; the plain word returned 3 unrelated rows
+    "chips":      ["potato chips"],   // the everyday US meaning; UK "chips" is the word "fries", its own query
   };
 
   /* Case- and punctuation-insensitive form, used ONLY to look a query up in the map
