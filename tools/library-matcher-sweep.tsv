@@ -1,0 +1,955 @@
+id	name	mode	isMobility	isEndRangeHinge	isIsolation	isBodyweight	workFactor	plyoMatch
+1966	1/2 Kneeling Thoracic Rotation	reps	true	false	true	false	1	false
+9	2 Handed Kettlebell Swing	weight_reps	false	false	false	false	1	true
+1924	3008 Abdominal Crunch	reps	false	false	true	true	1	false
+2564	90/90 Breathing	time	true	false	true	false	1	false
+1573	Ab wheel	reps	false	false	false	false	1	false
+1933	Abdominal Crunch	weight_reps	false	false	true	true	1	false
+1828	Abdominal Draw-In	reps	false	false	true	false	1	false
+56	Abdominal Stabilization	weight_reps	false	false	false	false	1	false
+1590	Arm and neck stretch	time	true	false	false	false	1	false
+165	Ball crunches	reps	false	false	true	true	1	false
+41	Barbell Ab Rollout	weight_reps	false	false	true	false	1	false
+1687	Bear crawl pull through	weight_reps	true	false	false	true	1	false
+1572	Bird Dog	weight_reps	true	false	false	true	1	false
+1475	Black Widow Knee Slides	reps	false	false	true	false	1	false
+1476	Butterfly Sit Up	reps	false	false	true	true	1	false
+145	Cable Woodchoppers	weight_reps	false	false	true	false	1	false
+2674	Captain's Chair Knee Raise	reps	false	false	true	true	1	false
+2675	Captain's Chair Oblique Knee Raise	reps	false	false	true	true	1	false
+1823	Clamshell	reps	true	false	false	false	1	false
+1912	Core Rotation	reps	true	false	false	false	1	false
+167	Crunches	weight_reps	false	false	true	true	1	false
+2704	Crunches (Custom)	weight_reps	false	false	true	true	1	false
+173	Crunches With Cable	weight_reps	false	false	true	false	1	false
+2705	Crunches With Cable (Custom)	weight_reps	false	false	true	false	1	false
+174	Crunches With Legs Up	reps	false	false	true	true	1	false
+172	Crunches on Machine	reps	false	false	true	false	1	false
+178	Deadbug	weight_reps	true	false	false	true	1	false
+1889	Decline Bench Leg Raise	weight_reps	false	false	true	true	1	false
+1827	Double-Leg Abdominal Press	weight_reps	false	false	false	false	1	false
+1409	Dragon-flag	reps	false	false	false	false	1	false
+1415	Dumbbell Crunches	weight_reps	false	false	true	true	1	false
+1650	Dumbbell Side Bend	weight_reps	false	false	true	false	1	false
+1286	Dynamic Planche	reps	false	false	false	false	1	false
+1099	Dynamic side hold	time	true	false	false	true	1	false
+1288	Dynamic side plank	time	true	false	true	true	1	false
+235	Flutter Kicks	reps	false	false	true	false	1	false
+1238	Frog stand	time	false	false	false	false	1	false
+1245	Front Lever	time	false	false	false	false	1	false
+1307	Front Plank	time	true	false	true	true	1	false
+1252	Front lever pull-up	weight_reps	false	false	false	false	1	false
+260	Full Sit Outs	reps	false	false	false	false	1	false
+2655	Gentle Reverse Kegels	reps	false	false	true	false	1	false
+283	Hanging Leg Raises	time	false	false	true	true	1	false
+2707	Hanging Leg Raises (Custom)	time	false	false	true	true	1	false
+1411	Heel Touches	reps	false	false	false	false	1	false
+297	Hollow Hold	time	true	false	true	true	1	false
+1248	Ice cream maker	reps	false	false	false	false	1	false
+171	Incline Crunches	weight_reps	false	false	true	true	2.12	false
+312	Incline Plank With Alternate Floor Touch	time	true	false	true	true	1	false
+2555	Kegel Exercise	reps	false	false	true	false	1	false
+978	Knee Raises	weight_reps	false	false	true	true	1	false
+382	L Hold	time	true	false	true	true	1	false
+1853	L-Sit (Foot Supported)	time	false	false	false	true	1	false
+1852	L-sit	time	false	false	false	true	1	false
+1779	Landmine Rotation	weight_reps	true	false	false	false	1	false
+377	Leg Raises, Lying	weight_reps	false	false	true	true	1	false
+378	Leg Raises, Standing	reps	false	false	true	true	1	false
+1909	Leg Wheel	reps	false	false	true	false	1	false
+979	Leg raises pull up bar	weight_reps	false	false	true	true	1	false
+1478	Levitation Crunch	reps	false	false	true	true	1	false
+976	Medicine ball booklet crunch	reps	false	false	true	true	1	false
+1089	Medicine ball twist	weight_reps	false	false	true	false	1	false
+427	Negative Crunches	reps	false	false	true	true	1	false
+1293	One armed push-ups	reps	false	false	false	true	1	false
+439	Overhand Cable Curl	weight_reps	false	false	true	false	1	false
+1194	Pallof Press	weight_reps	true	false	false	false	1	false
+458	Plank	time	true	false	true	true	1	false
+1489	Plank Jacks	time	false	false	true	true	1	false
+1766	Plank Reach	time	true	false	true	true	1	false
+1091	Plank Shoulder Taps	time	true	false	true	true	1	false
+1406	Plank-to-Elbow Extension	time	true	false	true	true	1	false
+2488	Posterior Pelvic Tilt	reps	false	false	false	false	1	false
+1287	Reach ups	reps	false	false	false	false	1	false
+500	Reverse Plank	time	true	false	true	true	1	false
+1772	Reverse crunch	reps	false	false	true	true	1	false
+1292	Reverse-grip pull-ups	weight_reps	false	false	false	true	1	false
+505	Roman Chair Crunch	reps	false	false	true	true	1	false
+1374	Rotary Torso Machine	weight_reps	false	false	true	false	1	false
+1193	Russian Twist	weight_reps	false	false	false	false	1	false
+545	Scissors	reps	false	false	true	false	1	false
+1477	Seated Corkscrew	reps	false	false	true	false	1	false
+1105	Seated Knee Tuck	reps	false	false	false	false	1	false
+556	Side Bends on Machine	weight_reps	false	false	false	false	1	false
+576	Side Crunch	weight_reps	false	false	true	true	1	false
+577	Side Dumbbell Trunk Flexion	weight_reps	false	false	false	false	1	false
+580	Side Plank	time	true	false	true	true	1	false
+1188	Side bend	weight_reps	false	false	false	false	1	false
+1019	Side plank right	time	true	false	true	true	1	false
+1479	Sit Up Elbow Thrust	reps	false	false	true	true	1	false
+591	Sit-ups	reps	false	false	true	true	1	false
+1810	Sphinx	time	false	false	true	false	1	false
+607	Splinter Sit-ups	reps	false	false	true	true	1	false
+1426	Standing Side Crunches	reps	false	false	true	true	1	false
+2673	Stomach Vacuum	time	false	false	false	false	1	false
+1847	Straddle L-Sit	time	false	false	false	true	1	false
+1776	Suitcase Carry	weight_distance	false	false	false	false	1	false
+1259	TRX Obliques	reps	false	false	false	false	1	false
+1246	TRX roll out	reps	false	false	false	false	1	false
+1425	Toe Taps	reps	false	false	true	false	1	false
+1529	Toes to bar	weight_reps	false	false	false	false	1	false
+1377	Torso Twist	reps	false	false	true	false	1	false
+672	Trunk Rotation With Cable	weight_reps	true	false	false	false	1	false
+1704	Tuck L-sit	time	false	false	false	true	1	false
+675	Turkish Get-Up	weight_reps	true	false	false	false	1	false
+2689	V-Up	weight_reps	false	false	true	true	1	false
+1090	Vpushup	weight_reps	false	false	false	true	1	false
+1474	W-Raise	reps	false	false	true	false	1	false
+1648	Weighted Crunch	weight_reps	false	false	true	true	1	false
+1743	Windshield Wipers	weight_reps	false	false	true	false	1	false
+1412	bicycle crunches	reps	false	false	true	true	1	false
+2531	elbow lever	time	false	false	false	false	1	false
+1103	walking bridge	reps	false	false	false	false	1	false
+1192	Alternating Biceps Curls With Dumbbell	weight_reps	false	false	true	false	1	false
+1012	Alternating bicep curls	weight_reps	false	false	true	false	1	false
+1567	Alternating dumbbell hammer curl	weight_reps	false	false	true	false	1	false
+1606	Arm Raises (T/Y/I)	reps	false	false	true	false	1	false
+1219	Australian pull-ups	reps	false	false	false	true	1	false
+31	Axe Hold	time	false	false	true	true	1	false
+995	Backward arm circles	reps	true	false	true	false	1	false
+2742	Band Finger Extensions	weight_reps	false	false	true	false	1	false
+48	Barbell Reverse Wrist Curl	weight_reps	false	false	true	false	1	false
+50	Barbell Triceps Extension	weight_reps	false	false	true	false	1	false
+51	Barbell Wrist Curl	weight_reps	false	false	true	false	1	false
+1493	Bayesian Curl	weight_reps	false	false	true	false	1	false
+1320	Bench Dips On Floor HD	reps	false	false	false	true	1	false
+76	Bench Press Narrow Grip	weight_reps	false	false	false	false	1	false
+1280	Biceps Close Grip Pull Down	weight_reps	false	false	false	false	1	false
+1424	Biceps Curl Machine	weight_reps	false	false	true	false	1	false
+95	Biceps Curl With Cable	weight_reps	false	false	true	false	1	false
+91	Biceps Curls With Barbell	weight_reps	false	false	true	false	1	false
+92	Biceps Curls With Dumbbell	weight_reps	false	false	true	false	1	false
+2701	Biceps Curls With Dumbbell (Custom)	weight_reps	false	false	true	false	1	false
+94	Biceps Curls With SZ-bar	weight_reps	false	false	true	false	1	false
+958	Biceps with TRX	reps	false	false	true	false	1	false
+1483	Bizeps Curls Trifecta	weight_reps	false	false	true	false	1	false
+112	Body-Ups	reps	false	false	false	false	1	false
+1608	Bodyweight Biceps Curl	weight_reps	false	false	true	true	1	false
+2734	Cable Back Pressure	weight_reps	false	false	false	false	1	false
+1109	Cable Concentration Curl	weight_reps	false	false	true	false	1	false
+2733	Cable Cupping	weight_reps	false	false	true	false	1	false
+1531	Cable Curls	weight_reps	false	false	true	false	1	false
+2735	Cable Side Pressure	weight_reps	false	false	false	false	1	false
+1662	Cable Tri Extension - Internal Rotation	weight_reps	false	false	true	false	1	false
+1509	Cable Tricep Kickback	weight_reps	false	false	true	false	1	false
+1661	Cable Triceps Press	weight_reps	false	false	false	false	1	false
+2736	Cable Wrist Pronation	weight_reps	false	false	true	false	1	false
+2737	Cable Wrist Supination	weight_reps	false	false	true	false	1	false
+1223	Claps over the head	reps	false	false	true	false	1	false
+1666	Curl  - With Shoulder Elevated	weight_reps	false	false	true	false	1	false
+2452	Curl De Muñeca Con Barra	weight_reps	false	false	true	false	1	false
+974	Curl with kettlebell two hands	weight_reps	false	false	true	false	1	false
+1502	DB Cross Body Hammer Curls	weight_reps	false	false	true	false	1	false
+1881	DB Wrist Extension	weight_reps	false	false	true	false	1	false
+182	Deadhang	time	false	false	true	true	1	false
+197	Dips Between Two Benches	weight_reps	false	false	true	true	1	false
+1360	Double Kettlebell Clean and Press	weight_reps	false	false	false	false	1	false
+1481	Drag Pushdown	weight_reps	false	false	true	false	1	false
+1512	Drop Curl	weight_reps	false	false	true	false	1	false
+1482	Dumbbell Cheat Curl	weight_reps	false	false	true	false	1	false
+202	Dumbbell Concentration Curl	weight_reps	false	false	true	false	1	false
+1931	Dumbbell Curl	weight_reps	false	false	true	false	1	false
+204	Dumbbell Incline Curl	weight_reps	false	false	true	false	1	false
+211	Dumbbell Triceps Extension	weight_reps	false	false	true	false	1	false
+2739	Dumbbell Ulnar Deviation	weight_reps	false	false	true	false	1	false
+1463	Dumbbell Underhand Dead Row	weight_reps	false	false	false	false	1	false
+2725	Dumbbell Wrist Rising	weight_reps	false	false	true	false	1	false
+1226	Dumbbell bicep curl to press	weight_reps	false	false	true	false	1	false
+1228	Dumbbell close grip bench press	weight_reps	false	false	false	false	1	false
+1224	Dumbbell drag curls	weight_reps	false	false	true	false	1	false
+1225	Dumbbell wide bicep curls	weight_reps	false	false	true	false	1	false
+208	Dumbbells on Scott Machine	weight_reps	false	false	true	false	1	false
+1824	Dumbell Tate Press	weight_reps	false	false	false	false	1	false
+1498	Elbows Tucked DB Bench Press	weight_reps	false	false	false	false	1	false
+2744	Fat Grip Dumbbell Hold	time	false	false	true	true	1	false
+1217	Finger Pushup	weight_reps	false	false	false	true	1	false
+820	Fingerboard 20 mm edge	time	false	false	true	false	1	false
+2638	FlexBar Tyler Twist	weight_reps	false	false	false	false	1	false
+2636	FlexBar Wrist Extension	weight_reps	false	false	true	false	1	false
+2637	FlexBar Wrist Flexion	weight_reps	false	false	false	false	1	false
+1468	Floor Skull Crusher	weight_reps	false	false	true	false	1	false
+1000	Floor dips	reps	false	false	false	true	1	false
+1333	Forearm Curls (underhand grip)	weight_reps	false	false	true	false	1	false
+994	Forward arm circles	reps	true	false	true	false	1	false
+1686	Glute Bridge Single-Arm Press	weight_reps	false	false	false	false	1	false
+272	Hammer Curls	weight_reps	false	false	true	false	1	false
+2738	Hammer Levering	weight_reps	false	false	true	false	1	false
+275	Hammercurls on Cable	weight_reps	false	false	true	false	1	false
+279	Hand Grip	weight_reps	false	false	true	false	1	false
+2741	Hand Gripper Squeeze	weight_reps	false	false	true	false	1	false
+284	Hercules Pillars	weight_reps	false	false	false	false	1	false
+1298	High-Cable Cross Tricep Extention - NB	weight_reps	false	false	true	false	1	false
+2743	Hub Lift	weight_reps	false	false	true	false	1	false
+1467	Incline Close Grip Barbell Bench Press	weight_reps	false	false	false	false	1	false
+911	Incline Skull Crush	weight_reps	false	false	true	false	1	false
+2728	Isometric Dumbbell Pronation Hold	time	false	false	true	true	1	false
+2729	Isometric Wrist Curl Hold	time	false	false	true	true	1	false
+2726	Isometric Wrist Rising Hold	time	false	false	true	true	1	false
+1302	JM Press	weight_reps	false	false	false	false	1	false
+2727	Kettlebell Wrist Turnover	weight_reps	false	false	true	false	1	false
+1511	Kong Curl	weight_reps	false	false	true	false	1	false
+1741	L-Sit Pull-ups	time	false	false	false	true	1	false
+1530	Lying Dumbbell Curls	weight_reps	false	false	true	false	1	false
+1480	Lying Triceps Extensions	weight_reps	false	false	true	false	1	false
+1490	Lying Triceps Kickback	weight_reps	false	false	true	false	1	false
+1971	Mentzer Pulldown	weight_reps	false	false	false	false	1	false
+1717	Neck extension	weight_reps	false	false	true	false	1	false
+1738	Neutral-grip pull-ups or TRX rows	weight_reps	false	false	false	true	1	false
+1668	One Arm Overhead Cable Tricep Extension	weight_reps	false	false	true	false	1	false
+803	One Arm Triceps Extensions on Cable	weight_reps	false	false	true	false	1	false
+1513	Overhead Cable Tricep Extension	weight_reps	false	false	true	false	1	false
+1519	Overhead Triceps Extension	weight_reps	false	false	true	false	1	false
+1808	Parallel Bar Hold	time	false	false	false	true	1	false
+1703	Patadas traseras	weight_reps	false	false	true	false	1	false
+454	Pike Push Ups	reps	false	false	false	true	1	false
+1430	Plate Pinch Hold	time	false	false	true	true	1	false
+1658	Preacher Curl - Externally Rotated	weight_reps	false	false	true	false	1	false
+1657	Preacher Curl - Internally Rotated	weight_reps	false	false	true	false	1	false
+2539	Preacher Curl Isometric	time	false	false	true	true	1	false
+2633	Preacher Curl Machine	weight_reps	false	false	true	false	1	false
+465	Preacher Curls	weight_reps	false	false	true	false	1	false
+821	Pullup on fingerboard	weight_reps	false	false	false	true	1	false
+985	Push-up rotations	reps	true	false	false	true	1	false
+1216	Recruitment Pulls	reps	false	false	true	false	1	false
+1114	Rest (for timed workouts)	time	false	false	true	false	1	false
+493	Reverse Bar Curl	weight_reps	false	false	true	false	1	false
+495	Reverse Curl	weight_reps	false	false	true	false	1	false
+914	Reverse EZ Bar Cable Curls	weight_reps	false	false	true	false	1	false
+1290	Reverse Grip Barbell Curls	weight_reps	false	false	true	false	1	false
+913	Reverse Preacher Curl (Close Grip)	weight_reps	false	false	true	false	1	false
+2745	Rice Bucket Training	weight_reps	false	false	true	false	1	false
+501	Ring Dips	reps	false	false	true	true	1	false
+1485	Rocking Triceps Pushdown	weight_reps	false	false	true	false	1	false
+1289	Seated Dumbbell Curls	weight_reps	false	false	true	false	1	false
+549	Seated Triceps Press	weight_reps	false	false	false	false	1	false
+1448	Seated W Curl	weight_reps	false	false	true	false	1	false
+1209	Shoulder width three-point push-up	reps	false	false	false	true	1	false
+584	Single-arm Preacher Curl	weight_reps	false	false	true	false	1	false
+1969	Single-arm cable pushdown	weight_reps	false	false	true	false	1	false
+245	Skullcrusher Dumbbells	weight_reps	false	false	true	false	1	false
+246	Skullcrusher SZ-bar	weight_reps	false	false	true	false	1	false
+804	Sloper hanging	time	false	false	true	true	1	false
+598	Smith Machine Close-grip Bench Press	weight_reps	false	false	false	false	1	false
+1465	Spider Curl	weight_reps	false	false	true	false	1	false
+621	Standing Bicep Curl	weight_reps	false	false	true	false	1	false
+623	Standing Rope Forearm	weight_reps	false	false	true	false	1	false
+1232	Standing biceps stretch left	time	true	false	false	false	1	false
+1233	Standing biceps stretch right	time	true	false	false	false	1	false
+912	Straight Bar Cable Curls	weight_reps	false	false	true	false	1	false
+1266	TRX Tricep Extension	reps	false	false	true	false	1	false
+1269	TRX dips	reps	false	false	false	true	1	false
+1261	TRX gorilla biceps curl	reps	false	false	true	false	1	false
+1260	TRX hammer curl	reps	false	false	true	false	1	false
+2732	Towel Grip Dead Hang	time	false	false	false	true	1	false
+655	Tricep Dumbbell Kickback	weight_reps	false	false	true	false	1	false
+805	Tricep Pushdown on Cable	weight_reps	false	false	true	false	1	false
+1900	Tricep Rope Pushdowns	weight_reps	false	false	true	false	1	false
+1372	Triceps Dips (Assisted)	reps	false	false	false	false	1	false
+659	Triceps Extensions on Cable	weight_reps	false	false	true	false	1	false
+660	Triceps Extensions on Cable With Bar	weight_reps	false	false	true	false	1	false
+1336	Triceps Overhead (Dumbbell)	weight_reps	false	false	true	false	1	false
+1185	Triceps Pushdown	weight_reps	false	false	true	false	1	false
+2716	Triceps Pushdown (Custom)	weight_reps	false	false	true	false	1	false
+2541	Triceps Pushdown Isometric	time	false	false	true	true	1	false
+661	Triceps on Machine	weight_reps	false	false	true	false	1	false
+2684	Triceps push up	reps	false	false	true	true	1	false
+1230	Triceps stretch left	time	true	false	true	false	1	false
+1231	Triceps stretch right	time	true	false	true	false	1	false
+1262	Trx Single Arm Bicep Curl	reps	false	false	true	false	1	false
+713	Wall Pushup	weight_reps	false	false	false	true	1	false
+2740	Wrist Roller	weight_reps	false	false	true	false	1	false
+2686	Wrist Stretch	time	true	false	true	false	1	false
+2543	Wrist circles	reps	true	false	true	false	1	false
+1771	Wrist curl, cable	weight_reps	false	false	true	false	1	false
+1205	Wrist curl, dumbbells	weight_reps	false	false	true	false	1	false
+2680	Wrist rocks	reps	true	false	true	false	1	false
+1683	Zottman curl	weight_reps	false	false	true	false	1	false
+1218	knee push-ups	reps	false	false	false	true	1	false
+975	one-handed kettlebell curls	weight_reps	false	false	true	false	1	false
+1462	punches	reps	false	false	false	false	1	false
+1470	1-Arm Half-Kneeling Lat Pulldown	weight_reps	false	false	false	false	1	false
+2690	Active Hang	time	false	false	true	false	1	false
+1486	Alternating High Cable Row	weight_reps	false	false	false	false	1	false
+1501	Alternative DB Gorilla rows	weight_reps	false	false	false	false	1	false
+1545	Archer Pull Up	reps	false	false	false	true	1	false
+1929	Assisted Pull-Up	weight_reps	false	false	false	false	1	false
+1737	Assisted chin-ups	reps	false	false	false	false	1	false
+1742	Back Lever	weight_reps	false	false	true	false	1	false
+1263	Back bridge	reps	false	false	false	false	1	false
+1010	Back neck stretch	time	true	false	true	false	1	false
+1005	Backward shoulder rotation	reps	true	false	true	false	1	false
+1380	Band pull-aparts	weight_reps	false	false	true	false	1	false
+1877	Banded Scapular Retraction	weight_reps	false	false	false	false	1	false
+1700	Barbell Romanian Deadlift (RDL)	weight_reps	false	true	false	false	1	false
+1698	Barbell Row (Overhand)	weight_reps	false	false	false	false	1	false
+1699	Barbell Row (Underhand)	weight_reps	false	false	false	false	1	false
+2719	Barbell Row (Underhand) (Custom)	weight_reps	false	false	false	false	1	false
+81	Bent Over Dumbbell Rows (Single Arm)	weight_reps	false	false	false	false	1	false
+2669	Bent Over Dumbbell Rows (Two Arms)	weight_reps	false	false	false	false	1	false
+83	Bent Over Rowing	weight_reps	false	false	false	false	1	false
+84	Bent Over Rowing Reverse	weight_reps	false	false	false	false	1	false
+1082	Bent over row to external rotation	weight_reps	false	false	false	false	1	false
+1363	Blackroll	time	false	false	true	false	1	false
+1577	Bretzel stretch	time	true	false	false	false	1	false
+1908	Butterfly Superman	reps	false	false	true	false	1	false
+1938	Cat-Cow	time	true	false	true	false	1	false
+1002	Child's pose	time	true	false	true	false	1	false
+152	Chin Up	weight_reps	false	false	false	true	1	false
+1006	Chin tuck	reps	false	false	true	false	1	false
+1282	Chin-up Isometric Hold	time	false	false	false	true	1	false
+1015	Clockwise neck circles	reps	true	false	true	false	1	false
+158	Close-grip Lat Pull Down	weight_reps	false	false	true	false	1	false
+1127	Close-grip supinated lat pulldown	weight_reps	false	false	false	false	1	false
+1450	Cobra Stretch	time	true	false	false	false	1	false
+1016	Counterclockwise neck circles	reps	true	false	true	false	1	false
+1458	Cross-Body Cable Y-Raise	weight_reps	false	false	true	false	1	false
+184	Deadlifts	weight_reps	false	false	false	false	1	false
+189	Deficit Deadlift	weight_reps	false	true	false	false	1	false
+1639	Dumbbell Bent Over Face Pull	weight_reps	false	false	false	false	1	false
+1087	Dumbbell Hang Power Cleans	time	false	false	false	false	1	false
+1027	Elevated prayer stretch	time	true	false	true	false	1	false
+1921	Extreme Lat Stretch	time	true	false	true	false	1	false
+1732	Face pulls with yellow/green band	weight_reps	false	false	false	false	1	false
+1004	Forward shoulder rotation	reps	true	false	true	false	1	false
+259	Front Pull narrow	weight_reps	false	false	false	false	1	false
+516	Front Wood Chop	weight_reps	false	false	true	false	1	false
+1214	Front lever tuck	weight_reps	false	false	false	false	1	false
+1011	Front neck stretch	time	true	false	true	false	1	false
+258	Front pull wide	weight_reps	false	false	false	false	1	false
+1018	Head tilts	reps	false	false	true	false	1	false
+1303	Helms Row	weight_reps	false	false	false	false	1	false
+1492	High Row	weight_reps	false	false	false	false	1	false
+1137	High-pulley pullover	weight_reps	false	false	true	false	1	false
+292	Hip Raise, Lying	reps	false	false	true	false	1	false
+1101	Horizontal traction isometry	weight_reps	false	false	false	false	1	false
+1487	Hyper Y W Combo	reps	false	false	true	false	1	false
+301	Hyperextensions	reps	false	false	true	true	1	false
+828	Incline Bench Reverse Fly	weight_reps	false	false	true	false	1	false
+1283	Incline Chest-Supported Dumbbell Row	weight_reps	false	false	false	false	1	false
+310	Incline Dumbbell Row	weight_reps	false	false	false	false	1	false
+2678	Incline Row - Rings	weight_reps	false	false	false	true	1	false
+1138	Incline bench pulldown	weight_reps	false	false	false	false	1	false
+1927	Inverted Lat Pull Down	weight_reps	false	false	false	false	1	false
+1702	Jalón al pecho con agarre ancho	weight_reps	false	false	false	false	1	false
+2748	Jumping Pull-Up	weight_reps	false	false	false	true	1	true
+2672	Kelso Shrugs	weight_reps	false	false	true	false	1	false
+1003	Kettlebell deadlifts	weight_reps	false	false	false	false	1	false
+1970	Kettlebell sumo high pull	weight_reps	false	false	false	false	1	false
+1910	Kneeling Superman	reps	false	false	false	false	1	false
+1471	Kroc Row	weight_reps	false	false	false	false	1	false
+1434	Lat Pull DB	weight_reps	false	false	false	false	1	false
+354	Lat Pull Down (Leaning Back)	weight_reps	false	false	true	false	1	false
+355	Lat Pull Down (Straight Back)	weight_reps	false	false	true	false	1	false
+1659	Lat Pulldown - Cross Body Single Arm	weight_reps	false	false	false	false	1	false
+2540	Lat Pulldown Isometric	time	false	false	false	true	1	false
+1514	Lateral Walk	reps	false	false	true	false	1	false
+1013	Left levator scapulae stretch	time	true	false	true	false	1	false
+380	Leverage Machine Iso Row	weight_reps	false	false	false	false	1	false
+394	Long-Pulley (low Row)	weight_reps	false	false	false	false	1	false
+395	Long-Pulley, Narrow	weight_reps	false	false	false	false	1	false
+1348	Lower Back Extensions	reps	false	false	true	true	1	false
+923	Lying Dumbbell Row SS Seated Shrug	weight_reps	false	false	true	false	1	false
+1304	Meadows Row	weight_reps	false	false	false	false	1	false
+1635	Modified pulldown	weight_reps	false	false	false	false	1	false
+423	Muscle up	weight_reps	false	false	false	true	1	false
+1017	Neck half circles	reps	true	false	true	false	1	false
+1510	Neutral Grip Lat Pulldown	weight_reps	false	false	false	false	1	false
+1136	Neutral-grip chest pulldown	weight_reps	false	false	false	false	1	false
+1186	One Arm Bent Row	weight_reps	false	false	false	false	1	false
+1701	One-Arm Heavy Row	weight_reps	false	false	false	false	1	false
+1822	Open Book	reps	false	false	true	false	1	false
+448	Pendelay Rows	weight_reps	false	false	false	false	1	false
+2623	Plate-Loaded Lat Pulldown	weight_reps	false	false	false	false	1	false
+468	Prone Scapular Retraction - Arms at Side	reps	false	false	true	false	1	false
+477	Pull Ups on Machine	reps	false	false	false	false	1	false
+2731	Pull-Up Top Position Hold	time	false	false	false	true	1	false
+1696	Pull-Ups (Neutral Grip)	reps	false	false	false	true	1	false
+1695	Pull-Ups (Wide Grip)	reps	false	false	false	true	1	false
+1537	Pull-up Isometric Hold	time	false	false	false	true	1	false
+475	Pull-ups	weight_reps	false	false	false	true	1	false
+2715	Pull-ups (Custom)	weight_reps	false	false	false	true	1	false
+1905	Pullback	weight_reps	false	false	false	false	1	false
+1273	Pullover	weight_reps	false	false	true	false	1	false
+1384	Pullover Machine	weight_reps	false	false	true	false	1	false
+957	Quadriped Arm and Leg Raise	reps	false	false	true	true	1	false
+1028	Quadruped thoracic rotation left	reps	true	false	true	false	1	false
+1029	Quadruped thoracic rotation right	reps	true	false	true	false	1	false
+484	Rack Deadlift	weight_reps	false	false	false	false	1	false
+1718	Remo alto polea alta	weight_reps	false	false	false	false	1	false
+1119	Remo maquina agarre estrecho	weight_reps	false	false	false	false	1	false
+1120	Remo maquina agarre estrecho supino	weight_reps	false	false	false	false	1	false
+490	Renegade Row	weight_reps	false	false	false	false	1	false
+1473	Reverse Cable Flye	weight_reps	false	false	true	false	1	false
+1215	Reverse Snow Angel	reps	false	false	false	false	1	false
+1433	Reverse Wood Chops	reps	false	false	false	false	1	false
+1014	Right levator scapulae stretch	time	true	false	true	false	1	false
+1399	Roll Down	reps	true	false	false	false	1	false
+2747	Rope Climb	reps	false	false	false	false	1	false
+1634	Rope Pullover/row	weight_reps	false	false	true	false	1	false
+508	Row	weight_reps	false	false	false	false	1	false
+512	Rowing seated, narrow grip	weight_reps	false	false	false	false	1	false
+674	Rowing with TRX band	reps	false	false	false	false	1	false
+510	Rowing, Lying on Bench	weight_reps	false	false	false	false	1	false
+513	Rowing, T-bar	weight_reps	false	false	false	false	1	false
+1435	Scapula Pulls	weight_reps	false	false	true	false	1	false
+2681	Scapular Pushups	weight_reps	false	false	false	true	1	false
+1207	Scorpion Kick	reps	true	false	true	false	1	false
+1143	Seated Back Extension Machine	reps	false	false	true	false	1	false
+2635	Seated Band Row	weight_reps	false	false	false	false	1	false
+922	Seated Cable Mid Trap Shrug	weight_reps	false	false	true	false	1	false
+1117	Seated Cable Row	weight_reps	false	false	false	false	1	false
+1725	Seated Row (Machine)	weight_reps	false	false	false	false	1	false
+2720	Seated Row (Machine) (Custom)	weight_reps	false	false	false	false	1	false
+1928	Seated V-Grip Row	weight_reps	false	false	false	false	1	false
+1098	Seated rear delt rise	weight_reps	false	false	true	false	1	false
+562	Shotgun Row	weight_reps	false	false	false	false	1	false
+1730	Side Lateral Raise (Cable)	weight_reps	false	false	true	false	1	false
+1727	Side Straight-Arm Pulldown (Cable)	weight_reps	false	false	false	false	1	false
+1861	Side stretch	time	true	false	true	false	1	false
+1022	Single Arm Plank to Row	time	true	false	true	true	1	false
+1637	Single arm row	weight_reps	false	false	false	false	1	false
+2663	Single-Arm Cable Row with Rotation (Floor)	weight_reps	false	false	false	false	1	false
+1972	Single-Arm Lat Pulldown	weight_reps	false	false	false	false	1	false
+2722	Single-Arm Lat Pulldown (Custom)	weight_reps	false	false	false	false	1	false
+1394	Sit & Reach	time	true	false	true	false	1	false
+1210	Skydiver with arms in T-position	reps	false	false	true	false	1	false
+2730	Slow Eccentric Pull-Up Negative	weight_reps	false	false	false	true	1	false
+1447	Snatch OL	weight_reps	false	false	false	false	1	false
+1726	Straight-Arm Pulldown (Cable)	weight_reps	false	false	false	false	1	false
+628	Straight-arm Pull Down (bar Attachment)	weight_reps	false	false	false	false	1	false
+2712	Straight-arm Pull Down (bar Attachment) (Custom)	weight_reps	false	false	false	false	1	false
+629	Straight-arm Pull Down (rope Attachment)	weight_reps	false	false	false	false	1	false
+636	Superman	weight_reps	false	false	false	false	1	false
+1583	Supine press	weight_reps	false	false	false	false	1	false
+919	T-Bar row	weight_reps	false	false	false	false	1	false
+959	TRX Rows	reps	false	false	false	false	1	false
+2746	Towel Pull-Up	weight_reps	false	false	false	true	1	false
+1455	Towel Superman	reps	false	false	false	false	1	false
+1834	Trap-3 Raise	reps	false	false	true	false	1	false
+1607	Typewriter Pull-ups	reps	false	false	false	true	1	false
+684	Underhand Lat Pull Down	weight_reps	false	false	false	false	1	false
+1621	Unilateral Cable row	weight_reps	false	false	false	false	1	false
+1381	Upper Back	weight_reps	false	false	false	false	1	false
+695	V-Bar Pulldown	weight_reps	false	false	false	false	1	false
+716	Wall Slides	reps	true	false	false	false	1	false
+2676	Weighted neck flexion	weight_reps	false	false	true	false	1	false
+723	Wide-grip Pulldown	weight_reps	false	false	false	false	1	false
+2713	Wide-grip Pulldown (Custom)	weight_reps	false	false	false	false	1	false
+1125	Wide-grip supinated lat pulldown	weight_reps	false	false	false	false	1	false
+1083	YWTs	reps	false	false	true	false	1	false
+1244	Yoga exercise: Cow-cat	time	true	false	false	false	1	false
+980	commando pull-ups	weight_reps	false	false	false	true	1	false
+1967	lento avanti seduto	weight_reps	false	false	true	false	1	false
+146	Calf Press Using Leg Press Machine	weight_reps	false	false	true	false	1	false
+148	Calf Raises on Hackenschmitt Machine	reps	false	false	true	false	1	false
+1203	Calf raises, left leg	reps	false	false	true	true	1	false
+702	Calf raises, one legged	reps	false	false	true	true	1	false
+1021	Calf raises, right leg	reps	false	false	true	true	1	false
+2661	Dumbbell Calf Raise	weight_reps	false	false	true	true	1	false
+1603	Leg curl with elastic	weight_reps	false	false	true	false	1	false
+1915	Quadruped Hip Abduction	weight_reps	false	false	true	false	1	false
+1620	Seated Dumbbell Calf Raise	weight_reps	false	false	true	true	1	false
+590	Sitting Calf Raises	reps	false	false	true	true	1	false
+622	Standing Calf Raises	reps	false	false	true	true	1	false
+2666	Step Calf Stretch	time	true	false	true	false	1	false
+1876	Supported Calf Stretch	time	true	false	true	false	1	false
+1200	Tibialis raises	reps	false	false	true	false	1	false
+1115	3D lunge warmup	distance_time	false	false	false	true	1	false
+2670	Alternate Walking	distance_time	false	false	true	false	1	false
+1092	Bag training	distance_time	false	false	false	false	1	false
+1525	Ball Slams	distance_time	false	false	false	false	1	true
+1524	Battle Ropes	distance_time	false	false	false	false	1	false
+1630	Blaze	distance_time	false	false	false	false	1	false
+2482	Bobbing Exhale Drill	distance_time	false	false	true	false	1	false
+2542	Boxing	distance_time	false	false	false	false	1	false
+1579	Bronco	distance_time	false	false	true	false	1	false
+1449	ClimbMill	distance_time	false	false	false	false	1	false
+2695	Controlled Brisk Swim	distance_time	false	false	false	false	1	false
+2487	Cool-Down Swim	distance_time	false	false	false	false	1	false
+177	Cycling	distance_time	false	false	false	false	1	false
+1204	Cycling cardio session	distance_time	false	false	true	false	1	false
+1940	Diaphragmatic Breathing	distance_time	false	false	true	false	1	false
+2480	Easy Continuous Swim (Freestyle)	distance_time	false	false	false	false	1	false
+962	Elliptical	distance_time	false	false	false	false	1	false
+2692	Exhale and Body-position Swim Drill	distance_time	false	false	false	false	1	false
+1592	Guided or free meditation	distance_time	false	false	true	false	1	false
+285	High Knee Jumps	distance_time	false	false	false	false	1	true
+1318	High Knee Skips HD	distance_time	false	false	false	false	1	false
+983	High knees	distance_time	false	false	true	false	1	false
+319	Jogging	distance_time	false	false	true	false	1	false
+993	Jump rope: basic jumps	distance_time	false	false	true	false	1	true
+1314	Jumping Jack HD	distance_time	false	false	false	false	1	true
+2481	Kick with Board	distance_time	false	false	false	false	1	false
+1584	March or jog in place	distance_time	false	false	false	false	1	false
+2671	Radio Taiso	distance_time	false	false	false	false	1	false
+2486	Recovery Bobbing	distance_time	false	false	true	false	1	false
+1376	Recumbent Bike	distance_time	false	false	true	false	1	false
+2549	Retro Treadmill Walking	distance_time	false	false	false	false	1	false
+1093	Rowing Machine	distance_time	false	false	false	false	1	false
+527	Run	distance_time	false	false	true	false	1	false
+529	Run - Interval Training	distance_time	false	false	true	false	1	false
+530	Run - Treadmill	distance_time	false	false	true	false	1	false
+1574	Schwimmen	distance_time	false	false	true	false	1	false
+2484	Side-Kick Breathing (Kickboard)	distance_time	false	false	false	false	1	false
+1526	Ski Machine	distance_time	false	false	false	false	1	false
+595	Skipping - Standard	distance_time	false	false	true	false	1	false
+1523	Sled Push	distance_time	false	false	false	false	1	false
+1548	Stair Master	distance_time	false	false	true	false	1	false
+624	Stationary Bike	distance_time	false	false	true	false	1	false
+1618	Stationary bike cardio	distance_time	false	false	true	false	1	false
+1962	Step Jack	distance_time	false	false	false	false	1	false
+2485	Stroke-and-Roll Drill	distance_time	false	false	false	false	1	false
+927	Suspended crossess	distance_time	false	false	true	false	1	false
+961	Swimming 50m sprints	distance_time	false	false	true	false	1	false
+1285	Talons fesses	distance_time	false	false	false	false	1	false
+1615	Treadmill Cardio	distance_time	false	false	true	false	1	false
+1104	Walking	distance_time	false	false	true	false	1	false
+2483	Wall-Hold Rotation	distance_time	false	false	false	true	1	false
+908	Zone 2 Running	distance_time	false	false	true	false	1	false
+1373	box jumps	distance_time	false	false	false	false	1	true
+997	4-count burpees	reps	false	false	true	false	1	false
+57	Bear Walk 2	reps	false	false	false	false	1	false
+73	Bench Press	weight_reps	false	false	false	false	1	false
+2700	Bench Press (Custom)	weight_reps	false	false	false	false	1	false
+2536	Bench Press Isometric	time	false	false	false	true	1	false
+75	Benchpress Dumbbells	weight_reps	false	false	false	false	1	false
+1469	Bent over Cable Flye	weight_reps	false	false	true	false	1	false
+132	Burpees	reps	false	false	true	false	1	false
+135	Butterfly	weight_reps	false	false	true	false	1	false
+2702	Butterfly (Custom)	weight_reps	false	false	true	false	1	false
+137	Butterfly Narrow Grip	weight_reps	false	false	true	false	1	false
+1656	Cable Chest Press - Decline	weight_reps	false	false	false	false	1	false
+1660	Cable Chest Press - Incline	weight_reps	false	false	false	false	1	false
+323	Cable Cross-over	weight_reps	false	false	false	false	1	false
+1691	Cable Fly Lower Chest	weight_reps	false	false	true	false	1	false
+1689	Cable Fly Middle Chest	weight_reps	false	false	true	false	1	false
+1690	Cable Fly Upper Chest	weight_reps	false	false	true	false	1	false
+1457	Cable Press Around	weight_reps	false	false	false	false	1	false
+129	Chest Press	weight_reps	false	false	false	false	1	false
+1554	Clap Push-UP	reps	false	false	false	true	1	false
+1086	Close-grip Press-ups	weight_reps	false	false	false	true	1	false
+161	Cross-Bench Dumbbell Pullovers	weight_reps	false	false	true	false	1	false
+1497	DB Underhand bench press	weight_reps	false	false	false	false	1	false
+1496	DB Upper Chest Variation	weight_reps	false	false	false	false	1	false
+185	Decline Bench Press Barbell	weight_reps	false	false	false	false	1	false
+186	Decline Bench Press Dumbbell	weight_reps	false	false	false	false	1	false
+1591	Deep breathing (standing or seated)	time	false	false	true	false	1	false
+1777	Deficit Push ups	reps	false	false	false	true	1	false
+386	Diamond push ups	reps	false	false	false	true	1	false
+194	Dips	reps	false	false	false	true	1	false
+2706	Dips (Custom)	reps	false	false	false	true	1	false
+1713	Doorway Pectoral Stretch	time	true	false	true	false	1	false
+1084	Dumbbell Floor Press	weight_reps	false	false	false	false	1	false
+1353	Dumbbell Hex Press	weight_reps	false	false	false	false	1	false
+801	Dumbbell Push-Up	weight_reps	false	false	false	true	1	false
+2529	Explosive Push-Ups	reps	false	false	false	true	1	true
+1919	Extreme Pec Stretch	time	true	false	true	false	1	false
+1694	Flat Machine Press	weight_reps	false	false	false	false	1	false
+237	Fly With Cable	weight_reps	false	false	true	false	1	false
+238	Fly With Dumbbells	weight_reps	false	false	true	false	1	false
+239	Fly With Dumbbells, Decline Bench	weight_reps	false	false	true	false	1	false
+1831	Hammerstrength Decline Chest Press	weight_reps	false	false	false	false	1	false
+1001	High plank	time	true	false	true	true	1	false
+1508	High-Incline Smith Machine Press	weight_reps	false	false	false	false	1	false
+538	Incline Bench Press - Barbell	weight_reps	false	false	false	false	1	false
+537	Incline Bench Press - Dumbbell	weight_reps	false	false	false	false	1	false
+539	Incline Bench Press - MP	weight_reps	false	false	false	false	1	false
+308	Incline Dumbbell Fly	weight_reps	false	false	true	false	1	false
+1716	Incline Shoulder Press Up	weight_reps	false	false	false	true	1	false
+1693	Incline Static Hold	time	false	false	true	true	1	false
+1198	Inverted Rows	reps	false	false	false	true	1	false
+314	Isometric Wipers	time	false	false	false	true	1	false
+1546	Larsen Press	weight_reps	false	false	false	false	1	false
+1918	Legend Chest Press	weight_reps	false	false	false	false	1	false
+1773	Legend Incline Bench Press	weight_reps	false	false	false	false	1	false
+379	Leverage Machine Chest Press	weight_reps	false	false	false	false	1	false
+1270	Low Pulley Cable Fly	weight_reps	false	false	true	false	1	false
+1296	Low-Cable Cross-Over - NB	weight_reps	false	false	false	false	1	false
+2723	Machine Incline Chest Press (Custom)	weight_reps	false	false	false	false	1	false
+926	Machine chest fly	weight_reps	false	false	true	false	1	false
+996	Mountain climbers	weight_reps	false	false	true	true	1	false
+1461	No Leg Drive Dumbbell Chest Press	weight_reps	false	false	false	false	1	false
+998	No push-up burpees	reps	false	false	false	true	1	false
+1484	Omni Cable Cross-over	weight_reps	false	false	true	false	1	false
+687	Overhead Press	weight_reps	false	false	false	false	1	false
+445	Pause Bench	weight_reps	false	false	false	false	1	false
+1904	Pec Deck	weight_reps	false	false	true	false	1	false
+1436	Pin Bench Press BB	weight_reps	false	false	false	false	1	false
+683	Power Clean	weight_reps	false	false	false	false	1	false
+1551	Push-Up	reps	false	false	false	true	1	false
+1112	Push-Ups | Decline	weight_reps	false	false	false	true	1	false
+1111	Push-Ups | Incline	weight_reps	false	false	false	true	1	false
+1113	Push-Ups | Parallettes	reps	false	false	false	true	1	false
+498	Reverse Grip Bench Press	weight_reps	false	false	false	false	1	false
+1832	Ring Support Hold	time	false	false	true	true	1	false
+2530	Russian Push Ups	reps	false	false	false	true	1	false
+1094	Seated Bench Press	weight_reps	false	false	false	false	1	false
+1922	Seated Cable chest fly	weight_reps	false	false	true	false	1	false
+583	Side to Side Push Ups	reps	false	false	false	true	1	false
+925	Smith Machine Slight Incline Press	weight_reps	false	false	false	false	1	false
+2528	Squat Sky Reach Stretch	time	true	false	false	false	1	false
+1778	Supino inclinado	weight_reps	false	false	false	false	1	false
+1451	Torso rotation stretch	time	true	false	false	false	1	false
+2679	Tyson push-ups	reps	false	false	false	true	1	false
+688	Upper External Oblique	weight_reps	false	false	true	false	1	false
+1902	Weighted push-ups	reps	false	false	false	true	1	false
+1964	Wide Push-Up	reps	false	false	false	true	1	false
+1948	1 Leg Box Squat	reps	false	false	false	false	1	false
+2613	90/90 Hip Switches	reps	true	false	true	false	1	false
+1096	Abduction while standing	reps	false	false	true	false	1	false
+2614	Adductor Rock Backs	reps	true	false	false	false	1	false
+1102	Alternate back lunges	weight_reps	false	false	false	true	1	false
+1864	Ankle Roll	reps	true	false	true	false	1	false
+1141	Arabesque	reps	false	false	true	false	1	false
+2494	Band Terminal Knee extension	weight_reps	false	false	true	false	1	false
+1865	Banded Ankle Mobility	time	true	false	true	false	1	false
+1842	Banded Clamshell	reps	true	false	false	false	1	false
+2665	Banded Monster Walk	weight_reps	false	false	false	false	1	false
+1801	Barbell Full Squat	weight_reps	false	false	false	false	1	false
+43	Barbell Hack Squats	weight_reps	false	false	false	false	1	false
+46	Barbell Lunges Standing	weight_reps	false	false	false	true	1	false
+802	Barbell Lunges Walking	weight_reps	false	false	false	true	1	false
+1830	Barbell Step Back Lunge	weight_reps	false	false	false	true	1	false
+1935	Belt Squat	weight_reps	false	false	false	false	1	false
+1840	Bent-Leg Hamstring Stretch	time	true	false	true	false	1	false
+1953	Bent-knee Iron Cross	weight_reps	false	false	true	true	1	false
+1312	Bodyweight Squat HD	weight_reps	false	false	false	true	1	false
+1324	Bodyweight lunge HD	weight_reps	false	false	false	true	1	false
+977	Box squat	weight_reps	false	false	false	false	1	false
+124	Braced Squat	weight_reps	false	false	false	false	1	false
+1706	Bulgarian Squat with Dumbbells	weight_reps	false	false	false	true	1	false
+988	Bulgarian split squats left	weight_reps	false	false	false	true	1	false
+989	Bulgarian split squats right	weight_reps	false	false	false	true	1	false
+1843	Butterfly Stretch	time	true	false	true	false	1	false
+1131	Cable glute extension	weight_reps	false	false	true	false	1	false
+1751	Cable pull through	weight_reps	false	false	false	false	1	false
+1466	Calf Raise using Hack Squat Machine	reps	false	false	true	false	1	false
+1854	Calves foam roller	time	true	false	true	false	1	false
+1911	Cat Plank	time	true	false	true	true	1	false
+2449	Clamshell to Reverse Clamshell	reps	true	false	true	false	1	false
+1438	Clean	weight_reps	false	false	false	false	1	false
+1605	Copenhagen Adduction Exercise	weight_reps	false	false	true	false	1	false
+1407	Cossack squat	reps	false	false	false	false	1	false
+2525	Couch Stretch	time	true	false	true	false	1	false
+1400	Crossbody Hamstring Stretch	time	true	false	true	false	1	false
+1395	Crossbody Leg Swings	reps	true	false	false	false	1	false
+1361	Double Kettlebell Front Squat	weight_reps	false	false	false	false	1	false
+1243	Double Leg Calf Raise	reps	false	false	true	true	1	false
+1201	Dragon squat	reps	false	false	false	false	1	false
+1370	Dumbbell Deadlift	weight_reps	false	false	false	false	1	false
+1503	Dumbbell Frog Press	weight_reps	false	false	false	false	1	false
+1640	Dumbbell Front Squat	weight_reps	false	false	false	false	1	false
+203	Dumbbell Goblet Squat	weight_reps	false	false	false	false	1	false
+1642	Dumbbell Hip Thrust	weight_reps	false	false	false	false	1	false
+205	Dumbbell Lunges Standing	weight_reps	false	false	false	true	1	false
+206	Dumbbell Lunges Walking	weight_reps	false	false	false	true	1	false
+1651	Dumbbell Rear Lunge	weight_reps	false	false	false	true	1	false
+1652	Dumbbell Romanian Deadlift	weight_reps	false	true	false	false	1	false
+1653	Dumbbell Side Squat	weight_reps	false	false	false	false	1	false
+1234	Dumbbell Single-leg Hip Thrust	weight_reps	false	false	false	false	1	false
+1366	Dumbbell Split Squat	weight_reps	false	false	false	true	1	false
+1684	Dumbbell Thruster	weight_reps	false	false	false	false	1	false
+2682	Dumbbell cyclist squat	weight_reps	false	false	false	false	1	false
+1616	Dumbbell donkey kick	weight_reps	false	false	true	false	1	false
+1116	Dumbbell farmer's carry	weight_distance	false	false	false	false	1	false
+1088	Dumbbell sumo deadlift	weight_reps	false	false	false	false	1	false
+1391	Elephant Walks	reps	false	false	false	false	1	false
+2615	Elevated Hamstring Stretch	time	true	false	true	false	1	false
+1241	Exercise Band Dorsiflexion	weight_reps	false	false	true	false	1	false
+1242	Exercise Band Plantarflexion	weight_reps	false	false	false	false	1	false
+1956	Fire Hydrant Circles	reps	true	false	true	false	1	false
+1950	Foam Roll IT Band	time	true	false	true	false	1	false
+1860	Foam Roller Adductors	time	true	false	true	false	1	false
+1856	Foam Roller Anterior tibialis	time	true	false	true	false	1	false
+1859	Foam Roller Gluteus	time	true	false	true	false	1	false
+1857	Foam Roller Iliotibial band	time	true	false	true	false	1	false
+1858	Foam Roller quadriceps	time	true	false	true	false	1	false
+1844	Frog Stretch	time	true	false	true	false	1	false
+2527	Front Split Stretch	time	true	false	false	false	1	false
+257	Front Squats	weight_reps	false	false	false	false	1	false
+265	Glute Bridge	reps	false	false	false	false	1	false
+1528	Glute Drive	weight_reps	false	false	false	false	1	false
+1723	Glute Kickback (Machine)	weight_reps	false	false	true	false	1	false
+2478	Glute-Ham Raise	weight_reps	false	false	true	true	1	false
+1392	Good Morning	weight_reps	false	true	false	false	1	false
+1414	Hack Squats	weight_reps	false	false	false	false	1	false
+2717	Hack Squats (Custom)	weight_reps	false	false	false	false	1	false
+1398	Hamstring Chokes	reps	false	false	true	false	1	false
+1855	Hamstring Foam roller	time	true	false	true	false	1	false
+1387	Hamstring Kicks	reps	false	false	false	false	1	false
+2656	Happy Baby	time	true	false	false	false	1	false
+291	Hindu Squats	reps	false	false	false	false	1	false
+2447	Hip Airplane	weight_reps	false	false	false	false	1	false
+1906	Hip Bridge	reps	false	false	false	false	1	false
+1862	Hip Circles	reps	true	false	true	false	1	false
+1863	Hip Crossover	reps	false	false	true	false	1	false
+1867	Hip Flexor Stretch	time	true	false	true	false	1	false
+294	Hip Thrust	weight_reps	false	false	false	false	1	false
+1578	Hip hinge	weight_reps	false	true	false	false	1	false
+2618	Hip-Out and Hip-In Lateral Steps	weight_reps	false	false	true	false	1	false
+1846	Horse Stance (Side Splits)	time	false	false	true	false	1	false
+1733	Isometric Squat to Failure	time	false	false	false	true	1	false
+320	Jumping Jacks	reps	false	false	true	false	1	true
+1641	Kettlebell One Legged Deadlift	weight_reps	false	false	false	false	1	false
+960	Kettlebell Swing	weight_reps	false	false	false	false	1	true
+331	Kettlebell Swings	weight_reps	false	false	false	false	1	true
+1688	Kickstand RDL	weight_reps	false	true	true	false	1	false
+1452	Knee to Chest Stretch	time	true	false	false	false	1	false
+990	Kneeling kickbacks	reps	false	false	true	false	1	false
+1829	Landmine Squat to Press	weight_reps	false	false	false	false	1	false
+1325	Lateral Push Off	reps	false	false	false	false	1	false
+364	Leg Curl	weight_reps	false	false	true	false	1	false
+365	Leg Curls (laying)	weight_reps	false	false	true	false	1	false
+366	Leg Curls (sitting)	weight_reps	false	false	true	false	1	false
+2708	Leg Curls (sitting) (Custom)	weight_reps	false	false	true	false	1	false
+367	Leg Curls (standing)	weight_reps	false	false	true	false	1	false
+369	Leg Extension	weight_reps	false	false	true	false	1	false
+2709	Leg Extension (Custom)	weight_reps	false	false	true	false	1	false
+2535	Leg Extension Isometric	time	false	false	true	true	1	false
+371	Leg Press	weight_reps	false	false	false	false	1	false
+1515	Leg Press Toe Press	weight_reps	false	false	false	false	1	false
+375	Leg Press on Hackenschmidt Machine	weight_reps	false	false	false	false	1	false
+373	Leg Presses (narrow)	weight_reps	false	false	false	false	1	false
+374	Leg Presses (wide)	weight_reps	false	false	false	false	1	false
+376	Leg Raise	reps	false	false	true	true	1	false
+1670	Leg Swings (Front–Back)	reps	true	false	false	false	1	false
+1589	Leg and hip stretch	time	true	false	false	false	1	false
+1949	Limber 11	time	false	false	true	false	1	false
+2526	Long Lunge Pulse Stretch	time	true	false	false	true	1	false
+397	Low Box Squat - Wide Stance	weight_reps	false	false	false	false	1	false
+1868	Lunge with Twist Stretch	time	true	false	false	true	1	false
+984	Lunges	weight_reps	false	false	false	true	1	false
+1869	Lying Figure Four Stretch	time	true	false	true	false	1	false
+1870	Lying Hamstring Stretch with Band	time	true	false	true	false	1	false
+1748	Machine Hip Abduction	weight_reps	false	false	true	false	1	false
+1132	Machine glute extension	weight_reps	false	false	true	false	1	false
+1965	Marching High Knees	reps	false	false	false	false	1	false
+910	Nordic Curl	weight_reps	false	false	true	true	1	false
+441	Overhead Squat	weight_reps	false	false	false	false	1	false
+1464	Pause Hack Squats	weight_reps	false	false	false	false	1	false
+2662	Paused Squats	weight_reps	false	false	false	false	1	false
+1521	Pendular hack	weight_reps	false	false	true	false	1	false
+1527	Pendulum Squat	weight_reps	false	false	false	false	1	false
+1872	Pigeon Stretch	time	true	false	true	false	1	false
+1437	Pin Squat	weight_reps	false	false	false	false	1	false
+456	Pistol Squat	reps	false	false	false	true	1	false
+1020	Pistol squats right	reps	false	false	false	true	1	false
+1410	Plank with Alternating Leg Lift	time	true	false	true	true	1	false
+1275	Plantarflexion Stretch with Band	time	true	false	true	false	1	false
+1208	Prisoner Squat	reps	false	false	false	false	1	false
+2617	Quad Sets	weight_reps	false	false	true	false	1	false
+2687	Quadriceps Stretch	time	true	false	true	false	1	false
+1960	Rear-foot-elevated Hip Flexor Stretch	time	true	false	true	false	1	false
+2448	Reverse Clamshell	reps	true	false	true	false	1	false
+1809	Reverse Hyperextension	weight_reps	false	false	true	true	1	false
+909	Reverse Nordic Curl	weight_reps	false	false	true	true	1	false
+2620	Reverse V-Squat	weight_reps	false	false	false	false	1	false
+999	Reverse lunges	weight_reps	false	false	false	true	1	false
+1954	Roll-overs into V-sits	reps	false	false	true	false	1	false
+507	Romanian Deadlift	weight_reps	false	true	false	false	1	false
+2710	Romanian Deadlift (Custom)	weight_reps	false	true	false	false	1	false
+1874	Runners Lunge Stretch	time	true	false	false	true	1	false
+1952	SMR Glutes (lax ball)	time	false	false	true	false	1	false
+1672	Seated Hip Abduction	weight_reps	false	false	true	false	1	false
+2718	Seated Hip Abduction (Custom)	weight_reps	false	false	true	false	1	false
+12	Seated Hip Adduction	weight_reps	false	false	true	false	1	false
+2699	Seated Hip Adduction (Custom)	weight_reps	false	false	true	false	1	false
+2664	Seated Knee Extension with Overpressure	time	false	false	true	false	1	false
+1845	Seated Pancake Good Morning	reps	false	true	false	false	1	false
+1959	Seated Piriformis Stretch	time	true	false	true	false	1	false
+1884	Shinbox IR Stretch	time	true	false	false	false	1	false
+1739	Shrimp Squat	reps	false	false	false	false	1	false
+1202	Side Lying Hip Abduction	reps	false	false	true	false	1	false
+1195	Side Slides + Squats	reps	false	false	false	false	1	false
+986	Side split squats left	weight_reps	false	false	false	true	1	false
+987	Side split squats right	weight_reps	false	false	false	true	1	false
+71	Single Leg Extension	weight_reps	false	false	true	false	1	false
+1740	Single Leg Glute Bridge	reps	false	false	true	false	1	false
+1393	Single Leg Hamstring Stretch	time	true	false	true	false	1	false
+1388	Single Leg RDL	weight_reps	false	true	false	false	1	false
+2677	Single leg press	weight_reps	false	false	false	false	1	false
+2667	Single-Leg Balance with Eyes Closed	time	false	false	false	false	1	false
+2668	Single-Leg Balance with Kettlebell Circles	weight_reps	false	false	false	false	1	false
+1736	Single-Leg Deadlift with Dumbbell	weight_reps	false	false	false	false	1	false
+1734	Single-Leg Lunge with Kettlebell:	weight_reps	false	false	false	true	1	false
+2619	Single-Leg Soft-Landing Holds	time	false	false	true	true	1	false
+2616	Single-leg BOSU balance	time	false	false	true	false	1	false
+1294	Single-leg hamstring curl	weight_reps	false	false	true	false	1	false
+1735	Single-leg side glute press	weight_reps	false	false	false	false	1	false
+1274	Sitting Calf Stretch (Dorsiflexion)	time	true	false	true	false	1	false
+1604	Sliding Lateral Lunge	weight_reps	false	false	false	true	1	false
+1963	Slow Squat	reps	false	false	false	false	1	false
+1593	Smith Machine Split Squat	weight_reps	false	false	false	false	1	false
+1747	Smith machine squat	weight_reps	false	false	false	false	1	false
+1576	Snap Down	reps	false	false	false	false	1	true
+1839	Solo Hip Flexor Stretch	time	true	false	true	false	1	false
+604	Speed Deadlift	weight_reps	false	false	false	false	1	false
+991	Split squats left	weight_reps	false	false	false	true	1	false
+992	Split squats right	weight_reps	false	false	false	true	1	false
+2645	Squat -> Stand Coordination	reps	false	false	false	false	1	false
+614	Squat Jumps	reps	false	false	false	false	1	true
+616	Squat Thrust	reps	false	false	false	false	1	false
+615	Squats	weight_reps	false	false	false	false	1	false
+341	Squats on Multipress	weight_reps	false	false	false	false	1	false
+1724	Standing Adduction (Cable)	weight_reps	false	false	true	false	1	false
+1239	Standing Calf Stretch	time	true	false	true	false	1	false
+1875	Standing IT Band Stretch	time	true	false	true	false	1	false
+1396	Standing Pancake	time	false	false	true	false	1	false
+1397	Standing Pancake Good Morning	time	false	true	false	false	1	false
+1240	Standing Soleus Stretch	time	true	false	true	false	1	false
+981	Step-ups	weight_reps	false	false	false	true	1	false
+627	Stiff-legged Deadlifts	weight_reps	false	true	false	false	1	false
+630	Sumo Deadlift	weight_reps	false	false	false	false	1	false
+632	Sumo Squats	weight_reps	false	false	false	false	1	false
+1886	Supine Hip Abduction	weight_reps	false	false	true	false	1	false
+2696	Supported Deep Squat Hold	time	true	false	false	true	1	false
+2557	Supported Split Squat	weight_reps	false	false	false	true	1	false
+650	Thruster	weight_reps	false	false	false	false	1	false
+1390	Toe Touch	time	true	false	false	false	1	false
+1803	Trap Bar Squat	weight_reps	false	false	false	false	1	false
+1913	Unilateral Hip Thrust	reps	false	false	false	false	1	false
+1907	Unilateral Lunges	weight_reps	false	false	false	true	1	false
+1196	Wall Drills	reps	false	false	false	false	1	false
+718	Wall Squat	time	false	false	false	false	1	false
+1100	Wall balls	weight_reps	false	false	false	false	1	false
+1408	Wall-sit	time	false	false	false	false	1	false
+722	Weighted Step-ups	weight_reps	false	false	false	true	1	false
+1804	ankle dorsiflexion rocks	reps	true	false	true	false	1	false
+1947	dumbbell snatch	weight_reps	false	false	false	false	1	false
+1612	kettlebell sumo deadlift	weight_reps	false	false	false	false	1	false
+1613	rubber band glute kickback	weight_reps	false	false	true	false	1	false
+1680	seated figure four	time	true	false	true	false	1	false
+1754	45° lateral raises	weight_reps	false	false	true	false	1	false
+2533	Arch Hang	time	false	false	true	false	1	false
+20	Arnold Shoulder Press	weight_reps	false	false	false	false	1	false
+1826	Band pull-apart with external rotation	weight_reps	false	false	true	false	1	false
+2622	Banded Front Raise	weight_reps	false	false	true	false	1	false
+1838	Banded Shoulder Drills	weight_reps	false	false	false	false	1	false
+1638	Barbell Clean and press	weight_reps	false	false	false	false	1	false
+1925	Barbell Silverback Shrug	weight_reps	false	false	true	false	1	false
+1807	Behind the Back Cable Lateral Raise	weight_reps	false	false	true	false	1	false
+79	Bent High Pulls	weight_reps	false	false	true	false	1	false
+82	Bent-over Lateral Raises	weight_reps	false	false	true	false	1	false
+2621	Box Handstand Push-up	time	false	false	false	true	1	false
+915	Bus Drivers	weight_reps	false	false	true	false	1	false
+1710	Butchers Block Stretch	time	true	false	false	false	1	false
+139	Butterfly Reverse	weight_reps	false	false	true	false	1	false
+2703	Butterfly Reverse (Custom)	weight_reps	false	false	true	false	1	false
+142	Cable External Rotation	weight_reps	true	false	true	false	1	false
+1745	Cable Front Raise with a small bar	weight_reps	false	false	true	false	1	false
+1378	Cable Lateral Raises (Single Arm)	weight_reps	false	false	true	false	1	false
+822	Cable Rear Delt Fly	weight_reps	false	false	true	false	1	false
+1936	Cable Rear-Delt Fly (single arm)	weight_reps	false	false	true	false	1	false
+1472	Cable Shrug-In	weight_reps	false	false	true	false	1	false
+1774	Chair dips	reps	false	false	false	true	1	false
+1825	Chest-Supported Rear Delt Raise	weight_reps	false	false	true	false	1	false
+1446	Clean and Jerk OL	weight_reps	false	false	false	false	1	false
+1901	Clean and Press	weight_reps	false	false	false	false	1	false
+2685	Cross-Body Stretch	time	true	false	true	false	1	false
+1536	Delt Stretch	time	true	false	true	false	1	false
+1556	Devil’s Press	weight_reps	false	false	false	false	1	false
+193	Diagonal Shoulder Press	weight_reps	false	false	false	false	1	false
+1504	Dumbbell Bradford press	weight_reps	false	false	false	false	1	false
+2724	Dumbbell Lateral Raise (Custom)	weight_reps	false	false	true	false	1	false
+1602	Dumbbell Scaption	weight_reps	false	false	false	false	1	false
+1429	Dumbbell Shoulder Rotations	weight_reps	true	false	true	false	1	false
+1227	Dumbbell rear delt row	weight_reps	false	false	false	false	1	false
+1835	External Rotation Stretch	time	true	false	false	false	1	false
+1920	Extreme Shoulder Stretch	time	true	false	true	false	1	false
+222	Facepull	weight_reps	false	false	true	false	1	false
+2694	Feet-assisted Straight-bar Support	time	false	false	false	false	1	false
+1833	Floor Glider Hamstring Curls	reps	false	false	true	false	1	false
+1731	Front Raise (Cable)	weight_reps	false	false	true	false	1	false
+256	Front Raises	weight_reps	false	false	true	false	1	false
+254	Front Raises with Plates	weight_reps	false	false	true	false	1	false
+1516	Handstand	time	false	false	true	false	1	false
+282	Handstand Pushup	time	false	false	false	true	1	false
+1007	Head turns	reps	false	false	true	false	1	false
+289	High Pull	weight_reps	false	false	false	false	1	false
+1882	High-Cable Lateral Raise	weight_reps	false	false	true	false	1	false
+1080	Hindu Pushups	weight_reps	false	false	false	true	1	false
+1712	Horizontal Shoulder Flexion Stretch	time	true	false	false	false	1	false
+1879	Incline DB Y-Raise	weight_reps	false	false	true	false	1	false
+2721	Incline DB Y-Raise (Custom)	weight_reps	false	false	true	false	1	false
+1441	Incline OHP DB	weight_reps	false	false	false	false	1	false
+1914	Isometria alle parallele	time	false	false	false	false	1	false
+1445	Jerk OL	weight_reps	false	false	false	false	1	false
+1442	Kreis Press DB	weight_reps	false	false	false	false	1	false
+346	Landmine press	weight_reps	false	false	false	false	1	false
+2538	Lateral Raise Isometric	time	false	false	true	true	1	false
+348	Lateral Raises	weight_reps	false	false	true	false	1	false
+349	Lateral Rows on Cable, One Armed	weight_reps	false	false	false	false	1	false
+351	Lateral-to-Front Raises	weight_reps	false	false	true	false	1	false
+2624	Lean-Away Cable Lateral Raise	weight_reps	false	false	true	false	1	false
+1008	Left neck stretch	time	true	false	true	false	1	false
+406	Lying Rotator Cuff Exercise	weight_reps	true	false	true	false	1	false
+1654	Machine Lateral Raise	weight_reps	false	false	true	false	1	false
+1744	Machine Side Lateral Raises	weight_reps	false	false	true	false	1	false
+418	Military Press mit SZ-Bar	weight_reps	false	false	false	false	1	false
+1939	Neck CARs	reps	true	false	true	false	1	false
+1893	Overhead Barbell Press	weight_reps	false	false	false	false	1	false
+2537	Overhead Press Isometric	time	false	false	false	true	1	false
+1775	Pec deck rear delt fly	weight_reps	false	false	true	false	1	false
+1580	Perpendicular Unilateral Landmine Row	weight_reps	false	false	false	false	1	false
+2691	Pike Hold (Floor)	time	true	false	false	true	1	false
+1439	Pin OHP	weight_reps	false	false	false	false	1	false
+2532	Planche Lean Hold	time	false	false	false	true	1	false
+1284	Pseudo Planche Push-up	reps	false	false	false	true	1	false
+1440	Push OHP	weight_reps	false	false	false	false	1	false
+478	Push Press	weight_reps	false	false	false	false	1	true
+487	Rear Delt Raises	weight_reps	false	false	true	false	1	false
+1709	Reverse Fly Standing	weight_reps	false	false	true	false	1	false
+1009	Right neck stretch	time	true	false	true	false	1	false
+918	Seated Dumbbell Side Lateral	weight_reps	false	false	true	false	1	false
+2714	Seated Dumbbell Side Lateral (Custom)	weight_reps	false	false	true	false	1	false
+1841	Seated Shoulder Extension Stretch	time	true	false	true	false	1	false
+2523	Serratus Wall Slide Stretch	time	true	false	false	false	1	false
+1714	Shoulder Dumbbell Pendular Exercise	weight_reps	false	false	false	false	1	false
+1729	Shoulder External Rotation (Cable)	weight_reps	true	false	true	false	1	false
+1715	Shoulder External Rotation with Dumbbell	weight_reps	true	false	false	false	1	false
+2693	Shoulder Flexion Wall Stretch	time	true	false	false	false	1	false
+1728	Shoulder Internal Rotation (Cable)	weight_reps	true	false	true	false	1	false
+566	Shoulder Press, Barbell	weight_reps	false	false	false	false	1	false
+567	Shoulder Press, Dumbbells	weight_reps	false	false	false	false	1	false
+543	Shoulder Press, on Machine	weight_reps	false	false	false	false	1	false
+2711	Shoulder Press, on Machine (Custom)	weight_reps	false	false	false	false	1	false
+569	Shoulder Press, on Multi Press	weight_reps	false	false	false	false	1	false
+1338	Shoulder Raise (Dumbbell)	weight_reps	false	false	true	false	1	false
+1443	Shoulder Raise Side and Front DB	weight_reps	false	false	true	false	1	false
+570	Shoulder Shrug	reps	false	false	true	false	1	false
+1755	Shoulder Y-pull cable	weight_reps	false	false	true	false	1	false
+1081	Shoulder dislocates	reps	true	false	true	false	1	false
+575	Shrugs on Multipress	weight_reps	false	false	true	false	1	false
+571	Shrugs, Barbells	weight_reps	false	false	true	false	1	false
+572	Shrugs, Dumbbells	weight_reps	false	false	true	false	1	false
+1753	Side lateral raise - Back (Cable)	weight_reps	false	false	true	false	1	false
+1752	Side lateral raise - Front (Cable)	weight_reps	false	false	true	false	1	false
+1582	Side-laying interior rotation	weight_reps	true	false	true	false	1	false
+578	Side-lying External Rotation	weight_reps	true	false	true	false	1	false
+1968	Single-arm dumbbell shoulder press	weight_reps	false	false	false	false	1	false
+1711	Sleeper Stretch	time	true	false	false	false	1	false
+916	Smith Press	weight_reps	false	false	false	false	1	false
+599	Snatch	weight_reps	false	false	false	false	1	false
+1575	Standing Dowel Shoulder press	weight_reps	false	false	false	false	1	false
+917	Straight Bar Cable Front Raise	weight_reps	false	false	true	false	1	false
+1581	Trap press	weight_reps	false	false	false	false	1	false
+1916	Tuck planche	time	false	false	false	false	1	false
+694	Upright Row w/ Dumbbells	weight_reps	false	false	false	true	1	false
+693	Upright Row, SZ-bar	weight_reps	false	false	false	true	1	false
+691	Upright Row, on Multi Press	weight_reps	false	false	false	true	1	false
+1679	Wall Angels	reps	false	false	false	false	1	false
+711	Wall Handstand	time	false	false	true	false	1	false
+2454	YTW Raises	reps	false	false	true	false	1	false
+1885	YTWL Exercise	weight_reps	false	false	false	false	1	false
+1795	unilateral cross body cable pull down	weight_reps	false	false	false	false	1	false

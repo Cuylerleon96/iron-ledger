@@ -434,8 +434,16 @@ const Engine = (() => {
      that name their own load source (machine, cable, bar, bell, band, plate, grip
      tool) stay on weight_reps and correctly refuse a loadless log. See
      tools/library-openclass-review.tsv and tools/openclass_review.py. */
-  function validSet(s, mode, bw) {
-    if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw);
+  /* A movement whose library entry carries `dual: 1` is genuinely performable
+     BOTH bodyweight and loaded (a box squat, a good morning, a sumo squat, a
+     single-leg RDL, a single-leg hamstring curl). For those the loadless log is
+     REAL work, so validSet accepts it — but ONLY for the flagged entry. validSet
+     is deliberately NOT loosened for the whole weight_reps class: a leg press or
+     a lat pulldown still refuses an empty log (see the RULE note above). The flag
+     is read off the live library entry, so a corrected library fixes scoring with
+     no engine change per row. See tools/library_source_fix.py (DUAL). */
+  function validSet(s, mode, bw, dual) {
+    if (mode === "weight_reps") return num(s.r) > 0 && (num(s.w) > 0 || bw || dual);
     if (mode === "reps") return num(s.r) > 0;
     if (mode === "time") return num(s.t) > 0;
     if (mode === "distance_time") return num(s.d) > 0 || num(s.t) > 0;
@@ -450,7 +458,7 @@ const Engine = (() => {
     /* A set only counts when it records actual work. This predicate is the ONE
        place that is decided, so entryStats and sessionXp's effort term cannot
        disagree about which sets are real. */
-    const valid = (entry.sets || []).filter((s) => validSet(s, mode, bw));
+    const valid = (entry.sets || []).filter((s) => validSet(s, mode, bw, entryDual(entry)));
     const sets = valid;
     let volume = 0, reps = 0, time = 0, dist = 0, best = 0, bestSet = null, bestReps = 0, tonnage = 0, rpeSum = 0, rpeN = 0;
     let restSum = 0, restN = 0, workSec = 0, hardReps = 0, highReps = 0, effSets = 0;
@@ -545,6 +553,14 @@ const Engine = (() => {
   const entryWeight = (state, en) => {
     if (en && en.ew != null && num(en.ew) > 0) return num(en.ew);
     return exerciseWeight(state, en ? en.id : null);
+  };
+  /* A logged entry's "accept either" flag (see validSet). Read from the live
+     library entry, or a stamp on the entry so a corrected library reaches sets
+     already in the log. Only the five DUAL movements carry it. */
+  const entryDual = (en) => {
+    if (en && en.dual) return true;
+    const info = libById.get(en ? en.id : null);
+    return !!(info && info.dual);
   };
 
   function liftKey(name) {
@@ -1002,7 +1018,7 @@ const Engine = (() => {
            (b) `hop` is word-bounded, so "wood chop" (a loaded rotation) is not
                read as a jump. */
       if (k !== "clean" && k !== "snatch" &&
-          /jump|plyo|\bhops?\b|bound|throw|slam|explosive|kettlebell swing|push press/i.test(info.n)) {
+          /jump|plyo|\bhops?\b|bound|throw|slam|explosive|kettlebell swing|push press|snap ?down/i.test(info.n)) {
         for (const x of en.sets || []) plyoReps += num(x.r) || 1;
       }
       /* A "heavy low-rep" set is one logged for FEWER THAN 5 reps at a real
@@ -1844,10 +1860,14 @@ const Engine = (() => {
 
   function exerciseWeight(state, id) {
     const info = exInfo(state, id);
-    // The movement's effort weight is a maths constant: derived here from the
-    // factor table below, never read from a per-exercise override.
-    // recruitment: an isolation set drives one joint and nothing else, so it is
-    // worth less than a compound set; more muscles driven is worth more
+    // The movement's effort weight is a maths constant: composed here from the
+    // factor tables below, never read from a per-exercise override.
+    /* BASIS (audit 2026-11-10): the numbers below are the APP'S OWN product
+       judgement, not a published measurement — an isolation set drives one joint
+       and nothing else, so it is worth 0.85 of a compound set; each extra radar
+       group and each of the first three synergists adds a small, capped share
+       (0.08 / 0.06, ceiling 0.24); the equipment and range factors below are the
+       separate, labelled tables. Nothing here is a standard. */
     const groups = exGroups(state, id).length;
     const sec = (info.s || []).length;
     let w = (isIsolation(state, id) ? 0.85 : 1)
@@ -2367,7 +2387,7 @@ const Engine = (() => {
       const mode = en.mode || "weight_reps";
       const bw = isBodyweight(en.name);
       for (const s of en.sets || []) {
-        if (!validSet(s, mode, bw)) continue;
+        if (!validSet(s, mode, bw, entryDual(en))) continue;
         total++;
         const primary = gs[0];
         if (primary && cum[primary] >= LANDMARKS[primary].mrv) over++;
@@ -2432,7 +2452,7 @@ const Engine = (() => {
       const mode = en.mode || "weight_reps";
       const bw = isBodyweight(en.name);
       for (const s of en.sets || []) {
-        if (!validSet(s, mode, bw)) continue;
+        if (!validSet(s, mode, bw, entryDual(en))) continue;
         const eff = setEffort(s);
         if (eff <= 1) continue;                       // a straight set pays the flat term only
         hardSets++;
