@@ -1038,6 +1038,29 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
       colaIdx >= 0 && (compIdx < 0 || colaIdx < compIdx), { colaIdx: colaIdx, compIdx: compIdx });
   });
 
+  /* (a2) "dr pepper" must reach the WHOLE pepper-type family. The data names that
+     family two ways — the SR row "...pepper-type, contains caffeine" (a hyphen) and
+     the FNDDS "Soft drink, pepper type" cluster (a space) — and one low-calorie SR
+     row says "pepper-types" (a plural). The matcher treats '-' as a word character,
+     so neither spelling matches inside the other; each is its own literal target in
+     SEARCH_ALIASES, and all three are literal strings in data/food.json. BEFORE this
+     change the query returned ONE row (173209); these pin the whole family. */
+  const PEPTYPE_IDS = [171876, 173209, 174850, 175099, 2710545, 2710546, 2710547, 2710548];
+  const dp = Food.search(DB, 'dr pepper', 50);
+  const dpIds = dp.map((f) => f.code).sort((a, b) => a - b);
+  eq('(a2) "dr pepper" returns the whole pepper-type family (8 rows)', dp.length, 8);
+  ok('(a2) ...and exactly these ids', JSON.stringify(dpIds) === JSON.stringify(PEPTYPE_IDS.slice().sort((a, b) => a - b)), dpIds);
+  ok('(a2) ...every returned row literally names pepper-type / pepper type',
+    dp.every((f) => /pepper-type|pepper type|pepper-types/.test(Food.norm(f.name))), dp.map((f) => f.name));
+  ok('(a2) both spellings are reached (the SR hyphen row AND the FNDDS space cluster)',
+    dp.some((f) => f.code === 173209) && dp.some((f) => f.code === 2710545));
+  /* the two literal spellings are frozen as explicit targets, so a future edit that
+     drops one is caught — a bare substring check could NOT catch it, because
+     "pepper-type" is itself a substring of "pepper-types". */
+  ok('(a2) the map carries BOTH the hyphen and the space spelling',
+    Food.SEARCH_ALIASES['dr pepper'].indexOf('pepper-type') >= 0 &&
+    Food.SEARCH_ALIASES['dr pepper'].indexOf('pepper type') >= 0, Food.SEARCH_ALIASES['dr pepper']);
+
   /* (c) an ordinary food query is UNCHANGED: a plain query takes the original
      substring path, so its codes must equal an independently-written reference. */
   const plainRef = (q, limit) => {

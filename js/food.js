@@ -321,7 +321,14 @@ const Food = (() => {
     "pepsi":      ["cola"],                       // the data has NO Pepsi cola row; PEPSI appears only as AQUAFINA water / PEPSICO Gatorade, so "pepsi" maps onto the cola category the data does name
     "sprite":     ["carbonated, lemon-lime"],
     "7up":        ["carbonated, lemon-lime"],
-    "dr pepper":  ["carbonated, pepper-type"],
+    /* The whole pepper-type family, which the data names two ways: the SR row says
+       "Beverages, carbonated, pepper-type, contains caffeine" and one low-calorie SR
+       row says "pepper-types", while the FNDDS cluster says "Soft drink, pepper type"
+       (a space). Each spelling has to be its OWN target: the matcher treats '-' as a
+       word character, so "pepper-type" never matches inside "pepper type" and vice
+       versa, and the plural "pepper-types" is a separate word again. All three are
+       literal strings in data/food.json. */
+    "dr pepper":  ["pepper-type", "pepper type", "pepper-types"],
     "diet":       ["low calorie", "reduced sugar", "aspartame"],
   };
 
