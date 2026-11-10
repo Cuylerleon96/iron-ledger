@@ -78,9 +78,23 @@ console.log("\n=== summary + weak points ===");
   eq("title", sm.title, "Rookie");
   eq("density %", sm.density, 36);
   eq("streak days", sm.streak.days, 1);
-  eq("PRs this month", sm.prs, 0);
+  eq("PRs in the last 28 days", sm.prs, 0);
   const wp = E.weakPoints(st, 28);
   eq("weak point count", wp.length, 7);
+  /* THE CALVES RECONCILIATION. The Muscle-balance card renders a status for
+     EVERY group; the weak-point "not trained yet" card names the untrained
+     ones. They must agree: a group the balance card reads "not trained yet"
+     has to appear in that card, and nothing else may. This is the exact
+     disagreement the sweep found — Calves used to be filtered out of the list
+     while the balance card still flagged it "not trained yet". The fixture has
+     Chest, Back and Calves untrained, so the card must name all three. */
+  {
+    const mg = E.muscleGroups(st, 28);
+    const untrained = E.GROUP_ORDER.filter((g) => mg[g].status === "not trained yet");
+    const gap = wp.filter((w) => w.kind === "gap")[0];
+    eq("the two surfaces agree on the untrained groups (balance card <-> weak-point card)",
+      gap ? gap.title.replace(/ not trained yet$/, "").split(", ") : [], untrained);
+  }
   eq("no tilde in any advice", wp.some((w) => /~/.test(w.fix || "")), false);
   eq("advice wording", wp.filter((w) => w.kind === "volume").map((w) => w.fix),
     ["Add about 5 sets/week of arms work.", "Add about 6 sets/week of shoulders work.", "Add about 5 sets/week of legs work."]);

@@ -1,11 +1,11 @@
 {
-  "versionCode": 102,
-  "versionName": "1.3.7",
+  "versionCode": 103,
+  "versionName": "1.3.8",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "842fe4d3af69d1442590823aa0b5dc31d4b85de3250085e77ce40672f2ef9c17",
-  "sizeBytes": 3950748,
+  "sha256": "bee3529c4178fcc95f45f0a7992c3a12745b0d93d11365889e0a4583f3676dfb",
+  "sizeBytes": 3951260,
   "published": "2026-11-10",
   "notes": [
-    "exercises now count toward the right things \u2014 the audit found and fixed classifications that were sending work to the wrong place"
+    "a couple of cards were saying slightly different things about the same muscle group, and a couple of numbers were described as if they were settled science \u2014 both tidied up"
   ]
 }

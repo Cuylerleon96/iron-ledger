@@ -646,6 +646,34 @@ console.log("=== the two 'work time %' figures name their window ===");
     !/% work time<\/span>/.test(app));
 }
 
+console.log("=== a window word in a user-facing string matches the window the code counts ===");
+{
+  const app = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+  const gloss = fs.readFileSync(path.join(B, "js", "glossary.js"), "utf8");
+  const engine = fs.readFileSync(path.join(B, "js", "engine.js"), "utf8");
+
+  /* The hero PR chip is a ROLLING 28-DAY count (Engine.summary.prs =
+     prCount(state, 28)), so the chip must name that window and never say
+     "this month". Build a state with a real PR so the two counts are not 0==0. */
+  const { E, S } = env();
+  S.upsertWorkout({ id: "pw1", date: iso(1), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 5 }] }] });
+  S.upsertWorkout({ id: "pw2", date: iso(0), entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 110, r: 5 }] }] });
+  truthy("the fixture really sets a PR to count", E.prCount(S.state, 28) >= 1);
+  eq("summary.prs is the 28-day count the chip beside it claims", E.summary(S.state).prs, E.prCount(S.state, 28));
+  truthy("the hero PR chip names that 28-day window", /pl\(s\.prs, "PR"\)\} in the last 28 days/.test(app));
+  eq("...and no user-facing source still says 'this month' for the PR count",
+    /this month/.test(app) || /this month's PRs/.test(gloss), false);
+  truthy("the glossary PR entry names the same 28-day window",
+    /PRs from the last 28 days and all-time/.test(gloss));
+
+  /* The push/pull line: its 1.0-1.2 band is the app's OWN judgement, so it is
+     labelled as a guide rather than stated as settled science. */
+  truthy("the push/pull line labels the 1.0-1.2 band as the app's own guide",
+    /Our own guide is a 1\.0.1\.2 ratio/.test(engine));
+  truthy("...and the unsourced 'keeps shoulders healthy' claim is gone",
+    /ratio keeps shoulders healthy/.test(engine) === false);
+}
+
 console.log("=== build injects the real app version (welcome constant cannot drift) ===");
 {
   const { execFileSync } = require("child_process");

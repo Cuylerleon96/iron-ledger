@@ -603,7 +603,10 @@
     const mg = Engine.muscleGroups(S, 28);
     const weak = Engine.weakPoints(S, 28);
 
-    /* hero */
+    /* hero. The PR chip is a ROLLING 28-DAY count (Engine.summary.prs =
+       prCount(state, 28)), so it reads "in the last 28 days" — never "this
+       month", which is not 28 days. Copy-truth: the window word must match the
+       window the code actually counts. */
     const hero = el("section", { class: "hero card" });
     hero.innerHTML = `
       <div class="hero-left">
@@ -621,7 +624,7 @@
             ${s.distKm > 0 ? `<span class="chip" title="Total distance logged across every session, all-time">${fmt(s.distKm, 1)} km logged</span>` : ""}
             ${s.density ? `<span class="chip" title="Share of all logged session time spent working rather than resting — all-time">${term("density", `${s.density}% work time (all-time)`)}</span>` : ""}
             <span class="chip">${weekChipText(wk)}</span>
-            <span class="chip">${term("pr", `${s.prs} ${pl(s.prs, "PR")} this month`)}</span>
+            <span class="chip">${term("pr", `${s.prs} ${pl(s.prs, "PR")} in the last 28 days`)}</span>
           </div>
         </div>
       </div>`;

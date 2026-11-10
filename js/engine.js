@@ -1948,20 +1948,35 @@ const Engine = (() => {
           : `Progressively overload ${g.toLowerCase()}.` });
     }
     // 2. not trained at all
-    const untrained = GROUP_ORDER.filter((g) => mg[g].setsPerWk <= 0 && g !== "Calves");
+    /* Calves IS included. It used to be filtered out (`g !== "Calves"` — a
+       noise-control choice made in the first commit), but the Muscle-balance
+       card beside this one renders EVERY group and reads Calves "not trained
+       yet" whenever it has no sets. Two halves of one screen then disagreed
+       about the same group. The balance card is the complete, factual surface
+       and is right; this advice list now matches it instead of silently
+       dropping a group the user can already see is untrained. Calves was never
+       really special — it carries a LANDMARKS row and a suggestFor() entry like
+       every other group. Do NOT re-add the filter: agreement between the two
+       cards is the point. */
+    const untrained = GROUP_ORDER.filter((g) => mg[g].setsPerWk <= 0);
     if (untrained.length) out.push({ kind: "gap", severity: untrained.length > 2 ? "high" : "med",
       priority: pct(untrained.length / GROUP_ORDER.length),
       title: `${untrained.join(", ")} not trained yet`, detail: "Nothing logged for these groups in the last 4 weeks — an easy place to start.",
       fix: `Add a compound movement for ${untrained.length === 1 ? "it" : "each"}: ${untrained.map((g) => suggestFor(g)).join("; ")}.` });
 
     // 3. push / pull balance
+    /* The 1.35 / 0.75 action thresholds AND the 1.0–1.2 "healthy" band are THIS
+       APP'S OWN product judgement — a widely used coaching heuristic, not a
+       published standard — so the sentence says "our own guide" rather than
+       stating the number as settled science (copy-truth rule 3, the same rule
+       the recovery window and the 72-hour recency window already follow). */
     const push = mg.Chest.volume + mg.Shoulders.volume + mg.Arms.volume * 0.5;
     const pull = mg.Back.volume + mg.Arms.volume * 0.5;
     if (push > 0 && pull > 0) {
       const ratio = push / pull;
       if (ratio > 1.35) out.push({ kind: "balance", severity: "med", priority: pct((ratio - 1.35) / 1.35),
         title: "Pushing ahead of pulling",
-        detail: `Push volume is ${ratio.toFixed(2)}× pull volume. A 1.0–1.2 ratio keeps shoulders healthy.`,
+        detail: `Push volume is ${ratio.toFixed(2)}× pull volume. Our own guide is a 1.0–1.2 ratio for shoulder health.`,
         fix: "Add rows, pulldowns or face-pulls to bring pulling up to match pressing." });
       else if (ratio < 0.75) out.push({ kind: "balance", severity: "low", priority: pct((0.75 - ratio) / 0.75),
         title: "Pulling ahead of pushing",

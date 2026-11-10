@@ -163,7 +163,7 @@ const Glossary = (() => {
     {
       id: "pr", term: "PR", aliases: ["PR", "PRs", "records"],
       plain: "A personal record — your best ever on that exercise. The app watches for them and lists them, so progress you would not notice day to day still shows up.",
-      real: "A PR is a new best estimated-1RM (or best reps / time / distance, by the movement's mode) for an exercise, dated when it was set. The dashboard counts this month's PRs and all-time PRs separately.",
+      real: "A PR is a new best estimated-1RM (or best reps / time / distance, by the movement's mode) for an exercise, dated when it was set. The dashboard counts PRs from the last 28 days and all-time PRs separately.",
       source: "This app's own rule, read off the e1RM estimate (see that entry).",
     },
     {
