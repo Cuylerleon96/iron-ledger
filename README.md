@@ -90,7 +90,7 @@ deliberately conservative and labelled as an estimate.
 working-set volume.
 
 **Power** — olympic-lift standard score blended with explosive rep count and heavy
-low-rep (under 5) set count.
+low-rep (5 or fewer) set count.
 
 **Mobility** — minutes per week of logged stretching/mobility work.
 

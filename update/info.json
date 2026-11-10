@@ -1,13 +1,13 @@
 {
-  "versionCode": 110,
-  "versionName": "1.3.15",
+  "versionCode": 111,
+  "versionName": "1.3.16",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "f586c958353627a8c98f6f16969d2025ed67a0a14e56b99b825c6838ba9defc5",
-  "sizeBytes": 3957178,
+  "sha256": "08cc9dae6f4a71736937ef72b571ca49e549c7ee46e5a6778d20410ee827a2b5",
+  "sizeBytes": 3957727,
   "published": "2026-11-10",
   "notes": [
-    "Twenty new badges arrive, every one counting work already in your log: 10, 25 and 50 different exercises tried, your first mobility and cardio sessions, a session note, 10 different cardio activities, 10 different weekends, 12 different months, and 26 and 52 weeks at your target",
-    "They also cover your lifetime totals: 10 and 100 hours of training, 10,000 reps, ten million kg of tonnage, a set of 5 pull-ups, a bodyweight overhead press and a 3x bodyweight deadlift",
-    "Nothing new to enter - each is derived from the log you already have; a badge you already qualify for is paid in full on the first look, by tier exactly as before"
+    "Heavy low-rep sets now count 5 reps or fewer: a set of 5 at a real load counts toward Power, a set of 6 does not \u2014 the boundary is inclusive at 5, as you asked",
+    "The Power advice now reads 3-8 sets of 3-5 reps, so its recommended target sits inside the rule that scores it",
+    "Switching tabs keeps the active tab fully in view: the bar no longer leaves a tab label clipped at the screen edge"
   ]
 }

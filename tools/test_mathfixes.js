@@ -2851,7 +2851,15 @@ console.log("\n=== 56. weak points lead with the FURTHEST-OFF card (bucket, then
   const pick = (g) => e.LIB.find((y) => (y.g || []).includes(g));
   const A = pick("Chest"), B = pick("Back"), C = pick("Legs");
   truthy("the library still has Chest, Back and Legs exercises to build the fixture from", !!(A && B && C));
-  const sets = () => [{ w: 100, r: 5 }, { w: 100, r: 5 }];
+  const sets = () => [{ w: 100, r: 6 }, { w: 100, r: 6 }];
+  /* The reps here are DELIBERATELY outside the "heavy low-rep" rule (6 > 5).
+     The fixture used to use 5-rep sets, which was harmless while the rule was
+     exclusive at 5 — but the rule is now INCLUSIVE (a 5-rep set at load counts
+     toward Power), so 5-rep sets inflated this fixture's Power read to 62/100
+     and the "Power has room in your log" card vanished. That is correct
+     behaviour, and it broke this ORDERING test for an unrelated reason. The
+     fixture's job is a mixed list to order, so its reps now sit just past the
+     boundary and the Power card stays low, as intended. */
   const ws = [];
   for (let w = 0; w < 5; w++) ws.push({ id: "wp" + w, date: iso(w * 7 + 1), note: "",
     entries: [{ id: A.id, name: "x", mode: A.m, sets: sets() },
@@ -3067,16 +3075,29 @@ console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
   eq("a wood chop is not read as a jump (`hop` is word-bounded now)",
      e.E.powerScore(chop, e.E.windowWorkouts(chop, 28, 0)).plyoReps, 0);
 
-  /* (e2) THE HEAVY-SET REP THRESHOLD (v1.3.10): "heavy low-rep" is now UNDER 5
-         reps, so a 4-rep set counts and a 5-rep set does not. NEW assertion:
-         the pre-change suite pinned NO rep threshold here — (e) above covers
-         only the olympic double-count and the plyo matcher, and no other test
-         reads `heavySets`, so there was no 3-rep assertion to reproduce. This
-         pins the boundary itself, exclusive at 5. */
+  /* (e2) THE HEAVY-SET REP THRESHOLD — INCLUSIVE at 5 (was UNDER 5 / exclusive,
+         set in v1.3.10). "Heavy low-rep" is now a VALID set of 5 OR FEWER reps
+         at a real load: a 5-rep set COUNTS, a 6-rep set does not. the owner's
+         reason, in his words: "anything under 5 reps should be counted towards
+         power. Some people's low reps are 5, not 3" — and he now names 5 itself
+         as the number, so the boundary is inclusive. The v1.3.10 pin ("a 5-rep
+         set does NOT count") is the assertion this task CHANGED, re-expressed
+         against the new behaviour rather than dropped. The advice string is
+         pinned too, so its rep target can never drift OUTSIDE the rule that
+         scores it. */
   const heavySetsFor = (r) => { const st = base({ workouts: [wk(iso(1), [{ w: 100, r }])] });
     return e.E.powerScore(st, e.E.windowWorkouts(st, 28, 0)).heavySets; };
-  eq("a 4-rep set at a real load counts as heavy low-rep (under 5)", heavySetsFor(4), 1);
-  eq("a 5-rep set does NOT count (the threshold is exclusive at 5)", heavySetsFor(5), 0);
+  eq("a 4-rep set at a real load counts as heavy low-rep", heavySetsFor(4), 1);
+  eq("a 5-rep set at a real load COUNTS (the threshold is inclusive at 5)", heavySetsFor(5), 1);
+  eq("a 6-rep set does NOT count (5 is the top of the range)", heavySetsFor(6), 0);
+  eq("a loadless 5-rep set does NOT count (a real load is required)", heavySetsFor(0), 0);
+  /* The advice string must name a rep target INSIDE the rule that scores it:
+     parse the rep range out of the copy and assert its TOP is within <= 5. */
+  const powAdvice = e.E.FIXES.POW;
+  const repRange = powAdvice.match(/(\d+)\s*-\s*(\d+)\s*reps/);
+  truthy("the Power advice names a rep range", !!repRange);
+  eq("...whose TOP sits inside the heavy-set rule (<= 5)", Number(repRange[2]) <= 5, true);
+  eq("...whose range is well-formed (bottom <= top)", Number(repRange[1]) >= 1 && Number(repRange[1]) <= Number(repRange[2]), true);
 
   /* (f) MUSCLE MAPPING — a group a movement plainly trains, which was absent. */
   truthy("Thruster trains the Legs (the group was missing)", lib(650).g.includes("Legs"));

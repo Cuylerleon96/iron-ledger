@@ -56,7 +56,10 @@ console.log("\n=== attributes (the synthetic subject's Dashboard) ===");
      CLOSED yet, so goal progress adds nothing and the basis names only the body
      parts used — the deliberate design, a healthy body is never dragged down by
      an unmet goal. */
-  const want = { STR: 45, END: 25, POW: 8, MOB: 0, CON: 75, VIT: 100 };
+  const want = { STR: 45, END: 25, POW: 11, MOB: 0, CON: 75, VIT: 100 };
+  /* POW moved 8 -> 11 when the heavy low-rep rule became INCLUSIVE at 5: the
+     fixture's one 5-rep set at a load now counts toward Power (heavySets 0 -> 1).
+     That is the intended effect of the change, not drift. */
   for (const k of Object.keys(want)) eq(k, a[k].score, want[k]);
   console.log(`        STR basis: "${a.STR.detail.basis}"`);
 }

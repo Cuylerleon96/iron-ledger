@@ -1021,10 +1021,15 @@ const Engine = (() => {
           /jump|plyo|\bhops?\b|bound|throw|slam|explosive|kettlebell swing|push press|snap ?down/i.test(info.n)) {
         for (const x of en.sets || []) plyoReps += num(x.r) || 1;
       }
-      /* A "heavy low-rep" set is one logged for FEWER THAN 5 reps at a real
-         load (a set of 4 counts; 5 does not) — some people's low reps are 5,
-         not 3. This is a READ of the log only; it never changes what earns XP. */
-      for (const x of en.sets || []) if (num(x.r) > 0 && num(x.r) < 5 && num(x.w) > 0) heavySets++;
+      /* A "heavy low-rep" set is one logged for 5 OR FEWER reps at a real load
+         (a set of 5 COUNTS; 6 does not). the owner's reason, in his words:
+         "anything under 5 reps should be counted towards power. Some people's
+         low reps are 5, not 3" — and he has since named 5 itself as the number
+         he means, so the boundary is INCLUSIVE at 5. It was `<= 3`, then `< 5`;
+         the rest insight's `hardReps` (entryStats, below) has used `<= 5`
+         throughout, so this also brings the Power READ into line with it. This
+         is a READ of the log only; it never changes what earns XP. */
+      for (const x of en.sets || []) if (num(x.r) > 0 && num(x.r) <= 5 && num(x.w) > 0) heavySets++;
     }
     const parts = [];
     if (olyKey) parts.push(liftScore(olympic / bw, olyKey, sex));
@@ -2111,7 +2116,7 @@ const Engine = (() => {
   const FIXES = {
     STR: "Anchor one heavy compound per session in the 3–6 rep range and add load weekly.",
     END: "Add 20–30 min of easy cardio twice a week and finish a lift with one high-rep back-off set.",
-    POW: "Add jumps, throws or a power clean at the start of a session, 3–5 sets of 3.",
+    POW: "Add jumps, throws or a power clean at the start of a session. 3-8 sets of 3-5 reps.",
     MOB: "Book 10 minutes of stretching or mobility after each session.",
     CON: "Set a fixed weekly target and schedule the sessions — consistency is the multiplier.",
     VIT: "Log bodyweight weekly and hold a small, steady deficit or surplus toward your goal.",

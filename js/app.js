@@ -535,6 +535,22 @@
   function setView(v) {
     view = v;
     $$("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === v));
+    /* KEEP THE ACTIVE TAB VISIBLE. At phone width the seven tabs are ~474 px
+       inside a 412 px bar, so the bar scrolls horizontally — and a tab can be
+       ACTIVE while sitting off-screen. His screenshot showed DASHBOARD clipped
+       at the LEFT edge: the bar had been scrolled right to reach PROFILE, and
+       switching back to the first tab never brought it into view. Nudge the
+       bar's own scrollLeft so the active button is fully inside the box; this
+       touches the bar only, never the page's own scroll position. */
+    try {
+      const bar = $("#tabs");
+      const on = bar && bar.querySelector("button.on");
+      if (bar && on) {
+        const l = on.offsetLeft, w = on.offsetWidth;
+        if (l < bar.scrollLeft) bar.scrollLeft = l;
+        else if (l + w > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = l + w - bar.clientWidth;
+      }
+    } catch (e) { /* decorative; never let it break navigation */ }
     /* switch the header avatar's per-tab behaviour profile (js/hero.js). Guarded
        so a build without the slot simply does nothing. */
     try { if (typeof Hero !== "undefined" && Hero && typeof Hero.setTab === "function") Hero.setTab(v); }
@@ -996,7 +1012,7 @@
         + (x.avgRest
             ? ` Average rest ${fmtRest(x.avgRest)} and ${x.density}% work time over the last 28 days — short rest raises the endurance demand, which is why it counts here and nowhere else.`
             : " Log rest between sets to factor training density in; nothing else reads it.");
-      case "POW": return `${x.plyoReps} explosive reps logged · ${x.heavySets} heavy low-rep sets (under 5 reps).`;
+      case "POW": return `${x.plyoReps} explosive reps logged · ${x.heavySets} heavy low-rep sets (5 reps or fewer).`;
       case "MOB": return x.minPerWk > 0
         ? `${Math.round(x.minPerWk)} min/wk across ${x.sessions} ${pl(x.sessions, "session")} of mobility and control work — stretching, joint work, and stability or rotation drills. Loaded end-range work like a Romanian deadlift held at the bottom counts too, at a third of a stretch's rate, because it lengthens tissue under load. Loaded flexion like crunches is strength, not range, so it counts toward Core instead.`
         : "No mobility or control work logged. Stretching, foam rolling, joint rotations, or stability and rotation drills (plank, bird dog, Pallof press, Turkish get-up) all count. So does loaded end-range work — a Romanian deadlift held at the bottom, a paused hinge — at a third of a stretch's rate. Crunches and sit-ups do not — they train a short range under load, which is strength.";
