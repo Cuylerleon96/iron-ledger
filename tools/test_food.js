@@ -1007,6 +1007,58 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
   const capNo = await Bc.capability({ isSecureContext: true });
   ok('capability(): no detector -> unavailable', capNo.available === false && capNo.reason === 'no-detector');
 
+  /* ---- query-side alias map: sodas must be FINDABLE (data unchanged) ---------
+     The map is a search aid only; js/food.js renames no USDA row. These cases pin
+     (4) every target is a literal string that occurs in the shipped data, (a) a
+     drink surfaces for "soda", (b) a cola drink outranks the Coca-Cola COMPANY's
+     non-cola rows, and (c) an ordinary query takes the pre-alias path unchanged. */
+  const aliasTargets = [];
+  Object.keys(Food.SEARCH_ALIASES).forEach((k) =>
+    Food.SEARCH_ALIASES[k].forEach((t) => { if (aliasTargets.indexOf(t) < 0) aliasTargets.push(t); }));
+  console.log('alias keys:', Object.keys(Food.SEARCH_ALIASES).length,
+    'distinct targets:', aliasTargets.length);
+  aliasTargets.forEach((t) => {
+    const n = DB.foods.filter((f) => Food.norm(f.name).indexOf(t) >= 0).length;
+    ok('alias target "' + t + '" is a literal string in the dataset', n > 0, { matches: n });
+  });
+
+  /* (a) "soda" must surface a carbonated drink, not baking soda / saltines. */
+  const soda = Food.search(DB, 'soda', 25);
+  ok('(a) "soda" returns a carbonated drink in the top 5',
+    soda.slice(0, 5).some((f) => Food.norm(f.name).indexOf('carbonated') >= 0));
+  ok('(a) "soda" is not led by baking soda / saltines / irish soda bread',
+    !/baking soda|saltine|irish soda/i.test(soda[0].name), soda[0] && soda[0].name);
+
+  /* (b) a cola drink ranks above the Coca-Cola COMPANY's non-cola products. */
+  ['coke', 'coca-cola', 'coca cola'].forEach((q) => {
+    const r = Food.search(DB, q, 25);
+    const colaIdx = r.findIndex((f) => /carbonated, cola/.test(f.name.toLowerCase()));
+    const compIdx = r.findIndex((f) => /the coca-cola company/i.test(f.name));
+    ok('(b) "' + q + '" ranks a cola drink above the Coca-Cola company rows',
+      colaIdx >= 0 && (compIdx < 0 || colaIdx < compIdx), { colaIdx: colaIdx, compIdx: compIdx });
+  });
+
+  /* (c) an ordinary food query is UNCHANGED: a plain query takes the original
+     substring path, so its codes must equal an independently-written reference. */
+  const plainRef = (q, limit) => {
+    const cap = (limit == null) ? 20 : limit;
+    const hits = [];
+    DB.foods.forEach((f, i) => {
+      const name = Food.norm(f.name), at = name.indexOf(q);
+      if (at < 0) return;
+      hits.push({ f: f, prefix: at === 0 ? 0 : 1, at: at, len: name.length, idx: i });
+    });
+    hits.sort((a, b) => (a.prefix - b.prefix) || (a.at - b.at) || (a.len - b.len) ||
+      (a.f.code - b.f.code) || (a.idx - b.idx));
+    return Food.dedupe(hits.map((h) => h.f), Food.nameKey(q)).list.slice(0, cap);
+  };
+  ['banana', 'apple', 'chicken', 'chocolate', 'milk', 'zzz'].forEach((q) => {
+    const a = Food.search(DB, q, 25).map((x) => x.code);
+    const b = plainRef(q, 25).map((x) => x.code);
+    ok('(c) ordinary query "' + q + '" equals the pre-alias substring ranking',
+      Food.expandAlias(q).length === 0 && JSON.stringify(a) === JSON.stringify(b));
+  });
+
   console.log('\nfood: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

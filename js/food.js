@@ -295,34 +295,159 @@ const Food = (() => {
     return { list: out, removed: drop.size };
   };
 
+  /* ---------- QUERY-SIDE ALIAS MAP — a search AID, NOT a change to the food data ----------
+     the owner: "It seems sodas aren't in the nutrition list?" They ARE: data/food.json
+     ships 85 soda-type rows. They were simply UNFINDABLE, because the search is a
+     plain substring match with no synonym layer and USDA names a soda in its own
+     vocabulary ("Beverages, carbonated, cola, regular"). Measured on the old search:
+     "soda" led with LEAVENING AGENTS, BAKING SODA and saltines ("includes oyster,
+     soda, soup"); "coke" matched nothing at all; "cola" led with chocolate, because
+     the substring "cola" sits inside "choCOLAte".
+
+     THIS MAP IS APPLIED TO THE QUERY ONLY. The USDA names are the data citation and
+     are NEVER renamed — every value on the right is a literal string that already
+     occurs in data/food.json (asserted in tools/test_food.js). A query expands to its
+     targets, which are searched ALONGSIDE the literal query. The targets say nothing
+     about a food's merit — a soda is loggable and neutral like any other food. */
+  const SEARCH_ALIASES = {
+    "soda":       ["carbonated"],
+    "pop":        ["carbonated"],
+    "fizzy":      ["carbonated"],
+    "soft drink": ["carbonated"],
+    "coke":       ["carbonated, cola", "cola"],
+    "coca cola":  ["carbonated, cola", "cola"],
+    "coca-cola":  ["carbonated, cola", "cola"],
+    "cola":       ["carbonated, cola"],
+    "pepsi":      ["cola"],                       // the data has NO Pepsi cola row; PEPSI appears only as AQUAFINA water / PEPSICO Gatorade, so "pepsi" maps onto the cola category the data does name
+    "sprite":     ["carbonated, lemon-lime"],
+    "7up":        ["carbonated, lemon-lime"],
+    "dr pepper":  ["carbonated, pepper-type"],
+    "diet":       ["low calorie", "reduced sugar", "aspartame"],
+  };
+
+  /* Case- and punctuation-insensitive form, used ONLY to look a query up in the map
+     above — so "Coca-Cola" and "coca cola" reach the same key. */
+  const aliasKey = (s) => norm(s).replace(/[^a-z0-9]+/g, " ").trim();
+
+  const ALIAS_KEYS = Object.keys(SEARCH_ALIASES).map((k) => [aliasKey(k), SEARCH_ALIASES[k]]);
+
+  /* whole-word containment of `needle` in a space-normalised `hay`. */
+  const wordContains = (hay, needle) => {
+    let i = 0;
+    while ((i = hay.indexOf(needle, i)) >= 0) {
+      const before = i === 0 ? " " : hay[i - 1];
+      const after = (i + needle.length >= hay.length) ? " " : hay[i + needle.length];
+      if (before === " " && after === " ") return true;
+      i += 1;
+    }
+    return false;
+  };
+
+  /* the alias targets a query expands to, or [] when it names no alias. A multi-key
+     query ("diet coke") collects the targets of every key it contains. */
+  const expandAlias = (query) => {
+    const q = aliasKey(query);
+    if (!q) return [];
+    const out = [];
+    for (let i = 0; i < ALIAS_KEYS.length; i++) {
+      if (!wordContains(q, ALIAS_KEYS[i][0])) continue;
+      const targets = ALIAS_KEYS[i][1];
+      for (let j = 0; j < targets.length; j++) {
+        if (out.indexOf(targets[j]) < 0) out.push(targets[j]);
+      }
+    }
+    return out;
+  };
+
+  /* A hyphen counts as a word character so a target never matches inside a NEGATED or
+     hyphenated compound: "carbonated" must not match "non-carbonated" (bottled water),
+     and "cola" must not match "chocolate". */
+  const WORD_CH = /[a-z0-9-]/;
+  const wordAt = (hay, needle) => {
+    if (!needle) return -1;
+    let i = 0;
+    while ((i = hay.indexOf(needle, i)) >= 0) {
+      const before = i === 0 ? "" : hay[i - 1];
+      const after = (i + needle.length >= hay.length) ? "" : hay[i + needle.length];
+      if (!WORD_CH.test(before) && !WORD_CH.test(after)) return i;
+      i += 1;
+    }
+    return -1;
+  };
+
   /* ---------- search ----------
      Ranked matches. A prefix match outranks a substring match; ties break on
      match position, then shorter name, then code, then original order — fully
      deterministic and stable. The ranked list is then TWIN-COLLAPSED (see above)
      and the cap applied, so a duplicate pair costs the list one row, not two.
      Records that absorbed a twin come back as shallow copies carrying
-     `.alternates`; every other row is the dataset record itself. */
+     `.alternates`; every other row is the dataset record itself.
+
+     ALIAS-AWARE RANKING (only when the query names an alias — an ordinary query takes
+     the original substring path, unchanged). For an alias query, a row is placed in
+     one of three groups:
+       0 — matched an alias TARGET: the vocabulary the data actually uses, so the
+           drink the user means ranks here, above the literal-word collisions;
+       1 — matched the literal query as a whole word (baking soda, saltines);
+       2 — matched the literal query only as a substring (chocolate for "cola").
+     Within group 0, a row matching MORE of a multi-key query's targets ranks higher,
+     so "diet coke" surfaces a diet cola before an arbitrary low-calorie food. The
+     chosen order is the minimal expansion that puts the drink on top while leaving
+     every literal match reachable. */
   const search = (db, query, limit) => {
     const q = norm(query);
     if (!q) return [];
     const cap = (limit == null || limit < 0) ? 20 : limit;
     if (cap === 0) return [];
-    const hits = [];
     const foods = foodsOf(db);
+    const targets = expandAlias(query);
+
+    /* No alias names this query: the original substring ranking, unchanged. */
+    if (targets.length === 0) {
+      const hits = [];
+      for (let i = 0; i < foods.length; i++) {
+        const name = norm(foods[i].name);
+        const at = name.indexOf(q);
+        if (at < 0) continue;
+        hits.push({ food: foods[i], prefix: at === 0 ? 0 : 1, at: at, len: name.length, idx: i });
+      }
+      hits.sort((a, b) =>
+        (a.prefix - b.prefix) ||          // prefix matches first
+        (a.at - b.at) ||                  // earlier match position first
+        (a.len - b.len) ||                // shorter name first
+        (a.food.code - b.food.code) ||    // then by code
+        (a.idx - b.idx));                 // then original order (stable)
+      return dedupe(hits.map((h) => h.food), nameKey(query)).list.slice(0, cap);
+    }
+
+    /* Alias names this query: expand it and rank by the groups described above. */
+    const hits = [];
     for (let i = 0; i < foods.length; i++) {
       const name = norm(foods[i].name);
-      const at = name.indexOf(q);
-      if (at < 0) continue;
-      hits.push({ food: foods[i], prefix: at === 0 ? 0 : 1, at: at, len: name.length, idx: i });
+      let tScore = 0, tAt = -1;
+      for (let k = 0; k < targets.length; k++) {
+        const pos = wordAt(name, targets[k]);
+        if (pos >= 0) { tScore++; if (tAt < 0 || pos < tAt) tAt = pos; }
+      }
+      const rawWord = wordAt(name, q);
+      const rawAt = name.indexOf(q);
+      let group, score, at;
+      if (tScore > 0) { group = 0; score = tScore; at = tAt; }
+      else if (rawWord >= 0) { group = 1; score = 0; at = rawWord; }
+      else if (rawAt >= 0) { group = 2; score = 0; at = rawAt; }
+      else continue;
+      hits.push({ food: foods[i], group: group, score: score,
+        prefix: at === 0 ? 0 : 1, at: at, len: name.length, idx: i });
     }
     hits.sort((a, b) =>
-      (a.prefix - b.prefix) ||          // prefix matches first
-      (a.at - b.at) ||                  // earlier match position first
-      (a.len - b.len) ||                // shorter name first
-      (a.food.code - b.food.code) ||    // then by code
-      (a.idx - b.idx));                 // then original order (stable)
-    const ranked = hits.map((h) => h.food);
-    return dedupe(ranked, nameKey(query)).list.slice(0, cap);
+      (a.group - b.group) ||            // target matches first, then literal word, then substring
+      (b.score - a.score) ||            // ...and within targets, more matched targets first
+      (a.prefix - b.prefix) ||
+      (a.at - b.at) ||
+      (a.len - b.len) ||
+      (a.food.code - b.food.code) ||
+      (a.idx - b.idx));
+    return dedupe(hits.map((h) => h.food), nameKey(query)).list.slice(0, cap);
   };
 
   /* ---------- measures -> grams ----------
@@ -468,6 +593,8 @@ const Food = (() => {
     lookupBarcode, BARCODE_LOOKUP_IMPLEMENTED,
     /* internals exposed for callers/tests */
     foodsOf, norm, round2,
+    /* query-side alias map (search aid, not data) */
+    SEARCH_ALIASES, expandAlias, aliasKey, wordAt,
     /* duplicate collapse (FNDDS vs SR Legacy) */
     dedupe, nameKey, exactKey, twinKey, isTwin, measureScore, KCAL_TOL_REL, KCAL_TOL_ABS, OPTIONAL_TAIL,
     nutrientPer100, macrosAgree, MACRO_KEYS, MACRO_TOL_REL, MACRO_TOL_ABS,
