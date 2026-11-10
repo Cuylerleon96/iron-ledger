@@ -12,6 +12,20 @@
    but must be a decision, not an accident. The semantic Vitality pins (healthy
    in-band -> high, out-of-band -> low, a goal can only add) live in
    test_mathfixes.js, not here. */
+/* CLOCK PINNED to 2026-11-12T12:00:00 local (PIN_MS). The engine windows sessions
+   and divides weekly rates by the wall clock, so every windowed number in this
+   suite drifted a little each real day; pinning ONE instant makes it reproducible
+   forever. Same pinned instant as tools/test_mathfixes.js. */
+const PIN_ISO = "2026-11-12T12:00:00";
+const PIN_MS = new Date(PIN_ISO).getTime();
+const RealDate = Date;
+function PinnedDate(...a) { return a.length === 0 ? new RealDate(PIN_MS) : new RealDate(...a); }
+PinnedDate.now = () => PIN_MS;
+PinnedDate.parse = RealDate.parse;
+PinnedDate.UTC = RealDate.UTC;
+PinnedDate.prototype = RealDate.prototype;
+Date = PinnedDate;   // no-arg new Date()/Date.now() -> the pin, everywhere
+
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const B = path.join(__dirname, "..");
 const SRC = ["js/data.js", "js/engine.js", "js/store.js"]
@@ -33,6 +47,8 @@ const s = { console: { log() {}, warn() {}, error() {} }, Date, Math, JSON, Obje
 s.globalThis = s; vm.createContext(s);
 vm.runInContext(SRC + "\n;globalThis.__X={Engine,Store,EXERCISE_LIB};", s, { filename: "b.js" });
 const E = s.__X.Engine;
+eq("the suite clock is pinned (Date.now() inside the sandbox === PIN_MS)",
+  vm.runInContext("Date.now()", s), PIN_MS);
 const LB = 2.2046226;
 const st = JSON.parse(fs.readFileSync(path.join(B, "tools/fixture-state.json"), "utf8"));
 
@@ -56,7 +72,11 @@ console.log("\n=== attributes (the synthetic subject's Dashboard) ===");
      CLOSED yet, so goal progress adds nothing and the basis names only the body
      parts used — the deliberate design, a healthy body is never dragged down by
      an unmet goal. */
-  const want = { STR: 45, END: 25, POW: 11, MOB: 0, CON: 75, VIT: 100 };
+  /* END and CON drop as the wall clock moves past the fixture's dated sessions,
+     because weekly rates divide by activeWeeks (the weeks since the FIRST
+     session, capped at 4). At the pinned clock the fixture is 6 days old, so
+     activeWeeks is 1 and both read at their un-divided value. */
+  const want = { STR: 45, END: 28, POW: 11, MOB: 0, CON: 91, VIT: 100 };
   /* POW moved 8 -> 11 when the heavy low-rep rule became INCLUSIVE at 5: the
      fixture's one 5-rep set at a load now counts toward Power (heavySets 0 -> 1).
      That is the intended effect of the change, not drift. */
@@ -67,7 +87,9 @@ console.log("\n=== attributes (the synthetic subject's Dashboard) ===");
 console.log("\n=== muscle groups, raw sets/week (the Muscle balance screen) ===");
 {
   const mg = E.muscleGroups(st, 28);
-  const want = { Chest: 0, Back: 0, Shoulders: 2, Arms: 1, Legs: 3, Calves: 0, Core: 9.5 };
+  /* sets/wk divides the raw sets by activeWeeks (1 at the pinned clock — the
+     fixture is 6 days old), so Core's 17.5 raw sets read 17.5/wk, not 9.5. */
+  const want = { Chest: 0, Back: 0, Shoulders: 2, Arms: 1, Legs: 3, Calves: 0, Core: 17.5 };
   for (const g of E.GROUP_ORDER) eq(`${g} sets/wk`, mg[g].setsPerWk, want[g]);
 }
 
@@ -87,7 +109,9 @@ console.log("\n=== summary + weak points ===");
   eq("...that is the whole difference on the total", sm.xp - 361, E.badgeXp(st));
   eq("title", sm.title, "Rookie");
   eq("density %", sm.density, 36);
-  eq("streak days", sm.streak.days, 1);
+  /* The current streak counts days ending today or yesterday; at the pinned
+     clock the last session (2026-11-10) is two days back, so it reads 0. */
+  eq("streak days", sm.streak.days, 0);
   eq("PRs in the last 28 days", sm.prs, 0);
   const wp = E.weakPoints(st, 28);
   eq("weak point count", wp.length, 7);

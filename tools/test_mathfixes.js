@@ -4,6 +4,20 @@
    Each case exists because the wrong answer was actually observed first. The
    comment on each says what it used to do, so a future reader can tell an
    intentional change from a regression. */
+/* CLOCK PINNED to 2026-11-12T12:00:00 local (PIN_MS) — the SAME instant as
+   tools/test_fixture.js. The engine (and this file's own iso()/date helpers) read
+   the wall clock, so date-windowed results drifted each real day; one pin makes
+   them reproducible forever. Rebound on the global so every route is pinned. */
+const PIN_ISO = "2026-11-12T12:00:00";
+const PIN_MS = new Date(PIN_ISO).getTime();
+const RealDate = Date;
+function PinnedDate(...a) { return a.length === 0 ? new RealDate(PIN_MS) : new RealDate(...a); }
+PinnedDate.now = () => PIN_MS;
+PinnedDate.parse = RealDate.parse;
+PinnedDate.UTC = RealDate.UTC;
+PinnedDate.prototype = RealDate.prototype;
+Date = PinnedDate;   // no-arg new Date()/Date.now() -> the pin, everywhere
+
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const B = path.join(__dirname, "..");
 const SRC = ["js/data.js", "js/engine.js", "js/store.js"]
@@ -33,7 +47,7 @@ function env() {
   };
   s.globalThis = s; vm.createContext(s);
   vm.runInContext(SRC + "\n;globalThis.__X={Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
-  return { E: s.__X.Engine, S: s.__X.Store, LIB: s.__X.EXERCISE_LIB };
+  return { E: s.__X.Engine, S: s.__X.Store, LIB: s.__X.EXERCISE_LIB, sandbox: s };
 }
 
 /* Loads the REAL app.js behind a stub DOM with a capturing Chart, so the tests
@@ -87,6 +101,15 @@ const base = (over = {}) => Object.assign({
 }, over);
 const wk = (date, sets, id = 73, name = "Bench Press", mode = "weight_reps") =>
   ({ id: "w" + date + id, date, note: "", entries: [{ id, name, mode, sets }] });
+
+console.log("\n=== 0. the suite clock is pinned ===");
+{
+  const e = env();
+  eq("Date.now() inside the sandbox equals the pinned instant",
+    vm.runInContext("Date.now()", e.sandbox), PIN_MS);
+  eq("...and a no-arg new Date() inside the sandbox sits at the pin",
+    vm.runInContext("new Date().getTime()", e.sandbox), PIN_MS);
+}
 
 console.log("\n=== 1. windows must not overlap ===");
 {
