@@ -509,6 +509,77 @@ console.log("=== recovery suggestion (where to start) ===");
   e.E.GROUP_ORDER.forEach((g) => { allToday[g] = { days: 0, fresh: 0, last: iso(0) }; });
   truthy("trained-today everywhere says so rather than pointing at nothing",
     /trained recently/.test(e.E.recoveryHint(e.S.state, allToday).text));
+
+  /* ---- the SAME state object feeds BOTH the chips and the hint ---- */
+  /* One state, one freshness read: whatever the chips show, the hint must rank
+     off those exact numbers. This is the reproduction of the reported
+     discrepancy (a chip row reading CHEST 10D while the hint omitted Chest) —
+     with ONE state it cannot happen, because app.js hands the hint the same
+     `fresh` object the chips render. */
+  const GROUP_EX = { Chest: [1228, "Dumbbell close grip bench press"], Back: [1470, "1-Arm Half-Kneeling Lat Pulldown"],
+    Shoulders: [687, "Overhead Press"], Arms: [439, "Overhand Cable Curl"], Legs: [1700, "Barbell Romanian Deadlift (RDL)"],
+    Calves: [146, "Calf Press Using Leg Press Machine"], Core: [1924, "3008 Abdominal Crunch"] };
+  const stateWithDays = (days) => {
+    const S = JSON.parse(JSON.stringify(e.S.state));
+    S.workouts = [];
+    e.E.GROUP_ORDER.forEach((g) => {
+      if (days[g] == null) return;
+      const [id, name] = GROUP_EX[g];
+      S.workouts.push({ id: "p" + g, date: iso(days[g]), note: "",
+        entries: [{ id, name, g: [g], mode: "weight_reps", sets: [{ w: 60, r: 8 }] }] });
+    });
+    return S;
+  };
+  const reportState = stateWithDays({ Chest: 10, Back: 6, Legs: 4, Calves: 4, Core: 4, Shoulders: 1, Arms: 1 });
+  {
+    const fresh = e.E.freshness(reportState);
+    const chip = e.E.GROUP_ORDER.map((g) => (fresh[g].days == null ? "no data" : Math.round(fresh[g].days) + "D")).join(" ");
+    const h = e.E.recoveryHint(reportState, fresh);
+    console.log(`        chips: ${chip}`);
+    console.log(`        hint : ${h.text}`);
+    eq("the longest-rested group leads the hint beside its own chip", h.groups[0], "Chest");
+    eq("the hint names exactly the top set the chips show", h.groups, ["Chest", "Back", "Legs", "Calves", "Core"]);
+    eq("...carrying the chips' own day numbers", h.days, [10, 6, 4, 4, 4]);
+    /* the render path itself: the card reads freshness ONCE and hands that very
+       object to the hint, so the two cannot be built from different states. */
+    const appSrc = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
+    truthy("the card reads freshness ONCE and hands that same object to the hint",
+      /const fresh = Engine\.freshness\(S\);/.test(appSrc) && /Engine\.recoveryHint\(S, fresh\)/.test(appSrc));
+  }
+
+  /* ---- PROPERTY (not a snapshot): the hint is a genuine TOP SET ---- */
+  /* Every group NAMED has days >= every group with logged history that is NOT
+     named — so "rested longest" is literally true beside the chip numbers. */
+  const topSetHolds = (hint, fresh) => {
+    const named = new Set(hint.groups);
+    const others = e.E.GROUP_ORDER.filter((g) => fresh[g] && fresh[g].days != null && !named.has(g));
+    if (!hint.groups.length) return others.every((g) => fresh[g].days < 2);
+    const minNamed = Math.min(...hint.groups.map((g) => fresh[g].days));
+    return others.every((g) => fresh[g].days <= minNamed);
+  };
+  {
+    let checked = 0, broke = 0;
+    let seed = 1234567;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const DAYS = [0, 1, 2, 2, 3, 4, 6, 10, null];
+    for (let t = 0; t < 3000; t++) {
+      const fresh = {};
+      e.E.GROUP_ORDER.forEach((g) => {
+        const d = DAYS[Math.floor(rnd() * DAYS.length)];
+        fresh[g] = d == null ? { fresh: null, days: null, last: null } : { days: d, fresh: 0, last: iso(d) };
+      });
+      const h = e.E.recoveryHint(e.S.state, fresh);
+      checked++;
+      if (!topSetHolds(h, fresh)) { broke++; if (broke === 1) console.log("        violating fresh:", JSON.stringify(fresh), "->", h.text); }
+    }
+    eq(`the top-set property holds over ${checked} states`, broke, 0);
+    /* the checker must DISCRIMINATE: the reported render's behaviour — naming the
+       rested groups but DROPPING the longest-rested one — violates it. */
+    const fresh = e.E.freshness(reportState);
+    const old = { groups: ["Back", "Legs", "Calves", "Core"], days: [6, 4, 4, 4] };
+    eq("the checker FAILS the reported (Chest-dropped) hint", topSetHolds(old, fresh), false);
+    eq("...and PASSES the shipped hint on the same state", topSetHolds(e.E.recoveryHint(reportState, fresh), fresh), true);
+  }
 }
 
 console.log("=== the 'Load my 7 Nov session' seed button is reachable ===");

@@ -2888,7 +2888,7 @@ console.log("\n=== 56. weak points lead with the FURTHEST-OFF card (bucket, then
   const attrLabels = e.E.ATTRIBUTES.map((a) => a.label);
   const gen = { volume: 0, gap: 1, balance: 2, stagnant: 3, density: 4, attribute: 5 };
   const genIdx = (w) => w.kind === "attribute"
-    ? attrLabels.findIndex((lab) => w.title === `${lab} has the most room in your log`) : gen[w.kind];
+    ? attrLabels.findIndex((lab) => w.title === `${lab} has room in your log`) : gen[w.kind];
   const oldOrder = wp.slice().sort((a, b) => (rank[a.severity] - rank[b.severity]) || (genIdx(a) - genIdx(b)));
   const titles = (l) => l.map((w) => w.title).sort().join(" | ");
   eq("the OLD bucket-only order violates the property (the test really discriminates)", monotone(oldOrder), false);
@@ -2951,19 +2951,42 @@ console.log("\n=== 57. mobility: honest credit, honest bands, honest copy ===");
   truthy("a token 2 min/wk still reads low",
     mob(C([wk(iso(1), [{ t: 120 }], "mStretch", "Hip Flexor Stretch", "time")])).score <= 20);
 
-  /* (f) the copy describes the LOG, never the body */
+  /* (f) the copy describes the LOG, never the body — and never claims a
+         superlative it cannot hold on every card */
   const srcE = fs.readFileSync(path.join(B, "js", "engine.js"), "utf8");
   const srcA = fs.readFileSync(path.join(B, "js", "app.js"), "utf8");
   const srcG = fs.readFileSync(path.join(B, "js", "glossary.js"), "utf8");
   truthy("the old body-claim title is gone", !/is where you can gain the most/.test(srcE + srcA + srcG));
-  truthy("the weak-point title now names the log", /has the most room in your log/.test(srcE));
+  truthy("the weak-point title now names the log", /has room in your log/.test(srcE));
   const attrCards = e.E.weakPoints(
     C([wk(iso(1), [{ t: 120 }], "mStretch", "Hip Flexor Stretch", "time")]), 28)
     .filter((w) => w.kind === "attribute");
   truthy("...and it renders on a real card",
-    attrCards.length >= 1 && attrCards.every((w) => /has the most room in your log$/.test(w.title)));
+    attrCards.length >= 1 && attrCards.every((w) => /has room in your log$/.test(w.title)));
+  /* SEVERAL low attributes: the card is emitted for EACH, so a superlative in
+     the title is false on all but one ("the most room" cannot be true of four
+     attributes). Every title/detail must claim only what its OWN score supports. */
+  const multi = e.E.weakPoints(
+    C([wk(iso(1), [{ w: 40, r: 8 }], 9, "2 Handed Kettlebell Swing", "weight_reps")]), 28)
+    .filter((w) => w.kind === "attribute");
+  truthy(`several low attributes each get their own card (${multi.length})`, multi.length >= 2);
+  eq("no attribute card claims a superlative ('the most' / 'the thinnest')",
+    multi.filter((w) => /the most|the thinnest|the least/i.test(w.title + " " + w.detail)), []);
+  eq("no attribute card claims a fact about the BODY",
+    multi.filter((w) => /you can gain|your body|you are |you're /i.test(w.title + " " + w.detail)), []);
   truthy("the mobility detail line explains the loaded-end-range rule",
     /Romanian deadlift held at the bottom/.test(srcA));
+
+  /* (g) every badge desc states the SAME window and scope its `test` reads —
+         a desc that says "in a week" while the test reads a 28-day window is a
+         claim the number beside it does not support. */
+  const ACH = e.E.achievements(base({ workouts: [wk(iso(1), [{ w: 60, r: 8 }])] }));
+  const descOf = (id) => ((ACH.find((a) => a.id === id) || {}).desc || "");
+  truthy("Well-Rounded's window matches its 28-day test (4 weeks, not a week)",
+    /4 weeks/.test(descOf("variety")) && !/in a week/.test(descOf("variety")));
+  truthy("Balanced no longer claims EVERY group (its test needs 5+ groups)",
+    !/every muscle group/i.test(descOf("balanced")) && /5\+/.test(descOf("balanced")));
+  truthy("Head to Toe's window is the same 4 weeks", /in 4 weeks/.test(descOf("everygroup")));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

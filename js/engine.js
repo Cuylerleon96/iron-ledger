@@ -2007,14 +2007,19 @@ const Engine = (() => {
     }
 
     // 7. low attributes
+    /* COPY-TRUTH: this loop emits ONE CARD PER low attribute, so a SUPERLATIVE
+       in the title is printed on several cards at once and is false on all but
+       one — "the most room" cannot be true of four attributes. Each card claims
+       only what its OWN score supports, and the words describe the LOG, never
+       the body ("has room in your log", not "you can gain the most"). */
     for (const a of ATTRIBUTES) {
       if (attrs[a.key].score < 30 && attrs[a.key].score > 0)
         out.push({ kind: "attribute", severity: "low",
           /* how far below 30 the score is, as a share of 30: the LOWEST score is
              the biggest gap, so it ranks first. */
           priority: pct((30 - attrs[a.key].score) / 30),
-          title: `${a.label} has the most room in your log`,
-          detail: `Score ${attrs[a.key].score}/100 (${attrs[a.key].tier}) — the thinnest part of what you have logged.`,
+          title: `${a.label} has room in your log`,
+          detail: `Score ${attrs[a.key].score}/100 (${attrs[a.key].tier}) — a low read, and an easy place to add.`,
           fix: FIXES[a.key] });
     }
     /* Bucket first (high -> med -> low), then the biggest gap first, and only
@@ -2633,6 +2638,17 @@ const Engine = (() => {
   const BIG_SESSION_MIN = 18;    // effort-weighted sets in one session
   const BIG_SESSION_GROUPS = 3;  // ...spread over at least this many groups
 
+  /* COPY-TRUTH RULE for every user-facing string that sits beside numbers:
+       - a score may describe the LOG, never the BODY — say what was measured,
+         not what the user is;
+       - every encouragement must be TRUE for the numbers displayed beside it;
+       - where a number is this app's own judgement rather than a published
+         standard, the glossary entry SAYS SO (see the recovery-window entry);
+       - tone: plain, encouraging, no shaming, no jargon, no red for ordinary
+         behaviour.
+     Each badge desc must state the SAME window and scope its `test` uses — a
+     desc that says "in a week" while the test reads a 28-day window is a claim
+     the number does not support. */
   const ACHIEVEMENTS = [
     { id: "first",     name: "First Blood",      desc: "Log your first workout",            tier: "major", test: (c) => c.sessions >= 1 },
     { id: "w10",       name: "Getting Serious",  desc: "10 workouts logged",                tier: "minor", test: (c) => c.sessions >= 10 },
@@ -2666,8 +2682,8 @@ const Engine = (() => {
     { id: "cardio100", name: "Endurance Athlete",desc: "100 km of logged cardio",           tier: "major", test: (c) => c.cardioKm >= 100 },
     /* was 20+ RAW sets (junk volume) -> a hard, well-spread, in-limits session */
     { id: "bigset",    name: "Big Session",      desc: "A hard session across several muscle groups, kept within your volume limits", tier: "major", test: (c) => c.bigSession >= BIG_SESSION_MIN },
-    { id: "balanced",  name: "Balanced",         desc: "Every muscle group scoring 60+",    tier: "major", test: (c) => c.balanced },
-    { id: "variety",   name: "Well-Rounded",     desc: "Train 6+ muscle groups in a week",  tier: "minor", test: (c) => c.groupsWeek >= 6 },
+    { id: "balanced",  name: "Balanced",         desc: "5+ muscle groups, each scoring 60+",  tier: "major", test: (c) => c.balanced },
+    { id: "variety",   name: "Well-Rounded",     desc: "Train 6+ muscle groups in 4 weeks",  tier: "minor", test: (c) => c.groupsWeek >= 6 },
     { id: "everygroup",name: "Head to Toe",      desc: "Train all 7 muscle groups in 4 weeks", tier: "major", test: (c) => c.groupsWeek >= 7 },
     { id: "weighin",   name: "On the Record",    desc: "Log 10 bodyweight check-ins",       tier: "minor", test: (c) => c.weighins >= 10 },
     { id: "firstweigh",name: "Baseline",         desc: "Log your first bodyweight check-in",tier: "minor", test: (c) => c.weighins >= 1 },
