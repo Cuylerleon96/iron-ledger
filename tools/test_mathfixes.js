@@ -2834,4 +2834,76 @@ console.log("\n=== 55. the HERO tab: roster, equip, colourway (pure view-model) 
   eq("...and reports nothing once every unlocked id is recorded", HT.newlyUnlocked(items, ["slime", "natural", "ember"]), []);
 }
 
+console.log("\n=== 56. weak points lead with the FURTHEST-OFF card (bucket, then priority) ===");
+{
+  /* the owner's question — "can we be sure these are arranged by priority?" — the
+     answer was NO. The list was bucketed high/med/low and, INSIDE a bucket, kept
+     the fixed generation sequence (lagging muscles -> untrained -> push/pull ->
+     quads/hams -> plateaus -> rest timing -> low attributes). The tie was
+     invisible AND backwards: his screenshot showed Power 11/100 listed ABOVE
+     Mobility 7/100 — both `low`, so the order came from the ATTRIBUTES array
+     (STR, END, POW, MOB, CON, VIT), not from the size of the gap.
+     Every card now carries a numeric `priority` — how far off it is, on one
+     shared 0-100 "gap" scale — and the list is ordered bucket first, then
+     priority DESCENDING, with the generation sequence kept only as the final
+     tie-break so the order stays deterministic. */
+  const e = env();
+  const pick = (g) => e.LIB.find((y) => (y.g || []).includes(g));
+  const A = pick("Chest"), B = pick("Back"), C = pick("Legs");
+  truthy("the library still has Chest, Back and Legs exercises to build the fixture from", !!(A && B && C));
+  const sets = () => [{ w: 100, r: 5 }, { w: 100, r: 5 }];
+  const ws = [];
+  for (let w = 0; w < 5; w++) ws.push({ id: "wp" + w, date: iso(w * 7 + 1), note: "",
+    entries: [{ id: A.id, name: "x", mode: A.m, sets: sets() },
+              { id: B.id, name: "x", mode: B.m, sets: sets() },
+              { id: C.id, name: "x", mode: C.m, sets: sets() }] });
+  const st = base({ workouts: ws });
+  const wp = e.E.weakPoints(st, 28);
+
+  const rank = { high: 0, med: 1, low: 2 };
+  /* THE PROPERTY: reading down the list, (bucket, -priority) never decreases —
+     no lower-priority card may sit above a higher-priority one in the same
+     bucket. This is an assertion over the returned list, not a snapshot. */
+  const monotone = (list) => list.every((w, i) => i === 0
+    || rank[list[i - 1].severity] < rank[w.severity]
+    || (rank[list[i - 1].severity] === rank[w.severity] && list[i - 1].priority >= w.priority));
+
+  truthy("the fixture really produces a mixed list to order", wp.length >= 4);
+  eq("every card carries a finite numeric priority",
+    wp.every((w) => typeof w.priority === "number" && isFinite(w.priority)), true);
+  eq("the returned list is non-decreasing in (bucket, -priority)", monotone(wp), true);
+
+  /* the checker DISCRIMINATES: swap two same-bucket cards with different
+     priorities and it must FAIL. */
+  const lowIdx = wp.map((w, i) => [w, i]).filter(([w]) => w.severity === "low");
+  const hi = lowIdx[0], lo = lowIdx.find(([w]) => w.priority < lowIdx[0][0].priority);
+  truthy("the low bucket holds two cards with different priorities to swap", !!(hi && lo));
+  const swapped = wp.slice();
+  [swapped[hi[1]], swapped[lo[1]]] = [swapped[lo[1]], swapped[hi[1]]];
+  eq("...and it FAILS a lower-priority card swapped above a higher-priority one in the same bucket",
+    monotone(swapped), false);
+
+  /* The OLD order (bucket only, generation inside) reconstructed, which must
+     VIOLATE the property — that is the defect this task fixes. */
+  const attrLabels = e.E.ATTRIBUTES.map((a) => a.label);
+  const gen = { volume: 0, gap: 1, balance: 2, stagnant: 3, density: 4, attribute: 5 };
+  const genIdx = (w) => w.kind === "attribute"
+    ? attrLabels.findIndex((lab) => w.title === `${lab} is where you can gain the most`) : gen[w.kind];
+  const oldOrder = wp.slice().sort((a, b) => (rank[a.severity] - rank[b.severity]) || (genIdx(a) - genIdx(b)));
+  const titles = (l) => l.map((w) => w.title).sort().join(" | ");
+  eq("the OLD bucket-only order violates the property (the test really discriminates)", monotone(oldOrder), false);
+  eq("the fix changed the ORDER only — the same cards, with the same copy", titles(oldOrder) === titles(wp), true);
+  eq("...and the visible order really did change",
+    oldOrder.map((w) => w.title).join(" | ") !== wp.map((w) => w.title).join(" | "), true);
+
+  /* the specific reported flaw, on the attributes */
+  const newAttrs = wp.filter((w) => w.kind === "attribute");
+  const oldAttrs = oldOrder.filter((w) => w.kind === "attribute");
+  truthy("the fixture has at least two low attributes", newAttrs.length >= 2);
+  eq("the attributes now lead with the LOWEST score (the biggest gap)",
+    newAttrs.map((w) => w.priority), newAttrs.map((w) => w.priority).slice().sort((a, b) => b - a));
+  eq("the OLD order listed a bigger attribute gap BELOW a smaller one (his Power-above-Mobility list)",
+    oldAttrs.some((w, i) => i > 0 && oldAttrs[i - 1].priority < w.priority), true);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);

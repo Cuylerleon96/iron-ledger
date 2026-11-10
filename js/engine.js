@@ -1723,6 +1723,18 @@ const Engine = (() => {
     const vals = trained.map((g) => mg[g].score);
     const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
 
+    /* ORDERING. Every card carries a numeric `priority` = HOW FAR OFF it is, on
+       one shared 0-100 "gap" scale (0 = at its own threshold, 100 = as far off as
+       that check can see), normalised per kind so the numbers are comparable
+       inside a bucket. The list is then ordered BUCKET first, then priority
+       DESCENDING, so the worst-off card in each bucket leads. Before this the only
+       order inside a bucket was the fixed generation sequence below, so a 7/100
+       attribute could sit above an 11/100 one — a bigger gap shown second. */
+    const pct = (x) => Math.max(0, Math.min(100, Math.round(x * 100)));
+    /* A low fixed value for the two cards that carry no measurable gap: they are
+       judgement calls, so they sit at the bottom of their bucket. */
+    const JUDGEMENT = 5;
+
     // 1. lagging muscle groups
     /* Groups below their MEV are lagging by the same bands the card prints next to
        them. Without this, Core showed "room to grow" in the status list while the
@@ -1733,7 +1745,12 @@ const Engine = (() => {
       .sort((a, b) => mg[a].score - mg[b].score);
     for (const g of lag.slice(0, 3)) {
       const need = Math.max(0, Math.ceil(mg[g].landmarks.mev - mg[g].setsPerWk));
+      /* the deficit as a share of the group's own MEV: half the target missing
+         (50) outranks a tenth missing (10). */
+      const gap = mg[g].landmarks.mev > 0
+        ? pct((mg[g].landmarks.mev - mg[g].setsPerWk) / mg[g].landmarks.mev) : 0;
       out.push({ kind: "volume", severity: mg[g].score < 40 ? "high" : "med", group: g,
+        priority: gap,
         title: `${g} has room to grow`, detail: `${mg[g].setsPerWk} sets/wk vs a ${mg[g].landmarks.mev}–${mg[g].landmarks.mav} target.`,
         fix: need > 0
           ? `Add about ${need} ${need === 1 ? "set" : "sets"}/week of ${g.toLowerCase()} work.`
@@ -1742,6 +1759,7 @@ const Engine = (() => {
     // 2. not trained at all
     const untrained = GROUP_ORDER.filter((g) => mg[g].setsPerWk <= 0 && g !== "Calves");
     if (untrained.length) out.push({ kind: "gap", severity: untrained.length > 2 ? "high" : "med",
+      priority: pct(untrained.length / GROUP_ORDER.length),
       title: `${untrained.join(", ")} not trained yet`, detail: "Nothing logged for these groups in the last 4 weeks — an easy place to start.",
       fix: `Add a compound movement for ${untrained.length === 1 ? "it" : "each"}: ${untrained.map((g) => suggestFor(g)).join("; ")}.` });
 
@@ -1750,10 +1768,12 @@ const Engine = (() => {
     const pull = mg.Back.volume + mg.Arms.volume * 0.5;
     if (push > 0 && pull > 0) {
       const ratio = push / pull;
-      if (ratio > 1.35) out.push({ kind: "balance", severity: "med", title: "Pushing ahead of pulling",
+      if (ratio > 1.35) out.push({ kind: "balance", severity: "med", priority: pct((ratio - 1.35) / 1.35),
+        title: "Pushing ahead of pulling",
         detail: `Push volume is ${ratio.toFixed(2)}× pull volume. A 1.0–1.2 ratio keeps shoulders healthy.`,
         fix: "Add rows, pulldowns or face-pulls to bring pulling up to match pressing." });
-      else if (ratio < 0.75) out.push({ kind: "balance", severity: "low", title: "Pulling ahead of pushing",
+      else if (ratio < 0.75) out.push({ kind: "balance", severity: "low", priority: pct((0.75 - ratio) / 0.75),
+        title: "Pulling ahead of pushing",
         detail: `Pull volume is ${(1 / ratio).toFixed(2)}× push volume.`, fix: "Add pressing volume (bench, OHP, dips)." });
     }
     // 4. quad / hamstring balance
@@ -1770,6 +1790,7 @@ const Engine = (() => {
         if (info.p.includes("Hamstrings") || info.p.includes("Glutes")) ham += st.sets;
       }
       if (quad > 0 && ham > 0 && quad / ham > 1.8) out.push({ kind: "balance", severity: "med",
+        priority: pct((quad / ham - 1.8) / 1.8),
         title: "Quads ahead of hamstrings", detail: `Quads ${Math.round(quad)} sets vs hamstrings ${Math.round(ham)}.`,
         fix: "Add Romanian deadlifts, leg curls or good mornings for the posterior chain." });
     }
@@ -1793,7 +1814,8 @@ const Engine = (() => {
           : lastRpe >= 8.5
             ? `Stalled at RPE ${lastRpe.toFixed(1)} — that is near-maximal, so the limiter is recovery, not effort. Deload a week, then retest.`
             : `Stalled but only at RPE ${lastRpe.toFixed(1)} — there is headroom. Add load next session.`;
-        out.push({ kind: "stagnant", severity: "low", title: `${exName(state, id)} has plateaued`,
+        out.push({ kind: "stagnant", severity: "low", priority: JUDGEMENT,
+          title: `${exName(state, id)} has plateaued`,
           detail: `No estimated-1RM improvement across the last 4 sessions.`, fix });
       }
     }
@@ -1807,12 +1829,12 @@ const Engine = (() => {
       const avgRest = rSum / rN;
       const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
       if (avgRest < 75 && hard / totSets > 0.35) {
-        out.push({ kind: "density", severity: "low",
+        out.push({ kind: "density", severity: "low", priority: JUDGEMENT,
           title: `Short rest (${mmss(avgRest)}) on heavy sets`,
           detail: `${hard} of ${totSets} sets are 5 reps or fewer, but your average rest is under 1:15. Short rest caps the load you can express, so the strength work suffers even when the effort feels maximal.`,
           fix: "Rest 2\u20133 min between sets of 5 or fewer reps, and keep the short rest for your higher-rep sets." });
       } else if (avgRest > 150 && high / totSets > 0.35) {
-        out.push({ kind: "density", severity: "low",
+        out.push({ kind: "density", severity: "low", priority: JUDGEMENT,
           title: `Long rest (${mmss(avgRest)}) on high-rep sets`,
           detail: `${high} of ${totSets} sets are 12+ reps but you rest over 2:30, which blunts the endurance stimulus those sets are there for.`,
           fix: "Cut rest to 45\u201375 s on the high-rep work, or superset it with something else." });
@@ -1822,12 +1844,23 @@ const Engine = (() => {
     // 7. low attributes
     for (const a of ATTRIBUTES) {
       if (attrs[a.key].score < 30 && attrs[a.key].score > 0)
-        out.push({ kind: "attribute", severity: "low", title: `${a.label} is where you can gain the most`,
+        out.push({ kind: "attribute", severity: "low",
+          /* how far below 30 the score is, as a share of 30: the LOWEST score is
+             the biggest gap, so it ranks first. */
+          priority: pct((30 - attrs[a.key].score) / 30),
+          title: `${a.label} is where you can gain the most`,
           detail: `Score ${attrs[a.key].score}/100 (${attrs[a.key].tier}).`,
           fix: FIXES[a.key] });
     }
+    /* Bucket first (high -> med -> low), then the biggest gap first, and only
+       then the generation sequence above, so the order stays deterministic. */
     const sev = { high: 0, med: 1, low: 2 };
-    return out.sort((a, b) => sev[a.severity] - sev[b.severity]);
+    return out
+      .map((w, i) => ({ w, i }))
+      .sort((a, b) => (sev[a.w.severity] - sev[b.w.severity])
+        || (b.w.priority - a.w.priority)
+        || (a.i - b.i))
+      .map((x) => x.w);
   }
 
   const FIXES = {

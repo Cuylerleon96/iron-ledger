@@ -700,7 +700,7 @@
 
     /* weak points */
     const wp = el("section", { class: "card" });
-    wp.innerHTML = `<div class="card-head"><h3>Weak points &amp; next moves</h3></div>`;
+    wp.innerHTML = `<div class="card-head"><h3>Weak points &amp; next moves</h3><span class="muted">furthest off first</span></div>`;
     if (!weak.length) wp.append(el("p", { class: "muted" }, "Nothing flagged — balance looks good. Keep progressing the big lifts."));
     weak.forEach((w) => {
       wp.append(el("div", { class: "weak " + w.severity },
