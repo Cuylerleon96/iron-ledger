@@ -296,7 +296,7 @@ const Food = (() => {
   };
 
   /* ---------- QUERY-SIDE ALIAS MAP — a search AID, NOT a change to the food data ----------
-     the owner: "It seems sodas aren't in the nutrition list?" They ARE: data/food.json
+     A user asked: "It seems sodas aren't in the nutrition list?" They ARE: data/food.json
      ships 85 soda-type rows. They were simply UNFINDABLE, because the search is a
      plain substring match with no synonym layer and USDA names a soda in its own
      vocabulary ("Beverages, carbonated, cola, regular"). Measured on the old search:
@@ -347,7 +347,7 @@ const Food = (() => {
        inside every tier. A key that declares no split (still an array) ranks
        EXACTLY as before, byte-for-byte.
 
-       THE AMBIGUOUS WORDS (the owner: "Prioritize us terms, and include the rest"):
+       THE AMBIGUOUS WORDS (the brief: "Prioritize us terms, and include the rest"):
          chips   — US "chips" is a packet of potato chips; the other reading (UK
                    chips = US fries) is still reachable, ranked after.
          biscuit — US "biscuit" is the dataset's own savoury quick bread (its rows

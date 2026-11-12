@@ -291,8 +291,8 @@ const Engine = (() => {
        where a floor crunch tops out. Work_ref ∝ sin35 = 0.574; sweep 35 deg;
        mean cos 0.939.
 
-       Head-below (bench at 40 deg with the HEAD BELOW THE HIPS — the owner's
-       standard, whatever the bench is called): rest -40 deg, top +35 deg. It
+       Head-below (bench at 40 deg with the HEAD BELOW THE HIPS — the usual
+       setup, whatever the bench is called): rest -40 deg, top +35 deg. It
        sweeps 75 deg, and the work ∝ sin35 - sin(-40) = 1.216 = 2.12x the flat
        sweep. The peak load is unchanged (mean cos 0.929 vs 0.939) — all of the
        extra cost is the longer arc. Hence 0.40 x 2.12 = 0.85, and the same 2.12
@@ -307,7 +307,7 @@ const Engine = (() => {
        moment arm is short. Work ∝ sin75 - sin40 = 0.323 = 0.56x the flat sweep
        (mean cos 0.529 vs 0.939; range unchanged). 0.40 x 0.56 = 0.23: easier,
        exactly as the geometry says. Keyed on the head-up geometry ("incline
-       sit-up" / "head-above" / "head-elevated"); note the owner's "Incline
+       sit-up" / "head-above" / "head-elevated"); note a logged "Incline
        Crunches" is the head-below case above, which is why the two spellings
        land on different rules. */
     [/incline sit.?up|head.?above|head.?elevated/i, 0.23],
@@ -1022,10 +1022,10 @@ const Engine = (() => {
         for (const x of en.sets || []) plyoReps += num(x.r) || 1;
       }
       /* A "heavy low-rep" set is one logged for 5 OR FEWER reps at a real load
-         (a set of 5 COUNTS; 6 does not). the owner's reason, in his words:
+         (a set of 5 COUNTS; 6 does not). The reason:
          "anything under 5 reps should be counted towards power. Some people's
-         low reps are 5, not 3" — and he has since named 5 itself as the number
-         he means, so the boundary is INCLUSIVE at 5. It was `<= 3`, then `< 5`;
+         low reps are 5, not 3" — and 5 itself is the number meant, so the
+         boundary is INCLUSIVE at 5. It was `<= 3`, then `< 5`;
          the rest insight's `hardReps` (entryStats, below) has used `<= 5`
          throughout, so this also brings the Power READ into line with it. This
          is a READ of the log only; it never changes what earns XP. */

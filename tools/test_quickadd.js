@@ -1,11 +1,11 @@
 /* Quick-add and set-row — the two bugs from the phone screenshots.
    Run: node tools/test_quickadd.js
 
-   Two real defects, both reproduced from the owner's screenshots before the fix:
+   Two real defects, both reproduced from the user's screenshots before the fix:
 
    1. Adding a set through the shorthand box stored the weight in DISPLAY units
       while the manual row inputs stored kg. On lb, every tonnage and e1RM that
-      came from the box was inflated by 2.2046x. His own screen proved it: a
+      came from the box was inflated by 2.2046x. The screenshots proved it: a
       180x12 set read "555.56 e1RM" and "4,762lb tonnage", which is exactly
       180 x 1.4 x 2.2046 and 180 x 12 x 2.2046 — the raw pound number run through
       the kg maths and converted back. A hand-typed 90x20 read 126 / 1,800,
@@ -83,7 +83,7 @@ function load(units) {
   // app.js reads Store.state at load, so the unit has to be in place first
   vm.runInContext(`localStorage.setItem("fitness-app-v1", JSON.stringify({
     version:1, createdAt:"2026-01-01T00:00:00.000Z",
-    profile:{name:"the owner",sex:"M",heightCm:180,weightKg:82,units:${JSON.stringify(units)}},
+    profile:{name:"Test User",sex:"M",heightCm:175,weightKg:75,units:${JSON.stringify(units)}},
     workouts:[], bodylog:[], overrides:{}, custom:[], achievements:{}, settings:{seeded:true}
   }));`, s);
   vm.runInContext(src + "\n;globalThis.__X={App,Engine,Store,EXERCISE_LIB};", s, { filename: "bundle.js" });
@@ -108,7 +108,7 @@ console.log("=== the shorthand box stores kg, whatever the display unit (lb) ===
   eq("e1RM is identical via both paths", fromBox.est1RM, fromRow.est1RM);
   near("tonnage reads back as the 2160 lb he lifted", e.A.U.w(fromBox.tonnage), 2160, 1);
   near("e1RM reads back as 252 lb", e.A.U.w(fromBox.est1RM), 252, 1);
-  console.log(`        (before the fix this was 4,762 lb / 555.56 lb — the bug on his screen)`);
+  console.log(`        (before the fix this was 4,762 lb / 555.56 lb — the bug in the report)`);
 }
 
 console.log("=== kg mode is a no-op, as it must be for existing data ===");
@@ -162,12 +162,12 @@ console.log("=== a weight field shows display units, storage stays kg ===");
 
 console.log("=== adding a later set must not alter an earlier one ===");
 {
-  /* the owner's report: "if you type in the next set, sometimes it changes the value
+  /* A user report: "if you type in the next set, sometimes it changes the value
      that was in the first set." Reproduced exactly — type 180x12 into set 1, add
      the next set from the shorthand box, and set 1's field fell back to
      81.64662740915384, because setRow re-rendered the raw stored kg. The model was
-     right the whole time; only what he was shown was wrong, which is the worst
-     kind of wrong because the number he trusted changed under him.
+     right the whole time; only what was shown was wrong, which is the worst
+     kind of wrong because the number the user trusted changed under them.
      The invariant: a set's displayed value depends ONLY on that set. */
   const e = load("lb");
   const field = (s) => {                       // exactly what setRow writes out

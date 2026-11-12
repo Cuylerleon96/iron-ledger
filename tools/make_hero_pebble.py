@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """make_hero_pebble.py — draw the PEBBLE GOLEM placeholder hero sheet.
 
-the owner's hand-drawn sprites replace this. It gives the Hero tab a SECOND hero
+Hand-drawn sprites replace this. It gives the Hero tab a SECOND hero
 (tools/make_hero_slime.py is the first) on the SAME row contract:
 
     img/hero-pebble.png  128x192 = 4 cols x 6 rows of 32x32

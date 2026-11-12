@@ -20,12 +20,12 @@ const dstr = (i) => `2026-${String(1 + Math.floor(i / 28)).padStart(2, "0")}-${S
 
 const mkState = (nw, nb) => ({
   version: 1, createdAt: "2026-01-01T00:00:00.000Z",
-  profile: { name: "the owner", sex: "M", heightCm: null, weightKg: 82, bodyFatPct: null, goalWeightKg: null, weeklyTarget: 4, units: "kg" },
+  profile: { name: "Test User", sex: "M", heightCm: 175, weightKg: 75, bodyFatPct: 20, goalWeightKg: 72, weeklyTarget: 4, units: "kg" },
   workouts: Array.from({ length: nw }, (_, i) => ({
     id: "w" + i, date: dstr(i), note: "",
     entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", sets: [{ w: 100, r: 10, rest: 120 }] }],
   })),
-  bodylog: Array.from({ length: nb }, (_, i) => ({ date: dstr(i), weightKg: 82 - i * 0.1, bodyFatPct: null })),
+  bodylog: Array.from({ length: nb }, (_, i) => ({ date: dstr(i), weightKg: 75 - i * 0.1, bodyFatPct: null })),
   overrides: {}, custom: [], achievements: {}, settings: { sound: false, seeded: true },
 });
 
@@ -256,7 +256,7 @@ function env({ ls = {}, files = {}, failRead = false, corruptMirror = false } = 
     eq("every workout id survived", ids.every((id) => after.Store.state.workouts.some((w) => w.id === id)), true);
     eq("bodyweight log survived", after.Store.state.bodylog.length, 60);
     eq("sets survived intact", after.Store.state.workouts[0].entries[0].sets[0].rest, 120);
-    eq("profile survived", after.Store.state.profile.name, "the owner");
+    eq("profile survived", after.Store.state.profile.name, "Test User");
 
     // and the app is fully usable afterwards
     after.Store.upsertWorkout({ id: "after1", date: "2026-12-31", entries: [] });

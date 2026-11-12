@@ -1344,7 +1344,7 @@ console.log("=== the Profile sex control offers a neutral 'Not set' choice ===")
 
 console.log("=== hero sprite slot: an INERT 32x32 GBA harness in the header ===");
 {
-  /* the owner draws the avatar himself. This pins the SLOT + HARNESS that ship
+  /* The avatar is drawn by hand. This pins the SLOT + HARNESS that ship
      now, with NO asset: the slot must be invisible and reserve no space until a
      sheet exists, and the animation must be event-driven, pausable and
      reduced-motion-safe. It is scoped to .topbar because the app already uses
@@ -1479,7 +1479,7 @@ console.log("=== Hero tab: tab order, new hero sheets, roster rendering (static)
   const tab = fs.readFileSync(path.join(B, "js", "herotab.js"), "utf8");
   const nav = (html.match(/<nav class="tabs" id="tabs">([\s\S]*?)<\/nav>/) || [])[1] || "";
   const order = [...nav.matchAll(/data-tab="([a-z]+)"[^>]*>([^<]+)</g)].map((m) => [m[1], m[2].trim()]);
-  /* THE ORDER (the owner, corrected 2026-11-09). Exact, left to right. */
+  /* THE ORDER (corrected 2026-11-09). Exact, left to right. */
   eq("the tab bar reads exactly: Dashboard | Log | Nutrition | Hero | History | Exercises | Profile",
     order.map((o) => o[1]), ["Dashboard", "Log", "Nutrition", "Hero", "History", "Exercises", "Profile"]);
   eq("...with the data-tab ids in the same order",

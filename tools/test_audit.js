@@ -29,13 +29,13 @@ function env(ls = {}) {
 
 const mk = (nw, nb) => ({
   version: 1, createdAt: "2026-01-01T00:00:00.000Z",
-  profile: { name: "the owner", sex: "M", heightCm: 180, weightKg: 82, bodyFatPct: 18, goalWeightKg: 78, weeklyTarget: 4, units: "kg" },
+  profile: { name: "Test User", sex: "M", heightCm: 175, weightKg: 75, bodyFatPct: 20, goalWeightKg: 72, weeklyTarget: 4, units: "kg" },
   workouts: Array.from({ length: nw }, (_, i) => ({
     id: "w" + i, date: `2026-0${1 + Math.floor(i / 28)}-${String(1 + (i % 28)).padStart(2, "0")}`, note: "n" + i,
     entries: [{ id: 73, name: "Bench Press", mode: "weight_reps", restDefault: 120,
       sets: [{ w: 100, r: 10, rpe: 8, rest: 120 }, { w: 105, r: 5, rest: 180 }] }],
   })),
-  bodylog: Array.from({ length: nb }, (_, i) => ({ date: `2026-0${1 + Math.floor(i / 28)}-${String(1 + (i % 28)).padStart(2, "0")}`, weightKg: 82 - i * 0.1, bodyFatPct: i % 2 ? 18 : null })),
+  bodylog: Array.from({ length: nb }, (_, i) => ({ date: `2026-0${1 + Math.floor(i / 28)}-${String(1 + (i % 28)).padStart(2, "0")}`, weightKg: 75 - i * 0.1, bodyFatPct: i % 2 ? 20 : null })),
   overrides: { 73: { mode: "weight_reps" } }, custom: [{ id: "u1", n: "My Machine", mode: "weight_reps", g: ["Chest"] }],
   achievements: { first100: "2026-01-05" }, settings: { seeded: true },
 });
@@ -48,8 +48,8 @@ console.log("=== exported file round trip ===");
   const s = b.S.state;
   eq("workouts", s.workouts.length, 30);
   eq("bodyweight log", s.bodylog.length, 15);
-  eq("profile name", s.profile.name, "the owner");
-  eq("heightCm", s.profile.heightCm, 180);
+  eq("profile name", s.profile.name, "Test User");
+  eq("heightCm", s.profile.heightCm, 175);
   eq("achievements", s.achievements.first100, "2026-01-05");
   eq("custom exercises", s.custom.length, 1);
   eq("overrides", s.overrides["73"].mode, "weight_reps");
@@ -66,9 +66,9 @@ console.log("=== merge-import must restore the WHOLE ledger, not just sessions =
   const fresh = env({});                       // a wiped phone
   fresh.S.importJSON(file, "merge");
   eq("workouts merged in", fresh.S.state.workouts.length, 10);
-  eq("profile name came back", fresh.S.state.profile.name, "the owner");
-  eq("height came back", fresh.S.state.profile.heightCm, 180);
-  eq("goal came back", fresh.S.state.profile.goalWeightKg, 78);
+  eq("profile name came back", fresh.S.state.profile.name, "Test User");
+  eq("height came back", fresh.S.state.profile.heightCm, 175);
+  eq("goal came back", fresh.S.state.profile.goalWeightKg, 72);
   eq("overrides came back", fresh.S.state.overrides["73"].mode, "weight_reps");
   eq("re-importing is idempotent", (() => { fresh.S.importJSON(file, "merge"); return fresh.S.state.workouts.length; })(), 10);
 }

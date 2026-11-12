@@ -46,10 +46,11 @@ const Welcome = (() => {
   /* The CONTENT revision of the tour itself. The seen-flag is armed by THIS, not
      by APP_VERSION: bump it ONLY when these pages or their copy change, so the
      walkthrough runs exactly once across any number of releases. */
-  const WELCOME_VERSION = "1";
+  const WELCOME_VERSION = "2";
 
   /* In order: what the app is; shorthand logging; the six attributes; muscle
-     balance & weak points; where data lives / backups; the self-update path. */
+     balance & weak points; nutrition & scanning; the Hero tab; badges; where data
+     lives / backups; the self-update path. */
   const PAGES = [
     {
       title: "LOCAL-ONLY. NO ACCOUNT.",
@@ -88,6 +89,27 @@ const Welcome = (() => {
         `<p><b>Muscle balance</b> shows, for each muscle group, the <b>effort sets per week</b> \u2014 sets weighted by how hard the movement is \u2014 next to the raw set count. The bars mark where a group starts to grow and where it risks being overworked.</p>
          <p><b>Weak points</b> names what is under-trained right now and suggests the next move, ordered by how much it matters.</p>
          <p class="muted small">Both come straight from the sessions you log \u2014 there is nothing extra to enter.</p>`,
+    },
+    {
+      title: "NUTRITION & SCANNING",
+      body:
+        `<p>The <b>Nutrition</b> tab logs food against targets for <b>kcal, protein, fat and carbs</b>, and shows how the day is going.</p>
+         <p>Search the <b>food database bundled in the app</b> \u2014 it works with no signal at all \u2014 or, on a phone that supports it, scan a packaged item's barcode to look it up and log it.</p>
+         <p class="muted small">A weekly view shows the days you logged food this week against your weekly target.</p>`,
+    },
+    {
+      title: "THE HERO TAB",
+      body:
+        `<p>The <b>Hero</b> tab is your crew: choose the character that comes along and pick its colourway.</p>
+         <p>Each one unlocks from work you have already logged \u2014 steady weeks at your target, consistency, and the sets you put in \u2014 so nothing extra needs entering.</p>
+         <p class="muted small">The one you bring along shows beside the header, so it is always in view.</p>`,
+    },
+    {
+      title: "BADGES",
+      body:
+        `<p>There are <b>62 badges</b>, each one counting work you have already done \u2014 sessions, sets, weigh-ins, consistency and more.</p>
+         <p>A badge also pays XP into your total, so each one moves your level along with it.</p>
+         <p class="muted small">A badge is yours for good once it is earned.</p>`,
     },
     {
       title: "YOUR DATA, BACKUPS, EXPORT",
@@ -135,7 +157,7 @@ const Welcome = (() => {
 
   /* THE TRANSITION GUARD. A saved state from before the arming moved off the app
      version holds an APP-version string in this flag ("1.0.37", "1.0.38"), which
-     can never equal WELCOME_VERSION ("1"). Left alone, shouldShow() returns true
+     can never equal WELCOME_VERSION ("2"). Left alone, shouldShow() returns true
      and its owner sees the tour one more time on the very update meant to stop
      that. The flag is only ever written when the tour was dismissed, so a PRESENT
      value means seen: rewrite it to the current revision and the tour stays away.

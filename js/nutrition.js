@@ -432,7 +432,7 @@ const Nutrition = (() => {
   /* ---------- the rounding note (honesty) ----------
      The macro grams are each rounded on their own to 5 g and the calorie target
      to 10 kcal, so adding the grams up can land a few kcal away from the target
-     (the owner's own plan: 145 P / 75 F / 230 C = 2175 kcal against a 2170 target).
+     (a plan whose rounded grams can add up a few kcal away from its own target).
      Say that plainly rather than leaving an unexplained discrepancy. */
   const MACRO_ROUNDING_NOTE =
     "Grams are rounded on their own to the nearest 5 g, and the calorie target to the nearest 10 kcal, " +

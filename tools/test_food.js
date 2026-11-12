@@ -232,7 +232,7 @@ ok('license carries the CC0 line', /CC0/.test(DB.license) && /public domain/i.te
   ok('removeIntake on a gone id returns false', IS.removeIntake(r1.id) === false);
 
   /* 6) TONE: no shaming on either side of the target, DRIVEN BY THE GOAL
-        (the owner's hard rule) — a cut is never told to eat UP, and an at-or-above
+        (the hard rule) — a cut is never told to eat UP, and an at-or-above
         day is ordinary on every goal. */
   const T = [{ key: 'kcal', label: 'Calories', value: 2000, unit: 'kcal' }];
   const BANNED = /\b(over|exceeded?|exceed|cheat|cheated|too much|failed|failure|limit|bad|junk|off-track)\b/i;
@@ -1114,7 +1114,7 @@ console.log('\n--- (m) identical-name collapse, disclosure, and distinguishable 
   ok('"mince" leads with beef, ground (not a mince pie / Spam)',
     /ground/.test(Food.norm(Food.search(DB, 'mince', 20)[0].name)));
   /* ---- ORDERED-TIER AMBIGUOUS WORDS (v1.3.21) -------------------------------
-     the owner: "Prioritize us terms, and include the rest". A key may declare PRIMARY
+     The brief: "Prioritize us terms, and include the rest". A key may declare PRIMARY
      target(s) then SECONDARY target(s). Ranking: primary-target matches, then
      secondary-target matches, then whole word, then substring. An unsplit key must
      be byte-for-byte unchanged. */

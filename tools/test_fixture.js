@@ -1,6 +1,6 @@
 /* Fixture — SYNTHETIC subject, replayed. Run: node tools/test_fixture.js
 
-   This suite used to replay a real export (his name, body composition and
+   This suite used to replay a real user's export (their name, body composition and
    logged sessions). That made the repo a carrier of his personal data, so the
    real export was removed from version control entirely. The subject here is now
    fully fabricated: tools/fixture-state.json holds an invented profile (Test
@@ -155,15 +155,15 @@ console.log("\n=== distances and pace are untouched by all of this ===");
 
 console.log("\n=== the APP load path must not read less XP than the RAW state ===");
 {
-  /* THE CLASS THIS GUARDS. the owner's export reads the pinned XP through the FULL
+  /* THE CLASS THIS GUARDS. The fixture export reads its XP through the FULL
      bundle (js/data.js + js/seed.js + js/engine.js + js/store.js) — the same
      files the app's own index.html loads, js/data.js FIRST. A headless harness
      that loads js/engine.js ALONE silently loses the EXERCISE_LIB global:
      entryGroups() then degrades an unmatched id to ["Core"], so the per-set
      weekly MRV taper (sessionSetTaper) mis-prices sets and the SAME export
-     read 13 XP short (session XP 484 vs 497; total 1164 vs 1177). The 13 was a
-     HARNESS artifact, not an app regression. These assertions pin the
-     app-visible value and make the library's necessity explicit. */
+     reads a fixed handful of XP short. That shortfall was a HARNESS artifact,
+     not an app regression. These assertions pin the app-visible value and make
+     the library's necessity explicit. */
   const LIB = s.__X.EXERCISE_LIB;
   eq("EXERCISE_LIB is loaded in the suite sandbox (the app loads js/data.js)", LIB.length, 954);
 
@@ -175,7 +175,7 @@ console.log("\n=== the APP load path must not read less XP than the RAW state ==
 
   /* POSITIVE CONTROL: a Legs exercise (id 375) at 24 raw sets/week — the taper
      only bites at Legs' MRV 24, but WITHOUT the library the id resolves to Core
-     (MRV 20) and the taper bites sooner. Reproduces the exact 13-XP class on
+     (MRV 20) and the taper bites sooner. Reproduces the same short-read class on
      purpose, so a library-less read can never again pass for the app's own. */
   const tip = { version: 1, profile: { name: "T", weeklyTarget: 4 },
     workouts: [{ id: "w1", date: "2026-11-10", note: "", entries: [{ id: 375,

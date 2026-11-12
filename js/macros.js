@@ -157,7 +157,8 @@ const Macros = (() => {
      It REPLACED Mifflin's own FFM form (19.7*FFM + 413) because that form, for a
      lean person, returned a LOWER RMR than the plain weight equation — the exact
      opposite of the reason the FFM path is preferred for lean/muscular people
-     (a lean profile). Cunningham is peer-reviewed and behaves
+     (the weight form landed ABOVE the FFM form, the wrong direction here).
+     Cunningham is peer-reviewed and behaves
      as the literature describes for lean individuals. HONEST CAVEAT: both are
      peer-reviewed with R^2 ~0.71, so this removes a known BIAS — it does not make
      the number a measurement. */

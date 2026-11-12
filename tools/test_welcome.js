@@ -103,7 +103,7 @@ function load(initial, opts = {}) {
 /* an existing user: real history, a seeded flag, and NO welcomeSeenVersion */
 const EXISTING = {
   version: 1, createdAt: "2026-01-01T00:00:00.000Z",
-  profile: { name: "the owner", sex: "M", heightCm: 180, weightKg: 82, units: "kg" },
+  profile: { name: "Test User", sex: "M", heightCm: 175, weightKg: 75, units: "kg" },
   workouts: [{ id: "seed-2026-11-07", date: "2026-11-07", entries: [{ id: "u1", name: "Bench Press Machine", mode: "weight_reps", sets: [{ w: 100, r: 10 }] }] }],
   bodylog: [], overrides: {}, custom: [], achievements: {}, targets: {},
   settings: { seeded: true },
@@ -143,13 +143,13 @@ console.log("=== THE TRANSITION GUARD: a legacy APP-version string means SEEN (r
   // (a) an old app-version string, present -> treated as SEEN, rewritten to "1"
   const a = migrateThenShow({ welcomeSeenVersion: "1.0.37" });
   eq("(a) '1.0.37' -> reconcileSeen rewrote it", a.rewrote, true);
-  eq("(a) ...stored value becomes the current WELCOME_VERSION", a.stored, "1");
+  eq("(a) ...stored value becomes the current WELCOME_VERSION", a.stored, "2");
   eq("(a) ...and shouldShow() resolves to NOT SHOWN", a.shown, false);
 
   // (b) the newest app-version string, likewise
   const b = migrateThenShow({ welcomeSeenVersion: "1.0.38" });
   eq("(b) '1.0.38' -> rewritten", b.rewrote, true);
-  eq("(b) ...stored value becomes the current WELCOME_VERSION", b.stored, "1");
+  eq("(b) ...stored value becomes the current WELCOME_VERSION", b.stored, "2");
   eq("(b) ...and shouldShow() resolves to NOT SHOWN", b.shown, false);
 
   // (c) NO flag at all -> the tour must still SHOW (genuine new-user path)
@@ -159,9 +159,9 @@ console.log("=== THE TRANSITION GUARD: a legacy APP-version string means SEEN (r
   eq("(c) ...and shouldShow() resolves to SHOWN", c.shown, true);
 
   // (d) already the current revision -> stays hidden, and is not rewritten
-  const d = migrateThenShow({ welcomeSeenVersion: "1" });
-  eq("(d) '1' -> nothing to reconcile", d.rewrote, false);
-  eq("(d) ...stored value stays '1'", d.stored, "1");
+  const d = migrateThenShow({ welcomeSeenVersion: "2" });
+  eq("(d) '2' -> nothing to reconcile", d.rewrote, false);
+  eq("(d) ...stored value stays '2'", d.stored, "2");
   eq("(d) ...and shouldShow() resolves to NOT SHOWN", d.shown, false);
 
   // an empty string is not a value the flag is ever set to -> treated as absent
@@ -172,14 +172,14 @@ console.log("=== THE TRANSITION GUARD: a legacy APP-version string means SEEN (r
   const e = load({ version: 1, settings: { seeded: true, welcomeSeenVersion: "1.0.38" } });
   e.Welcome.reconcileSeen(e.Store.state, e.Store);
   eq("the rewritten revision was persisted to storage",
-     JSON.parse(e.storage.get("fitness-app-v1")).settings.welcomeSeenVersion, "1");
+     JSON.parse(e.storage.get("fitness-app-v1")).settings.welcomeSeenVersion, "2");
 
   // and the guard runs BEFORE the tour can open: maybeOpen() is a no-op for it
   const g = load({ version: 1, settings: { seeded: true, welcomeSeenVersion: "1.0.37" } });
   eq("maybeOpen() is a no-op on a legacy app-version flag",
      g.Welcome.maybeOpen(fakeCtx(g.Store.state, g.Store, {})), false);
   eq("...having folded the flag forward in the same pass",
-     g.Store.state.settings.welcomeSeenVersion, "1");
+     g.Store.state.settings.welcomeSeenVersion, "2");
   // while a no-flag state still opens it
   const nf = load({ version: 1, settings: { seeded: true } });
   eq("a no-flag state still opens the tour through maybeOpen()",
@@ -223,11 +223,11 @@ console.log("=== arming is keyed on the TOUR content revision, not the app versi
 
 console.log("=== THE REQUIREMENT: a new RELEASE must NOT re-arm the tour ===");
 {
-  // A state that has already seen WELCOME_VERSION "1".
+  // A state that has already seen WELCOME_VERSION "2".
   const seen = {
     version: 1, createdAt: "2026-01-01T00:00:00.000Z",
-    profile: { name: "the owner", units: "kg" }, workouts: [], bodylog: [], overrides: {},
-    custom: [], achievements: {}, targets: {}, settings: { seeded: true, welcomeSeenVersion: "1" },
+    profile: { name: "Test User", units: "kg" }, workouts: [], bodylog: [], overrides: {},
+    custom: [], achievements: {}, targets: {}, settings: { seeded: true, welcomeSeenVersion: "2" },
   };
 
   // A NEW RELEASE is built: build_www.py injects a different app version. Prove
@@ -235,7 +235,7 @@ console.log("=== THE REQUIREMENT: a new RELEASE must NOT re-arm the tour ===");
   // a test that silently checked nothing.
   const e = load(seen, { appVersion: "9.9.9" });
   eq("the injected APP_VERSION really changed (a new release)", e.Welcome.APP_VERSION, "9.9.9");
-  eq("WELCOME_VERSION is unchanged by the release", e.Welcome.WELCOME_VERSION, "1");
+  eq("WELCOME_VERSION is unchanged by the release", e.Welcome.WELCOME_VERSION, "2");
   eq("...yet shouldShow() stays FALSE — the release does NOT re-arm the tour",
      e.Welcome.shouldShow(e.Store.state.settings), false);
   eq("...and maybeOpen() is a no-op after the release",
@@ -243,7 +243,7 @@ console.log("=== THE REQUIREMENT: a new RELEASE must NOT re-arm the tour ===");
 
   // Bumping the TOUR's own content revision DOES re-arm it — the only way.
   eq("bumping WELCOME_VERSION re-arms the tour",
-     e.Welcome.shouldShow(e.Store.state.settings, "2"), true);
+     e.Welcome.shouldShow(e.Store.state.settings, "3"), true);
 
   // sanity: the same release with NO seen flag still shows (missing = show)
   const fresh = load({ version: 1, settings: { seeded: true } }, { appVersion: "9.9.9" });
@@ -268,21 +268,22 @@ console.log("=== every control is wired (Skip, Next, dots) ===");
   truthy("the first page offers Next", /welcome-next"[^>]*>Next</.test(html));
   const dots = (html.match(/class="welcome-dot/g) || []).length;
   eq("there is one dot per page", dots, e.Welcome.pageCount);
-  eq("the tour has six pages", e.Welcome.pageCount, 6);
-  truthy("page 1 of 6 is labelled", /STEP 1 \/ 6/.test(html));
+  eq("the tour has nine pages", e.Welcome.pageCount, 9);
+  truthy("page 1 of 9 is labelled", /STEP 1 \/ 9/.test(html));
 
   // Next advances to page 2
   ctx.cap.node.querySelector(".welcome-next")._lis.click[0]();
-  truthy("Next advances to STEP 2", /STEP 2 \/ 6/.test(ctx.cap.node.innerHTML));
+  truthy("Next advances to STEP 2", /STEP 2 \/ 9/.test(ctx.cap.node.innerHTML));
   truthy("...and still offers Skip", /welcome-skip/.test(ctx.cap.node.innerHTML));
 
   // a dot jumps straight to a later page
   const dotNodes = ctx.cap.node.querySelectorAll(".welcome-dot");
+  eq("there is one dot per page (nine)", dotNodes.length, 9);
   dotNodes[4]._lis.click[0]();
-  truthy("a page dot jumps to STEP 5", /STEP 5 \/ 6/.test(ctx.cap.node.innerHTML));
+  truthy("a page dot jumps to STEP 5", /STEP 5 \/ 9/.test(ctx.cap.node.innerHTML));
   // the last dot reaches the final page, where Next becomes Done
-  dotNodes[5]._lis.click[0]();
-  truthy("the last dot reaches STEP 6", /STEP 6 \/ 6/.test(ctx.cap.node.innerHTML));
+  dotNodes[8]._lis.click[0]();
+  truthy("the last dot reaches STEP 9", /STEP 9 \/ 9/.test(ctx.cap.node.innerHTML));
   truthy("the last page relabels Next as Done", /welcome-next"[^>]*>Done</.test(ctx.cap.node.innerHTML));
 
   // the Skip button dismisses and persists
@@ -313,12 +314,19 @@ console.log("=== the pages cover the required topics, in order, and obey the fon
   truthy("page 2: shorthand logging", /shorthand/.test(titles));
   truthy("page 3: the six attributes", /six attributes/.test(titles));
   truthy("page 4: muscle balance & weak points", /muscle balance/.test(titles) && /weak point/.test(titles));
-  truthy("page 5: data / backups / export", /export/.test(titles));
-  truthy("page 6: self-update", /update/.test(titles));
+  truthy("page 5: nutrition & scanning", /nutrition/.test(titles));
+  truthy("page 6: the hero tab", /hero/.test(titles));
+  truthy("page 7: badges", /badge/.test(titles));
+  truthy("page 8: data / backups / export", /export/.test(titles));
+  truthy("page 9: self-update", /update/.test(titles));
 
   const all = e.Welcome.PAGES.map((p) => p.body).join("\n");
   truthy("the six attribute names are all present", ["STRENGTH", "STAMINA", "POWER", "MOBILITY", "DISCIPLINE", "VITALITY"].every((n) => all.includes(n)));
   truthy("the notes-app shorthand example is shown", /Bench press machine:/.test(all) && /1:100x10/.test(all));
+  truthy("the nutrition page names the bundled database and the macro targets",
+    /bundled/.test(all) && /kcal/.test(all) && /protein/.test(all));
+  truthy("the hero page describes the crew", /your crew/.test(all));
+  truthy("the badges page states the count", /62 badges/.test(all));
   // pixel-font pitfall: a tilde reads as a dash, so "~4" would read as "minus four"
   truthy("no tilde-number anywhere (it renders as a dash)", !/~\s*\d/.test(all));
 }
@@ -345,7 +353,7 @@ console.log("=== wiring: boot, index.html and the escape routes ===");
   truthy("APP_VERSION is still the injectable build-time anchor",
     /const APP_VERSION = "[^"]*"/.test(w));
   truthy("WELCOME_VERSION is a separate content revision, not injected",
-    /const WELCOME_VERSION = "1"/.test(w));
+    /const WELCOME_VERSION = "2"/.test(w));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

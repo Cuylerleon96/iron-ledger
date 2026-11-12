@@ -1,11 +1,11 @@
 {
-  "versionCode": 116,
-  "versionName": "1.3.21",
+  "versionCode": 117,
+  "versionName": "1.3.22",
   "apkUrl": "https://github.com/Cuylerleon96/iron-ledger/releases/latest/download/iron-ledger.apk",
-  "sha256": "5eeb82b2187b1fb669b8d06c506260e624a624b05b4351bf5fd6cc260b3572ee",
-  "sizeBytes": 3961909,
-  "published": "2026-11-10",
+  "sha256": "8ca282a2c84a9a27ca312418ee39d90c6f64e69eed4ddc180a8d3008a3aff367",
+  "sizeBytes": 3962363,
+  "published": "2026-11-12",
   "notes": [
-    "Ambiguous food words now lead with the US meaning but still include the other reading: \"chips\" leads with potato chips and still reaches french fries, and \"biscuit\" leads with the dataset's savoury biscuit rows and still reaches cookies; \"double cream\", \"jacket potato\", \"candy floss\" and \"banger\" now find the foods the US database files under its own names; This is a query-side word map in the search only - the food data itself is unchanged, and an ordinary food search behaves exactly as before; which food a word names says nothing about the food itself"
+    "the first-run walkthrough now matches the app as it is: it covers the Nutrition tab (search the bundled food database, scan a barcode, log a day against your targets), the Hero tab and your crew, and the 62 badges; housekeeping so no reference to any individual's figures appears anywhere in the app or its source; your own logged data and numbers are untouched"
   ]
 }

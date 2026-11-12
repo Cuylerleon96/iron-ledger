@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """make_hero_ember.py — draw the EMBER WISP placeholder hero sheet.
 
-the owner's hand-drawn sprites replace this. It gives the Hero tab a THIRD hero on
+Hand-drawn sprites replace this. It gives the Hero tab a THIRD hero on
 the SAME row contract (slime + pebble are the others):
 
     img/hero-ember.png  128x192 = 4 cols x 6 rows of 32x32

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """make_hero_slime.py — draw the PLACEHOLDER hero sprite sheet.
 
-the owner's hand-drawn sprites replace this. It exists so the header harness
+Hand-drawn sprites replace this. It exists so the header harness
 (js/hero.js) has a real `img/hero-sheet.png` to render: 128x192 native px =
 4 columns x 6 rows of 32x32 GBA cells.
 

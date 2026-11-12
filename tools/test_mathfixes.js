@@ -607,7 +607,7 @@ console.log("\n=== 21. a bodyweight movement must count the body, not just the p
   eq("...at the published fraction", e.E.bwFactor("Dips"), 0.95);
   eq("'Pull-ups' is bodyweight", e.E.isBodyweight("Pull-ups"), true);
   eq("'Incline Crunches' is bodyweight", e.E.isBodyweight("Incline Crunches"), true);
-  // the owner's standard incline crunch is a 40 deg bench with the HEAD BELOW THE
+  // The standard incline crunch is a 40 deg bench with the HEAD BELOW THE
   // HIPS — the decline geometry — sweeping -40 -> +35 deg. Mean moment arm 0.93
   // (peak load the same as flat) but 75 deg of travel against 35: 2.12x the work.
   // 0.40 x 2.12 = 0.85. Derived from the geometry, not picked.
@@ -1610,7 +1610,7 @@ console.log("\n=== 45. celebrations fire only after a save, and collapse into ON
 
 console.log("\n=== 39. the per-exercise effort weight is a maths constant, not a user field ===");
 {
-  /* the owner: the effort ratio "should be baked in with the math, not changeable
+  /* The brief: the effort ratio "should be baked in with the math, not changeable
      by the user." The detail sheet no longer offers it, the engine no longer
      reads any stored override, and migrate strips the orphan field. */
   const e = env();
@@ -2697,7 +2697,7 @@ console.log("\n=== 53. XP scales with the work logged — and only ever GROWS as
 
 console.log("\n=== 54. PROPERTY: NOTHING ever reduces XP — a set, an entry or a session can only ADD ===");
 {
-  /* the owner's standing rule (v1.2.10): "Nothing should ever reduce xp."
+  /* The standing rule (v1.2.10): "Nothing should ever reduce xp."
      The old defect: `overMrvSplit` summed min(mine, beyond) PER ENTRY and the
      volume factor multiplied the WHOLE session, so (a) splitting the same weekly
      volume across more entries raised the penalty (measured 22 one-set entries ->
@@ -2859,7 +2859,7 @@ console.log("\n=== 55. the HERO tab: roster, equip, colourway (pure view-model) 
 
 console.log("\n=== 56. weak points lead with the FURTHEST-OFF card (bucket, then priority) ===");
 {
-  /* the owner's question — "can we be sure these are arranged by priority?" — the
+  /* The question — "can we be sure these are arranged by priority?" — the
      answer was NO. The list was bucketed high/med/low and, INSIDE a bucket, kept
      the fixed generation sequence (lagging muscles -> untrained -> push/pull ->
      quads/hams -> plateaus -> rest timing -> low attributes). The tie was
@@ -3100,9 +3100,9 @@ console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
 
   /* (e2) THE HEAVY-SET REP THRESHOLD — INCLUSIVE at 5 (was UNDER 5 / exclusive,
          set in v1.3.10). "Heavy low-rep" is now a VALID set of 5 OR FEWER reps
-         at a real load: a 5-rep set COUNTS, a 6-rep set does not. the owner's
-         reason, in his words: "anything under 5 reps should be counted towards
-         power. Some people's low reps are 5, not 3" — and he now names 5 itself
+         at a real load: a 5-rep set COUNTS, a 6-rep set does not. The reason, in
+         words: "anything under 5 reps should be counted towards
+         power. Some people's low reps are 5, not 3" — and 5 itself is now named
          as the number, so the boundary is inclusive. The v1.3.10 pin ("a 5-rep
          set does NOT count") is the assertion this task CHANGED, re-expressed
          against the new behaviour rather than dropped. The advice string is
@@ -3137,7 +3137,7 @@ console.log("\n=== 58. library audit: every exercise feeds the RIGHT data ===");
 
 console.log("\n=== 59. badges pay XP into the TOTAL — back-paid in full, and nothing can reduce it ===");
 {
-  /* the owner (2026-11-10): "a pr, or a badge should earn you extra XP" and "make
+  /* The brief (2026-11-10): "a pr, or a badge should earn you extra XP" and "make
      sure that if you already have the badge unlocked when the update comes in,
      that you get all that xp that was missed out on". The term lives in the
      TOTAL (xp()), paid by tier, so a badge held BEFORE the term existed pays in

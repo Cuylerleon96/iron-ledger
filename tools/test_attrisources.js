@@ -113,9 +113,9 @@ console.log("\n=== state-injection guard: no future-dated sessions ===");
   const realPath = "/tmp/il-export.json";
   if (fs.existsSync(realPath)) {
     const real = JSON.parse(fs.readFileSync(realPath, "utf8"));
-    eq("the owner's export carries no future-dated session", RS.futureDated(real, now), []);
+    eq("the real export carries no future-dated session", RS.futureDated(real, now), []);
   } else {
-    console.log("  skip  the owner's export not present at /tmp (not committed — expected off the render host)");
+    console.log("  skip  the real export is not present at /tmp (not committed — expected off the render host)");
   }
 }
 

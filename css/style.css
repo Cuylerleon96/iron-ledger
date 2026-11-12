@@ -115,7 +115,7 @@ b, strong { font-weight: 700; }
 .hud-item { font-size: .68rem; text-shadow: var(--outline-sm); }
 
 /* ---------------- hero sprite slot (header) ----------------
-   An INERT slot for the owner's hand-drawn avatar, sitting between .brand and
+   An INERT slot for a hand-drawn avatar, sitting between .brand and
    .hud. Nothing here draws, reserves space or is tappable until a sprite sheet
    exists: with no asset the element carries only class "hero" (plus no row
    class), matches none of the rules below, and stays display:none — so it adds
@@ -266,7 +266,7 @@ b, strong { font-weight: 700; }
 .roster-tile.on .tile-tag, .roster-tile .tile-tag.muted { opacity: .7; }
 
 /* ---------------- tabs ---------------- */
-/* SEVEN tabs, in the owner's order: Dashboard | Log | Nutrition | Hero | History |
+/* SEVEN tabs, in this order: Dashboard | Log | Nutrition | Hero | History |
    Exercises | Profile (Profile LAST). Nutrition sits between Log and Hero, Hero
    between Nutrition and History. At the 412px Pixel-6 width the row does NOT fit,
    so overflow-x:auto IS the mechanism that keeps every tab reachable — the bar

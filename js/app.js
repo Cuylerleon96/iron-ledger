@@ -1032,7 +1032,7 @@
   /* The age-adjustment clause for Strength, shown ONLY when a coefficient
      actually applies (age 40+). Below 40 the coefficient is exactly 1.000 and
      nothing is adjusted, so the line is left untouched — the under-40 output
-     (including a typical profile at 30) stays byte-identical to before this feature. */
+     (including an under-40 user's) stays byte-identical to before this feature. */
   function ageNote(x) {
     if (!(x && x.coef > 1)) return "";
     return ` Age-adjusted for ${x.age}: a McCulloch coefficient of ${x.coef.toFixed(3)} scales the load each tier needs, so an older lifter is compared against the standard for their age. Source: the McCulloch masters coefficients used by USA Powerlifting. This is one arrangement, not a settled figure — the published tables disagree (WRPF's McCulloch variant and Malone–Meltzer give different numbers), and the coefficients come from powerlifting competition lifts rather than this app's mixed standard, so applying them here is an extrapolation. They adjust for age only, not training age or sex.`;
