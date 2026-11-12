@@ -26,9 +26,9 @@ console.log("surface:", Object.keys(N).join(", "));
 
 const TARGETS = [
   { key: "kcal", label: "Calories", value: 2000, unit: "kcal" },
-  { key: "protein", label: "Protein", value: 130, unit: "g" },
-  { key: "fat", label: "Fat", value: 65, unit: "g" },
-  { key: "carbs", label: "Carbs", value: 260, unit: "g" },
+  { key: "protein", label: "Protein", value: 150, unit: "g" },
+  { key: "fat", label: "Fat", value: 60, unit: "g" },
+  { key: "carbs", label: "Carbs", value: 240, unit: "g" },
 ];
 const TOTALS = { kcal: 1560, protein: 96, fat: 52, carb: 180 };
 
@@ -42,7 +42,7 @@ const TOTALS = { kcal: 1560, protein: 96, fat: 52, carb: 180 };
   eq("macroCard: the fat row reads the log total", vm.rows[2].logged, 52);
   /* the tab's "carbs" target reads the log's "carb" key */
   eq("macroCard: the carbs row reads the log's carb total", vm.rows[3].logged, 180);
-  eq("macroCard: the carbs row keeps its target (logged / target line)", vm.rows[3].target, 260);
+  eq("macroCard: the carbs row keeps its target (logged / target line)", vm.rows[3].target, 240);
   eq("macroCard: goal is passed through", vm.rows[0].goal, "gain");
   eq("macroCard: row text is intakeSummary's own wording",
     vm.rows[0].text, N.intakeSummary(TARGETS, TOTALS, "gain")[0].text);

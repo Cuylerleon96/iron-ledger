@@ -24,7 +24,7 @@ const near = (label, got, want, tol = 0.01) => {
   console.log(`  ${ok ? "OK  " : "FAIL"} ${label}  got=${got}${ok ? "" : ` want≈${want}`}`);
   ok ? pass++ : fail++;
 };
-const MAN = { sex: "M", weightKg: 80, heightCm: 180, ageY: 30 };
+const MAN = { sex: "M", weightKg: 92, heightCm: 176, ageY: 44 };
 const WOMAN = { sex: "F", weightKg: 65, heightCm: 165, ageY: 30 };
 const NO_NUMBERS = (p) => p.refused === true && p.bmr === undefined && p.target === undefined
   && p.protein === undefined && p.fat === undefined && p.carbs === undefined && p.totals === undefined;
@@ -36,24 +36,24 @@ eq("exposes PACE_BANDS", typeof M.PACE_BANDS, "object");
 eq("exposes SOURCES", typeof M.SOURCES, "object");
 
 console.log("\n--- (1) Mifflin worked examples ---");
-// man 80 kg, 180 cm, 30 y:  10*80 + 6.25*180 - 5*30 + 5 = 800 + 1125 - 150 + 5 = 1780
-eq("man rmrMifflin", Math.round(M.rmrMifflin(MAN).kcal), 1780);
-near("man exact", M.rmrMifflin(MAN).kcal, 1780);
+// man 92 kg, 176 cm, 44 y:  10*92 + 6.25*176 - 5*44 + 5 = 920 + 1100 - 220 + 5 = 1805
+eq("man rmrMifflin", Math.round(M.rmrMifflin(MAN).kcal), 1805);
+near("man exact", M.rmrMifflin(MAN).kcal, 1805);
 // woman 65 kg, 165 cm, 30 y: 10*65 + 6.25*165 - 5*30 - 161 = 650 + 1031.25 - 150 - 161 = 1370.25
 near("woman exact", M.rmrMifflin(WOMAN).kcal, 1370.25);
 eq("man method", M.rmrMifflin(MAN).method, "mifflin-weight");
 eq("source carries the citation", /PMID 2305711/.test(M.rmrMifflin(MAN).source), true);
 
 // full man plan, maintain: TDEE = 1805*1.2 = 2166 -> round10 = 2170 (floor 1500 not hit)
-// protein maintain 1.6 g/kg *80 = 128 -> round5 = 130 ; fat 0.8*80 = 64 -> 65
-// carbs = (2170 - 145*4 - 75*9)/4 = (2170-580-675)/4 = 915/4 = 228.75 -> round5 = 260
+// protein maintain 1.6 g/kg *92 = 147.2 -> round5 = 145 ; fat 0.8*92 = 73.6 -> 75
+// carbs = (2170 - 145*4 - 75*9)/4 = (2170-580-675)/4 = 915/4 = 228.75 -> round5 = 230
 const mp = M.plan({ ...MAN, goal: "maintain", pace: "maintain" });
 eq("man plan refused", mp.refused, false);
-eq("man plan computedTarget (pre-round 1780*1.2=2136)", mp.target.computedTarget, 2136);
-eq("man plan target kcal (rounded to 10)", mp.target.kcal, 2140);
-eq("man plan protein 130 g", mp.protein.g, 130);
-eq("man plan fat 65 g", mp.fat.g, 65);
-eq("man plan carbs 260 g", mp.carbs.g, 260);
+eq("man plan computedTarget (pre-round 1805*1.2=2166)", mp.target.computedTarget, 2166);
+eq("man plan target kcal (rounded to 10)", mp.target.kcal, 2170);
+eq("man plan protein 145 g", mp.protein.g, 145);
+eq("man plan fat 75 g", mp.fat.g, 75);
+eq("man plan carbs 230 g", mp.carbs.g, 230);
 eq("man plan protein convention is bodyweight", mp.protein.basis, "bodyweight");
 eq("man plan floor not applied", mp.target.floorApplied, false);
 
@@ -71,7 +71,7 @@ console.log("\n--- (2) FFM path when body fat is supplied, weight path when not 
 eq("rmr() picks FFM when bf given", M.rmr({ ...MAN, bodyFatPct: 20 }).method, "ffm-cunningham");
 near("default FFM rmr is Cunningham 500+22*64", M.rmrFFM({ weightKg: 80, bodyFatPct: 20 }).kcal, 1908);
 eq("rmr() picks weight path when bf null", M.rmr({ ...MAN, bodyFatPct: null }).method, "mifflin-weight");
-near("weight path rmr", M.rmr({ ...MAN, bodyFatPct: null }).kcal, 1780);
+near("weight path rmr", M.rmr({ ...MAN, bodyFatPct: null }).kcal, 1805);
 // rmrCunningham stays, now the SAME as the default path
 near("rmrCunningham = 500 + 22*64", M.rmrCunningham({ weightKg: 80, bodyFatPct: 20 }).kcal, 1908);
 // named alternatives remain reachable, but NOT the default
@@ -142,7 +142,7 @@ eq("pregnancy has no numbers", NO_NUMBERS(preg), true);
 const ed = M.plan({ ...MAN, goal: "lose", pace: "loss-slow", eatingDisorderRisk: true });
 eq("eating-disorder risk refused", ed.refused, true);
 eq("eating-disorder risk has no numbers", NO_NUMBERS(ed), true);
-const noage = M.plan({ sex: "M", weightKg: 80, heightCm: 180, goal: "maintain", pace: "maintain" });
+const noage = M.plan({ sex: "M", weightKg: 92, heightCm: 176, goal: "maintain", pace: "maintain" });
 eq("missing age refused", noage.refused, true);
 eq("missing age has no numbers", NO_NUMBERS(noage), true);
 eq("missing-age reason no longer claims there is no age field", /no age field/i.test(noage.reason), false);
@@ -538,8 +538,8 @@ console.log("\n--- (17) goal-aware totals wording + the rounding note ---");
   truthy("GAIN under: offers the remaining figure", /to go/.test(gUnder.text));
   truthy("LOSS under: progress, never 'to go'", !/to go/.test(lUnder.text) && /budget/.test(lUnder.text));
   truthy("gain and loss word the SAME numbers DIFFERENTLY", gUnder.text !== lUnder.text);
-  eq("gain under row text", gUnder.text, "900 of 2000 kcal — 1240 to go");
-  eq("loss under row text", lUnder.text, "900 of 2000 kcal so far — 1240 still in today's budget");
+  eq("gain under row text", gUnder.text, "900 of 2000 kcal — 1100 to go");
+  eq("loss under row text", lUnder.text, "900 of 2000 kcal so far — 1100 still in today's budget");
   eq("at/above row text (gain): neutral", gOver.text, "2400 kcal — your target is 2000 kcal");
   eq("at/above row text (loss): identical — over is ordinary on every goal", lOver.text, gOver.text);
   [gUnder, lUnder, gOver, lOver].forEach((r) =>
@@ -558,7 +558,7 @@ console.log("\n--- (17) goal-aware totals wording + the rounding note ---");
   /* ---- the SAME goal drives the targets AND the wording: they cannot disagree.
           Here the profile's own weights say GAIN, but the phase PICKED is a cut,
           so the wording must follow the PHASE. ---- */
-  const MANP = { sex: "M", weightKg: 80, heightCm: 180, birthYear: 1990 };
+  const MANP = { sex: "M", weightKg: 92, heightCm: 176, birthYear: 1982 };
   const gv = P.view(MANP, { phase: "lean-gain", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
   const cv = P.view(MANP, { phase: "cut-standard", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
   eq("a gain phase reports its goal on the view model", gv.phase.goal, "gain");
@@ -580,16 +580,15 @@ console.log("\n--- (17) goal-aware totals wording + the rounding note ---");
   truthy("...and says both numbers are right", /only the rounding differs/.test(P.MACRO_ROUNDING_NOTE));
   truthy("...and it is rendered on the tab", gv.html.includes(P.MACRO_ROUNDING_NOTE.slice(0, 40)));
   truthy("...inside the n-rounding element", gv.html.includes('id="n-rounding"'));
-  /* The fixture's OWN arithmetic, re-derived after its birth year was changed to
-     a neutral value (1996 -> 1990; age 30 -> 36), so the plan it produces no
-     longer encodes a real birth year: 145 P / 75 F / 230 C = 2175 kcal against a
-     2170 target. */
+  /* The fixture's OWN arithmetic, re-derived for the generic fixture body
+     (92 kg / 176 cm / birth year 1982 -> age 44): 145 P / 75 F / 230 C = 2175 kcal
+     against a 2170 target. */
   const mv = P.view(MANP, { phase: "maintain", year: 2026, training: { sessionsPerWeek: 0, cardioMinutesPerWeek: 0 } });
-  eq("maintain plan target kcal 2170", mv.plan.target.kcal, 2100);
-  eq("maintain plan protein 130 g", mv.plan.protein.g, 130);
-  eq("maintain plan fat 65 g", mv.plan.fat.g, 65);
-  eq("maintain plan carbs 250 g", mv.plan.carbs.g, 250);
-  eq("the grams add to 2105 kcal (145*4 + 75*9 + 230*4)", 130 * 4 + 65 * 9 + 250 * 4, 2105);
+  eq("maintain plan target kcal 2170", mv.plan.target.kcal, 2170);
+  eq("maintain plan protein 145 g", mv.plan.protein.g, 145);
+  eq("maintain plan fat 75 g", mv.plan.fat.g, 75);
+  eq("maintain plan carbs 230 g", mv.plan.carbs.g, 230);
+  eq("the grams add to 2175 kcal (145*4 + 75*9 + 230*4)", 145 * 4 + 75 * 9 + 230 * 4, 2175);
   truthy("the note spells out THIS plan's 2175-vs-2170 arithmetic",
     /145 g protein \+ 75 g fat \+ 230 g carbs = 2175 kcal against the 2170 kcal target/.test(mv.roundingNote));
   truthy("...and calls the 5 kcal difference out", /5 kcal apart/.test(mv.roundingNote));
@@ -604,9 +603,9 @@ const u18 = M.plan({ sex: "M", weightKg: 60, heightCm: 170, ageY: 17, goal: "los
 const prg = M.plan({ ...WOMAN, goal: "maintain", pace: "maintain", pregnant: true });
 const lct = M.plan({ ...WOMAN, goal: "maintain", pace: "maintain", lactating: true });
 const edr = M.plan({ ...MAN, goal: "lose", pace: "loss-slow", eatingDisorderRisk: true });
-const noAgeField = M.plan({ sex: "M", weightKg: 80, heightCm: 180, goal: "maintain", pace: "maintain" });
+const noAgeField = M.plan({ sex: "M", weightKg: 92, heightCm: 176, goal: "maintain", pace: "maintain" });
 const noWH = M.plan({ sex: "M", ageY: 30, goal: "maintain", pace: "maintain" });
-const badSex = M.plan({ sex: "X", weightKg: 80, heightCm: 180, ageY: 30, goal: "maintain", pace: "maintain" });
+const badSex = M.plan({ sex: "X", weightKg: 92, heightCm: 176, ageY: 44, goal: "maintain", pace: "maintain" });
 [u18, prg, lct, edr, noAgeField, noWH, badSex].forEach((p, i) => {
   eq(`refusal ${i} is refused`, p.refused, true);
   eq(`refusal ${i} carries a NON-EMPTY source`, typeof p.source === "string" && p.source.length > 0, true);
@@ -626,7 +625,7 @@ eq("the floor's own source is untouched", /ISSN position stand/.test(M.FLOOR_SOU
    (19) SEX IS OPTIONAL WHEN A BODY-FAT % IS KNOWN
    ============================================================ */
 console.log("\n--- (19) sex optional when a body-fat % is known ---");
-const noSexBf = M.plan({ weightKg: 80, heightCm: 180, ageY: 30, bodyFatPct: 20, goal: "maintain", pace: "maintain" });
+const noSexBf = M.plan({ weightKg: 92, heightCm: 176, ageY: 44, bodyFatPct: 20, goal: "maintain", pace: "maintain" });
 eq("a body-fat % but NO sex is NOT refused", noSexBf.refused, false);
 eq("...it produces a real target", isFinite(noSexBf.target.kcal) && noSexBf.target.kcal > 0, true);
 eq("...via the sex-independent FFM path", noSexBf.bmr.method, "ffm-cunningham");
@@ -637,12 +636,12 @@ eq("...and that assumption is reported to the caller", noSexBf.target.floorAssum
 eq("...the floor's sex is the male value", noSexBf.target.floorSex, "M");
 /* A SET sex is never flagged as assumed, and the floor follows it: 1500 for M,
    1200 for F — the conservative higher value is used ONLY when sex is unset. */
-eq("a set sex is not flagged as assumed", M.plan({ sex: "M", weightKg: 80, heightCm: 180, ageY: 30 }).target.floorAssumed, false);
-eq("...the M floor follows the sex (1500)", M.plan({ sex: "M", weightKg: 80, heightCm: 180, ageY: 30 }).target.floor, 1500);
-eq("...the F floor follows the sex (1200)", M.plan({ sex: "F", weightKg: 80, heightCm: 180, ageY: 30 }).target.floor, 1200);
-eq("...the F plan reports floorSex 'F'", M.plan({ sex: "F", weightKg: 80, heightCm: 180, ageY: 30 }).target.floorSex, "F");
+eq("a set sex is not flagged as assumed", M.plan({ sex: "M", weightKg: 92, heightCm: 176, ageY: 44 }).target.floorAssumed, false);
+eq("...the M floor follows the sex (1500)", M.plan({ sex: "M", weightKg: 92, heightCm: 176, ageY: 44 }).target.floor, 1500);
+eq("...the F floor follows the sex (1200)", M.plan({ sex: "F", weightKg: 92, heightCm: 176, ageY: 44 }).target.floor, 1200);
+eq("...the F plan reports floorSex 'F'", M.plan({ sex: "F", weightKg: 92, heightCm: 176, ageY: 44 }).target.floorSex, "F");
 
-const noSexNoBf = M.plan({ weightKg: 80, heightCm: 180, ageY: 30, goal: "maintain", pace: "maintain" });
+const noSexNoBf = M.plan({ weightKg: 92, heightCm: 176, ageY: 44, goal: "maintain", pace: "maintain" });
 eq("no sex AND no body-fat % STILL refuses", noSexNoBf.refused, true);
 eq("...it returns no numbers", NO_NUMBERS(noSexNoBf), true);
 eq("...it says plainly it will not guess", /won't guess/.test(noSexNoBf.reason), true);
@@ -650,17 +649,17 @@ eq("...it points at Profile", /Profile/.test(noSexNoBf.reason), true);
 eq("...it names the body-fat % alternative route", /body-fat %/.test(noSexNoBf.reason), true);
 eq("...it names the sex-independent lean-mass route", /lean-mass/.test(noSexNoBf.reason), true);
 eq("the refusal contains NO imperative 'must'", /\bmust\b/i.test(noSexNoBf.reason), false);
-eq("a nonsense sex ('X') with no body-fat % still refuses", M.plan({ sex: "X", weightKg: 80, heightCm: 180, ageY: 30 }).refused, true);
-eq("...but 'X' WITH a body-fat % does NOT refuse", M.plan({ sex: "X", weightKg: 80, heightCm: 180, ageY: 30, bodyFatPct: 20 }).refused, false);
+eq("a nonsense sex ('X') with no body-fat % still refuses", M.plan({ sex: "X", weightKg: 92, heightCm: 176, ageY: 44 }).refused, true);
+eq("...but 'X' WITH a body-fat % does NOT refuse", M.plan({ sex: "X", weightKg: 92, heightCm: 176, ageY: 44, bodyFatPct: 20 }).refused, false);
 
 /* The sex-SPECIFIC Mifflin weight form is UNCHANGED for M and F: on the SAME
    body the +5 / -161 sex term is the only difference -> a 166 kcal/day gap.
    (Mifflin-St Jeor is ONE regression carrying a sex term — not two equations.) */
-const miffBase = 10 * 80 + 6.25 * 180 - 5 * 30;      // = 1775
-const mM = M.rmrMifflin({ sex: "M", weightKg: 80, heightCm: 180, ageY: 30 }).kcal;
-const mF = M.rmrMifflin({ sex: "F", weightKg: 80, heightCm: 180, ageY: 30 }).kcal;
-eq("Mifflin male (+5) is unchanged", mM, miffBase + 5);          // 1780
-eq("Mifflin female (-161) is unchanged", mF, miffBase - 161);    // 1614
+const miffBase = 10 * 92 + 6.25 * 176 - 5 * 44;      // = 1800
+const mM = M.rmrMifflin({ sex: "M", weightKg: 92, heightCm: 176, ageY: 44 }).kcal;
+const mF = M.rmrMifflin({ sex: "F", weightKg: 92, heightCm: 176, ageY: 44 }).kcal;
+eq("Mifflin male (+5) is unchanged", mM, miffBase + 5);          // 1805
+eq("Mifflin female (-161) is unchanged", mF, miffBase - 161);    // 1639
 eq("the 166 kcal/day sex gap still holds", mM - mF, 166);
 
 /* ============================================================

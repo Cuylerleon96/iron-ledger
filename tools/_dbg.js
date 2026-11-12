@@ -1,5 +1,5 @@
 
-const fs=require("fs"), vm=require("vm"), B="/home/user/Projects/fitness-app/";
+const fs=require("fs"), vm=require("vm"), path=require("path"), B=path.join(__dirname,"..")+path.sep;
 const SRC=["js/data.js","js/engine.js","js/store.js"].map(f=>fs.readFileSync(B+f,"utf8")).join("\n;\n");
 function env(ls={}){const store=Object.assign({},ls);
  const s={console:{log(){},warn:console.warn,error:console.error,info(){}},Date,Math,JSON,Object,Array,Number,String,Boolean,RegExp,Promise,Error,isFinite,parseInt,parseFloat,Set,Map,setTimeout,clearTimeout,
